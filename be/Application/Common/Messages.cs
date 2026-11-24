@@ -210,6 +210,8 @@ public static class Messages
     public const string WrongCurrentPassword = "Mật khẩu hiện tại không đúng.";                  // MSG07
     public const string PasswordChanged = "Đã đổi mật khẩu. Các thiết bị khác đã được đăng xuất."; // MSG08
     public const string EmployeeCodeDuplicate = "Mã nhân viên đã tồn tại.";
+    public const string EmployeeEmailDuplicate = "Email đã tồn tại.";
+    public const string EmployeeTeamTypeMismatch = "Vai trò không phù hợp với loại tổ.";
     public const string EmployeeAttendanceCodeTaken = "Mã chấm công {0} đã gán cho nhân viên khác.";
     public const string EmployeeNotActive = "Nhân viên đã nghỉ việc.";
     public const string EmployeeCreated = "Đã thêm nhân viên và tạo tài khoản.";
@@ -231,7 +233,7 @@ public static class Messages
     public const string TeamAppointed = "Đã bổ nhiệm. Người giữ chức cũ (nếu có) đã chuyển về Công nhân.";
     public const string TeamTransferred = "Đã chuyển {0} nhân viên.";
     /// <summary>Thêm vào message thành công khi có thu hồi sản lượng giao chưa làm xong ở tổ may cũ.</summary>
-    public const string TeamTransferSettledSuffix = " Đã chốt sản lượng đã báo và thu hồi phần chưa làm xong ở tổ cũ.";
+    public const string TeamTransferSettledSuffix = " Đã chốt sản lượng đã báo và thu hồi phần chưa làm xong ở tổ cũ; đã quyết toán việc tổ may.";
     public const string TeamMemberHasTeam = "{0} đang thuộc tổ khác. Dùng Chuyển sang tổ khác.";
     public const string TeamRemoveLeader = "{0} đang là tổ trưởng / tổ phó. Thôi giữ chức trước khi loại khỏi tổ.";
     public const string TeamMembersAdded = "Đã thêm {0} nhân viên vào tổ.";
@@ -370,6 +372,7 @@ public static class Messages
     public const string KpiExceedsStock = "KPI theo ngày còn phải làm ({0}) vượt BTP khả dụng ({1}): kho còn {2}, tổ đang giữ {3}, tổ khác cần lấy từ kho {4}.";
     public const string ProductSpecComponentDuplicate = "Tên thành phần của mã hàng bị trùng.";
     public const string ProductSpecVariantDuplicate = "Màu – size của mã hàng bị trùng.";
+    public const string ProductSpecColorDuplicate = "Mã hàng đang có hai màu trùng tên \"{0}\".";
     public const string ProductSpecNormReference = "Định mức phải dùng thành phần và màu có trong danh sách.";
     public const string ProductSpecVariantFromOrders = "Màu – size lấy từ đơn hàng, không thêm ở màn định mức.";
     public const string ProductSpecNormDuplicate = "Mỗi NVL chỉ khai một dòng cho mỗi thành phần và màu.";

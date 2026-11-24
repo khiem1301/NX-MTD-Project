@@ -31,7 +31,7 @@ public sealed class OrderPaymentService : IOrderPaymentService
     public async Task<Result<PagedResult<OrderPaymentListItemDto>>> ListAsync(OrderPaymentQuery query, CancellationToken ct)
     {
         var keyword = query.Keyword?.Trim();
-        var state = query.State?.Trim();
+        var state = NormalizeState(query.State);
         var page = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
             .Where(o => string.IsNullOrEmpty(keyword) || o.OrderCode.Contains(keyword) || o.Customer.CustomerName.Contains(keyword))
             .Where(o => string.IsNullOrEmpty(state)
@@ -67,7 +67,7 @@ public sealed class OrderPaymentService : IOrderPaymentService
             .Select(p => new OrderPaymentLineDto(p.OrderPaymentId, p.PaymentDate, p.Amount, CodeText.ToPascal(p.PaymentMethod),
                 p.PaymentNote, p.CreatedAt, p.UpdatedAt, p.EditReason, IsEditable(p, now))).ToList();
         var history = await _audit.GetHistoryAsync(AuditTable, orderId, ct);
-        return Result<OrderPaymentDto>.Success(new OrderPaymentDto(order.OrderId, order.OrderCode, order.Customer.CustomerName,
+        return Result<OrderPaymentDto>.Success(new OrderPaymentDto(order.OrderId, order.OrderCode, (order.Customer?.CustomerName)!,
             CodeText.ToPascal(order.Status), order.OrderLines.Sum(l => l.OrderedQty * l.CmtUnitPrice), order.FinalAmount,
             order.FinalAmountReason, paid, Remaining(order.FinalAmount, paid), StateOf(order.FinalAmount, paid), order.RowVer,
             payments, history));
@@ -77,6 +77,7 @@ public sealed class OrderPaymentService : IOrderPaymentService
 
     public async Task<Result> SetFinalAmountAsync(int orderId, SetFinalAmountDto dto, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(dto);
         var order = await LoadAsync(orderId, asNoTracking: false, ct);
         if (order is null) return Fail.NotFound();
         if (string.IsNullOrWhiteSpace(dto.Reason))
@@ -98,6 +99,8 @@ public sealed class OrderPaymentService : IOrderPaymentService
         if (order is null) return Fail.NotFound();
         if (order.FinalAmount is null)
             return Result.Failure(ErrorCodes.PaymentInvalid, Messages.OrderPaymentNeedFinalAmount);
+        if (string.IsNullOrWhiteSpace(dto.PaymentMethod))
+            return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentMethodInvalid, ResultKind.Validation);
         var method = CodeText.ToCode(dto.PaymentMethod);
         var invalid = Validate(method, dto.Amount, dto.PaymentDate)
                       ?? (InRange(Paid(order) + dto.Amount, order.FinalAmount.Value)
@@ -202,4 +205,16 @@ public sealed class OrderPaymentService : IOrderPaymentService
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    /// <summary>State lọc không phân biệt hoa thường; giá trị lạ giữ nguyên để query trả rỗng (không Validation).</summary>
+    private static string? NormalizeState(string? state)
+    {
+        if (string.IsNullOrWhiteSpace(state)) return null;
+        var trimmed = state.Trim();
+        if (string.Equals(trimmed, OrderPaymentStates.NotSet, StringComparison.OrdinalIgnoreCase)) return OrderPaymentStates.NotSet;
+        if (string.Equals(trimmed, OrderPaymentStates.Unpaid, StringComparison.OrdinalIgnoreCase)) return OrderPaymentStates.Unpaid;
+        if (string.Equals(trimmed, OrderPaymentStates.Partial, StringComparison.OrdinalIgnoreCase)) return OrderPaymentStates.Partial;
+        if (string.Equals(trimmed, OrderPaymentStates.Settled, StringComparison.OrdinalIgnoreCase)) return OrderPaymentStates.Settled;
+        return trimmed;
+    }
 }

@@ -18,6 +18,12 @@ public sealed class AccountRepository : GenericRepository<Account>, IAccountRepo
     public Task<bool> UsernameExistsAsync(string username, CancellationToken ct) =>
         _context.Accounts.AnyAsync(a => a.Username == username, ct);
 
+    public Task<bool> EmailExistsAsync(string email, CancellationToken ct)
+    {
+        var key = email.Trim().ToUpperInvariant();
+        return _context.Accounts.AnyAsync(a => a.Username.ToUpper() == key, ct);
+    }
+
     private IQueryable<Account> WithEmployee() =>
         _context.Accounts.AsNoTracking()
             .Include(a => a.Employee).ThenInclude(e => e.Role)

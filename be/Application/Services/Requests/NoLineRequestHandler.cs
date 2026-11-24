@@ -23,6 +23,7 @@ public abstract class NoLineRequestHandler : IRequestTypeHandler
 
     public Task<Result> ValidateAsync(RequestDraft draft, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(draft);
         if (draft.Lines.Count > 0) return Task.FromResult(Invalid(_noLinesMessage));
         if (draft.RequestId is null && draft.TargetDate is { } target && target < _clock.Today)
             return Task.FromResult(Invalid(Messages.RequisitionTargetDatePast));

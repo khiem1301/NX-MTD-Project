@@ -12,8 +12,8 @@ public sealed class TeamsController : ManagerBaseController
     public TeamsController(ITeamService teams) => _teams = teams;
 
     [HttpGet]
-    public async Task<IActionResult> List([FromQuery] bool includeDiscontinued, CancellationToken ct) =>
-        this.ToResponse(await _teams.ListAsync(includeDiscontinued, ct));
+    public async Task<IActionResult> List([FromQuery] bool includeDiscontinued, [FromQuery] string? type, CancellationToken ct) =>
+        this.ToResponse(await _teams.ListAsync(includeDiscontinued, type, ct));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Get(int id, CancellationToken ct) => this.ToResponse(await _teams.GetAsync(id, ct));
@@ -37,7 +37,8 @@ public sealed class TeamsController : ManagerBaseController
         this.ToResponse(await _teams.TransferInAsync(id, dto, ct));
 
     [HttpGet("candidates")]
-    public async Task<IActionResult> Candidates(CancellationToken ct) => this.ToResponse(await _teams.CandidatesAsync(ct));
+    public async Task<IActionResult> Candidates([FromQuery] int? teamId, CancellationToken ct) =>
+        this.ToResponse(teamId is int id ? await _teams.CandidatesAsync(id, ct) : await _teams.CandidatesAsync(ct));
 
     [HttpPost("{id:int}/add-members")]
     public async Task<IActionResult> AddMembers(int id, [FromBody] TeamMembersDto dto, CancellationToken ct) =>

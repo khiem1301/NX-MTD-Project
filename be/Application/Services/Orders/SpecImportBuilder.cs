@@ -10,9 +10,14 @@ public sealed record SpecImportMaterial(int MaterialId, string MaterialCode, str
 
 /// <summary>
 /// Dữ liệu cũ đã được dùng ở bảng khác (chế độ thay thế không được xóa hay sửa): tên thành phần (hoa) có định mức đã dùng, cặp
-/// "MÀU|CHI TIẾT" có định mức đã dùng, số nhóm bìa đã có bìa của đơn.
+/// "MÀU|CHI TIẾT" có định mức đã dùng, số nhóm bìa đã có bìa của đơn, khóa "NHÓM|MÃ BÌA" của bìa đơn đã dùng.
+/// <see cref="OrderMarkers"/> null = không khai danh sách bìa đã dùng, nên không xóa bìa đang có. Tập rỗng = không bìa nào được giữ ngoài file.
 /// </summary>
-public sealed record SpecImportUsage(IReadOnlySet<string> Components, IReadOnlySet<string> NormPairs, IReadOnlySet<int> Groups)
+public sealed record SpecImportUsage(
+    IReadOnlySet<string> Components,
+    IReadOnlySet<string> NormPairs,
+    IReadOnlySet<int> Groups,
+    IReadOnlySet<string>? OrderMarkers = null)
 {
     public static SpecImportUsage None { get; } = new(new HashSet<string>(), new HashSet<string>(), new HashSet<int>());
 }
@@ -65,6 +70,7 @@ public sealed class SpecImportBuilder
         OrderMarkerProductDto? orderProduct, string productCode, SpecWorkbookDto workbook, bool replace = false,
         SpecImportUsage? usage = null)
     {
+        ArgumentNullException.ThrowIfNull(workbook);
         _usage = usage ?? SpecImportUsage.None;
         _replaceComponents = replace && workbook.HasComponents;
         _replaceNorms = replace && workbook.HasNorms;
@@ -266,7 +272,9 @@ public sealed class SpecImportBuilder
         var activeNames = components.Select(c => Upper(c.ComponentName)).ToHashSet();
 
         // Biến thể tạm (màu chưa có size, xem ColorOnlySize) chỉ để nhận màu, không ghi.
-        var variants = _spec.Variants.Where(v => v.Status == "Active" && v.SizeCode != ColorOnlySize)
+        // Size "?" có thật trong đơn thì giữ, không gỡ như biến thể tạm.
+        var questionIsRealSize = _orderProduct?.Sizes.Any(s => Same(s, ColorOnlySize)) == true;
+        var variants = _spec.Variants.Where(v => v.Status == "Active" && (questionIsRealSize || !Same(v.SizeCode, ColorOnlySize)))
             .Select(v => new SaveProductVariantDto(v.ProductVariantId, v.Color, v.SizeCode)).ToList();
 
         var fileNormKeys = _validNorms.Select(n => (Upper(n.Color), Upper(n.ComponentName))).ToHashSet();
@@ -341,11 +349,26 @@ public sealed class SpecImportBuilder
         && string.Join(';', current.Ratios.OrderBy(r => Upper(r.SizeCode)).Select(r => $"{Upper(r.SizeCode)}:{r.PiecesPerPly}"))
         == string.Join(';', input.Ratios.OrderBy(r => Upper(r.SizeCode)).Select(r => $"{Upper(r.SizeCode)}:{r.PiecesPerPly}"));
 
+    /// <summary>Khóa bìa của đơn đã dùng: "NHÓM|MÃ" chữ hoa, cùng dạng với thành phần / cặp định mức.</summary>
+    private static string OrderMarkerKey(int markerNo, string code) => $"{markerNo}|{Upper(code)}";
+
+    /// <summary>
+    /// Null (usage mặc định): không có danh sách bìa đã dùng — giữ bìa đang có khi thay thế.
+    /// Tập rỗng: không bìa nào được giữ ngoài file. Tập có khóa "NHÓM|MÃ": chỉ những khóa đó được giữ.
+    /// </summary>
+    private bool IsOrderMarkerKept(OrderMarkerDto marker)
+    {
+        var used = _usage.OrderMarkers;
+        if (used is null) return true;
+        var key = OrderMarkerKey(marker.MarkerNo, marker.MarkerCode);
+        return used.Any(item => string.Equals(item.Trim(), key, StringComparison.OrdinalIgnoreCase));
+    }
+
     private SaveOrderMarkersDto MergeMarkers()
     {
         var replaced = _validMarkers.Where(m => m.ProductMarkerId is not null).Select(m => m.ProductMarkerId!.Value).ToHashSet();
         var kept = _orderProduct!.Markers.Where(m => !replaced.Contains(m.ProductMarkerId)
-                && (!_replaceMarkers || _fileMarkerKeys.Contains((m.MarkerNo, Upper(m.MarkerCode)))))
+                && (!_replaceMarkers || _fileMarkerKeys.Contains((m.MarkerNo, Upper(m.MarkerCode))) || IsOrderMarkerKept(m)))
             .Select(m => new SaveOrderMarkerDto(m.ProductMarkerId, m.MarkerNo, m.MarkerCode, m.LengthM, m.WidthM, m.Status, m.Ratios));
         return new SaveOrderMarkersDto(kept.Concat(_validMarkers).ToList());
     }
@@ -393,6 +416,11 @@ public sealed class SpecImportBuilder
                 && mergedPairs.Contains($"{Upper(n.Color)}|{Upper(n.ComponentName)}"))
             .DistinctBy(n => $"{Upper(n.Color)}|{Upper(n.ComponentName)}").Select(n => $"Định mức: {n.Color} · {n.ComponentName}"));
         names.AddRange(mergedGroupNos.Where(no => _replaceGroups && !_fileGroupNos.Contains(no)).Order().Select(no => $"Nhóm bìa: {no}"));
+        if (_orderProduct is not null && Markers is not null)
+            names.AddRange(_orderProduct.Markers.Where(m => _replaceMarkers
+                    && !_fileMarkerKeys.Contains((m.MarkerNo, Upper(m.MarkerCode)))
+                    && Markers.Markers.Any(k => k.ProductMarkerId == m.ProductMarkerId))
+                .Select(m => $"Bìa của đơn: {m.MarkerCode}"));
         return names;
     }
 

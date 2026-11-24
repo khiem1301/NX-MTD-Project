@@ -1,8 +1,6 @@
 using FluentAssertions;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using NX_MTD.Application.Common;
-using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Application.Services;
 using NX_MTD.Domain.Constants;
@@ -10,817 +8,557 @@ using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
-/// <summary>UTCID470–UTCID511: DailyWorkAllocationService high-complexity cases (incl. DEV-ALL-157).</summary>
+/// <summary>
+/// UTCID551–567: <see cref="DailyWorkAllocationService.SettleOnTeamLeaveAsync"/>.
+/// Thu hồi ADJUSTED là CONFIRMED + SYSTEM (khác SaveAsync PENDING/WORKER).
+/// </summary>
 [Trait("Category", "HighComplexity")]
 public class DailyWorkAllocationServiceHighComplexityTests
 {
-    private static readonly DateTime Now = new(2026, 11, 22, 10, 0, 0);
-    private static readonly DateOnly Today = new(2026, 11, 22);
-    private const int TeamId = 3;
-    private const int CuttingTeamId = 1;
-    private const int OrderId = 1;
+    private static readonly DateOnly Today = new(2026, 11, 24);
+    private static readonly DateTime Now = new(2026, 11, 24);
+    private static readonly DateOnly ClosedOn = new(2026, 11, 20);
+
+    private const int TeamSewing = 3;
+    private const int TeamCutting = 1;
+    private const int Office1 = 5;
+    private const int W1 = 1;
+    private const int W2 = 2;
+    private const int E4 = 4;
+    private const int W5 = 5;
+    private const int Op10 = 10;
     private const int Line100 = 100;
     private const int Line101 = 101;
-    private const int Line102 = 102;
-    private const int WorkerW1 = 1;
-    private const int Op10 = 10;
 
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly INotificationService _notifier = Substitute.For<INotificationService>();
-    private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
     private readonly IAppLock _locks = Substitute.For<IAppLock>();
     private readonly IClock _clock = Substitute.For<IClock>();
     private readonly IPieceRateService _rates = Substitute.For<IPieceRateService>();
 
-    private readonly List<Team> _teams = [];
-    private readonly List<Employee> _employees = [];
-    private readonly List<OrderLine> _orderLines = [];
-    private readonly List<Operation> _operations = [];
-    private readonly List<PieceRate> _ratesData = [];
-    private readonly List<WorkAllocation> _allocations = [];
-    private readonly List<VwOperationAllocationProgress> _progress = [];
-    private readonly List<OutputRecord> _outputs = [];
-    private readonly List<OperationAssignment> _assignments = [];
-    private readonly List<OrderLineTeam> _allotted = [];
-    private readonly List<OperationComponent> _components = [];
+    private readonly List<Team> _teams = new();
+    private readonly List<WorkAllocation> _allocations = new();
+    private readonly List<OperationAssignment> _assignments = new();
+    private readonly List<OutputRecord> _outputs = new();
+    private readonly List<string> _lockKeys = new();
+    private string? _timeoutOnKey;
+    private int _nextAllocationId = 1;
+    private int _nextAssignmentId = 1;
 
     public DailyWorkAllocationServiceHighComplexityTests()
     {
-        _clock.Now.Returns(Now);
         _clock.Today.Returns(Today);
+        _clock.Now.Returns(Now);
         _uow.SaveChangesAsync().Returns(1);
-        _locks.AcquireAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
-
-        var order = new CustomerOrder
-        {
-            OrderId = OrderId, OrderCode = "DH2611-001", Status = OrderStatuses.InProduction,
-            ReceivedDate = new DateOnly(2026, 11, 10),
-        };
-        _teams.Add(new Team { TeamId = TeamId, TeamCode = "MAY3", TeamType = TeamTypes.Sewing });
-        _teams.Add(new Team { TeamId = CuttingTeamId, TeamCode = "CAT1", TeamType = TeamTypes.Cutting });
-        _employees.Add(new Employee
-        {
-            EmployeeId = WorkerW1, EmployeeCode = "W1", FullName = "Worker 1", TeamId = TeamId,
-            Status = RecordStatus.Active, Role = new Role { RoleCode = RoleCodes.Worker },
-        });
-        foreach (var lineId in new[] { Line100, Line101, Line102 })
-        {
-            _orderLines.Add(new OrderLine
+        _uow.BeginTransactionAsync().Returns(Task.CompletedTask);
+        _uow.CommitTransactionAsync().Returns(Task.CompletedTask);
+        _uow.RollbackTransactionAsync().Returns(Task.CompletedTask);
+        _locks.AcquireAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
             {
-                OrderLineId = lineId, OrderId = OrderId, Order = order, ProductId = 1,
-                ProductVariant = TestVariant.Make(new Product { ProductId = 1, ProductCode = "AO-01" }, "Đỏ", "M"),
+                var key = call.Arg<string>();
+                _lockKeys.Add(key);
+                if (_timeoutOnKey is not null && key == _timeoutOnKey)
+                    throw new TimeoutException("lock timeout");
+                return Task.CompletedTask;
             });
-        }
-        _allotted.Add(new OrderLineTeam { OrderLineId = Line100, SewingTeamId = TeamId });
-        _allotted.Add(new OrderLineTeam { OrderLineId = Line101, SewingTeamId = TeamId });
-        _operations.Add(new Operation
-        {
-            OperationId = Op10, ProductId = 1, OperationCode = "OP10", OperationName = "May",
-            StationSequence = 10, Status = RecordStatus.Active, TeamType = TeamTypes.Sewing,
-        });
-        _ratesData.Add(TestRates.Approved(Op10));
-        _progress.Add(new VwOperationAllocationProgress { SewingTeamId = TeamId, OrderLineId = Line100, OperationId = Op10, RequiredQty = 100, UnallocatedQty = 50 });
-        _progress.Add(new VwOperationAllocationProgress { SewingTeamId = TeamId, OrderLineId = Line101, OperationId = Op10, RequiredQty = 100, UnallocatedQty = 50 });
-        _assignments.Add(new OperationAssignment { SewingTeamId = TeamId, OrderId = OrderId, OperationId = Op10, WorkerId = WorkerW1, ValidTo = null });
-        Setup(_teams); Setup(_employees); Setup(_orderLines); Setup(_operations); Setup(_ratesData);
-        Setup(_allocations); Setup(_progress); Setup(_outputs); Setup(_assignments); Setup(_allotted); Setup(_components);
+        Setup(_teams);
+        Setup(_allocations);
+        Setup(_assignments);
+        Setup(_outputs);
+        _teams.Add(Team(TeamSewing, "MAY3", TeamTypes.Sewing));
+    }
 
-        var rateSvc = new PieceRateService(_uow, _audit, _notifier, _clock);
-        _rates.FindEffectiveManyAsync(Arg.Any<IReadOnlyList<int>>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
-            .Returns(ci => rateSvc.FindEffectiveManyAsync(ci.ArgAt<IReadOnlyList<int>>(0), ci.ArgAt<DateOnly>(1), ci.ArgAt<CancellationToken>(2)));
-        _rates.FindEffectiveAsync(Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
-            .Returns(ci => rateSvc.FindEffectiveAsync(ci.ArgAt<int>(0), ci.ArgAt<DateOnly>(1), ci.ArgAt<CancellationToken>(2)));
+    [Fact]
+    public async Task UTCID551_SettleOnTeamLeaveAsync_PendingAndRemaining_ConfirmsAdjustedAndClosesAssignment()
+    {
+        // Arrange — H1 PENDING, R1 PENDING, Remaining hiển thị = 10, OA1 còn mở
+        var h1 = PendingHandover(W1, Line100, 4);
+        var r1 = PendingRetrieval(W1, Line100, 10);
+        ConfirmedHandover(W1, Line100, 20);
+        var oa1 = OpenAssignment(W1, Op10);
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(TeamSewing, new[] { W1 }, default);
+
+        // Assert — ADJUSTED CONFIRMED/SYSTEM, không phải PENDING/WORKER như SaveAsync UTCID504
+        result.IsSuccess.Should().BeTrue();
+        _lockKeys.Should().Equal($"work-allocation:{TeamSewing}:{Line100}");
+        h1.Status.Should().Be(HandoverStatuses.Rejected);
+        h1.RejectReason.Should().Be(string.Format(WarehouseMessages.TeamLeavePendingWithdrawn, WarehouseMessages.TeamLeaveRetrieveNote));
+        h1.ConfirmedAt.Should().Be(Now);
+        AssertRetrievalConfirmed(r1, 10);
+        var adjusted = SingleAdjusted();
+        adjusted.Quantity.Should().Be(10);
+        adjusted.ConfirmedQty.Should().Be(10);
+        adjusted.OrderLineId.Should().Be(Line100);
+        adjusted.WorkerId.Should().Be(W1);
+        adjusted.OperationId.Should().Be(Op10);
+        adjusted.Status.Should().Be(HandoverStatuses.Confirmed);
+        adjusted.ConfirmMode.Should().Be(ConfirmModes.System);
+        adjusted.RetrievalReason.Should().Be(RetrievalReasons.Adjusted);
+        adjusted.RetrievalNote.Should().Be(WarehouseMessages.TeamLeaveRetrieveNote);
+        adjusted.WorkDate.Should().Be(Today);
+        adjusted.CreatedAt.Should().Be(Now);
+        adjusted.ConfirmedAt.Should().Be(Now);
+        oa1.ValidTo.Should().Be(Today);
+        await _uow.Received(2).SaveChangesAsync();
+        AssertNotifierSilent();
+    }
+
+    [Fact]
+    public async Task UTCID552_SettleOnTeamLeaveAsync_PendingRetrieval_AdjustedDoesNotDoubleCount()
+    {
+        // Arrange — R1 PENDING qty=5; Remaining hiển thị = 20 − 5 = 15 (DEV-ALL-157)
+        var r1 = PendingRetrieval(W1, Line100, 5);
+        ConfirmedHandover(W1, Line100, 20);
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(TeamSewing, new[] { W1 }, default);
+
+        // Assert — R1=5 + ADJUSTED=15 = 20, đúng phần đang giữ
+        result.IsSuccess.Should().BeTrue();
+        AssertRetrievalConfirmed(r1, 5);
+        var adjusted = SingleAdjusted();
+        adjusted.Quantity.Should().Be(15);
+        adjusted.ConfirmedQty.Should().Be(15);
+        adjusted.Status.Should().Be(HandoverStatuses.Confirmed);
+        adjusted.ConfirmMode.Should().Be(ConfirmModes.System);
+        ConfirmedRetrievalQty().Should().Be(20);
+    }
+
+    [Fact]
+    public async Task UTCID553_SettleOnTeamLeaveAsync_TwoLines_LocksAndSettlesEach()
+    {
+        // Arrange — line 100 còn 6, line 101 còn 7 sau khi chốt R1
+        var h1 = PendingHandover(W1, Line100, 3);
+        ConfirmedHandover(W1, Line100, 6);
+        var r1 = PendingRetrieval(W1, Line101, 4);
+        ConfirmedHandover(W1, Line101, 11);
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(TeamSewing, new[] { W1 }, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        _lockKeys.Should().Equal(
+            $"work-allocation:{TeamSewing}:{Line100}",
+            $"work-allocation:{TeamSewing}:{Line101}");
+        h1.Status.Should().Be(HandoverStatuses.Rejected);
+        AssertRetrievalConfirmed(r1, 4);
+        AdjustedOn(Line100).Quantity.Should().Be(6);
+        AdjustedOn(Line101).Quantity.Should().Be(7);
+        AdjustedOn(Line100).Status.Should().Be(HandoverStatuses.Confirmed);
+        AdjustedOn(Line101).ConfirmMode.Should().Be(ConfirmModes.System);
+    }
+
+    [Fact]
+    public async Task UTCID554_SettleOnTeamLeaveAsync_EmptyWorkers_ReturnsWithoutWork()
+    {
+        // Arrange
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(TeamSewing, Array.Empty<int>(), default);
+
+        // Assert — trả ngay, không query, không lock, không SaveChanges
+        result.IsSuccess.Should().BeTrue();
+        _uow.ReceivedCalls().Should().BeEmpty();
+        _locks.ReceivedCalls().Should().BeEmpty();
+        _lockKeys.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UTCID555_SettleOnTeamLeaveAsync_DuplicateWorker_SettlesOnce()
+    {
+        // Arrange — cùng fixture Normal, workerIds lặp
+        PendingHandover(W1, Line100, 4);
+        PendingRetrieval(W1, Line100, 10);
+        ConfirmedHandover(W1, Line100, 20);
+        OpenAssignment(W1, Op10);
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(TeamSewing, new[] { W1, W1 }, default);
+
+        // Assert — Distinct: một phiếu ADJUSTED, một lần khóa line
+        result.IsSuccess.Should().BeTrue();
+        SingleAdjusted().Quantity.Should().Be(10);
+        _lockKeys.Should().Equal($"work-allocation:{TeamSewing}:{Line100}");
+        await _locks.Received(1).AcquireAsync($"work-allocation:{TeamSewing}:{Line100}", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UTCID556_SettleOnTeamLeaveAsync_NoPending_SavesOnlyFinalRetrieval()
+    {
+        // Arrange — không HO/RT PENDING; Remaining = 5
+        ConfirmedHandover(W1, Line100, 5);
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(TeamSewing, new[] { W1 }, default);
+
+        // Assert — bỏ SaveChanges của pending; SaveChanges cuối đúng 1 lần
+        result.IsSuccess.Should().BeTrue();
+        SingleAdjusted().Quantity.Should().Be(5);
+        await _uow.Received(1).SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task UTCID557_SettleOnTeamLeaveAsync_RemainingZero_DoesNotAddAdjusted()
+    {
+        // Arrange — đã giao 10 và đã báo 10 → Remaining = 0
+        ConfirmedHandover(W1, Line100, 10);
+        Output(W1, Line100, 10);
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(TeamSewing, new[] { W1 }, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        _allocations.Should().NotContain(a => a.RetrievalReason == RetrievalReasons.Adjusted);
+        await _uow.Received(1).SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task UTCID558_SettleOnTeamLeaveAsync_RemainingOne_AddsAdjustedQtyOne()
+    {
+        // Arrange — Remaining = 1
+        ConfirmedHandover(W1, Line100, 1);
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(TeamSewing, new[] { W1 }, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var adjusted = SingleAdjusted();
+        adjusted.Quantity.Should().Be(1);
+        adjusted.ConfirmedQty.Should().Be(1);
+        adjusted.Status.Should().Be(HandoverStatuses.Confirmed);
+        adjusted.ConfirmMode.Should().Be(ConfirmModes.System);
+    }
+
+    [Fact]
+    public async Task UTCID559_SettleOnTeamLeaveAsync_ClosedAssignment_KeepsValidTo()
+    {
+        // Arrange — OA mở bị đóng; OA2 đã ValidTo=2026-11-20
+        ConfirmedHandover(W1, Line100, 2);
+        var open = OpenAssignment(W1, Op10);
+        var oa2 = OpenAssignment(W1, Op10 + 1);
+        oa2.ValidTo = ClosedOn;
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(TeamSewing, new[] { W1 }, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        open.ValidTo.Should().Be(Today);
+        oa2.ValidTo.Should().Be(ClosedOn);
+    }
+
+    [Fact]
+    public async Task UTCID560_SettleOnTeamLeaveAsync_NoAllocation_ClosesAssignmentWithoutLock()
+    {
+        // Arrange — W2 không có WorkAllocation; OA3 còn mở
+        var oa3 = OpenAssignment(W2, Op10);
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(TeamSewing, new[] { W2 }, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        _lockKeys.Should().BeEmpty();
+        await _locks.DidNotReceiveWithAnyArgs().AcquireAsync(default!, default);
+        oa3.ValidTo.Should().Be(Today);
+        await _uow.Received(1).SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task UTCID561_SettleOnTeamLeaveAsync_UnknownTeam_SilentNoOp()
+    {
+        // Arrange — team 999 không có; phiếu sẵn để chứng minh không đụng DB
+        var h1 = PendingHandover(W1, Line100, 4);
+        h1.SewingTeamId = 999;
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(999, new[] { W1 }, default);
+
+        // Assert — Success no-op im lặng
+        result.IsSuccess.Should().BeTrue();
+        h1.Status.Should().Be(HandoverStatuses.Pending);
+        _lockKeys.Should().BeEmpty();
+        await _uow.DidNotReceive().SaveChangesAsync();
+        _allocations.Should().NotContain(a => a.RetrievalReason == RetrievalReasons.Adjusted);
+    }
+
+    [Fact]
+    public async Task UTCID562_SettleOnTeamLeaveAsync_CuttingTeam_NoOp()
+    {
+        // Arrange — tổ 1 là tổ cắt
+        _teams.Add(Team(TeamCutting, "CAT1", TeamTypes.Cutting));
+        var h1 = PendingHandover(W1, Line100, 4);
+        h1.SewingTeamId = TeamCutting;
+        var oa = OpenAssignment(W1, Op10);
+        oa.SewingTeamId = TeamCutting;
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(TeamCutting, new[] { W1 }, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        h1.Status.Should().Be(HandoverStatuses.Pending);
+        oa.ValidTo.Should().BeNull();
+        _lockKeys.Should().BeEmpty();
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task UTCID563_SettleOnTeamLeaveAsync_OfficeTeam_NoOp()
+    {
+        // Arrange — tổ văn phòng Office1, nhân viên E4
+        _teams.Add(Team(Office1, "VP-1", TeamTypes.Office));
+        var h1 = PendingHandover(E4, Line100, 4);
+        h1.SewingTeamId = Office1;
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(Office1, new[] { E4 }, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        h1.Status.Should().Be(HandoverStatuses.Pending);
+        _lockKeys.Should().BeEmpty();
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task UTCID564_SettleOnTeamLeaveAsync_LockTimeout_TeamOrderBusyRollsBack()
+    {
+        // Arrange — khóa 100 xong, khóa 101 timeout; caller bọc transaction
+        var h1 = PendingHandover(W1, Line100, 3);
+        ConfirmedHandover(W1, Line100, 6);
+        var r1 = PendingRetrieval(W1, Line101, 4);
+        ConfirmedHandover(W1, Line101, 11);
+        var oa = OpenAssignment(W1, Op10);
+        _timeoutOnKey = $"work-allocation:{TeamSewing}:{Line101}";
+        ResetCalls();
+
+        // Act
+        var result = await _uow.InTransactionAsync(() => Sut().SettleOnTeamLeaveAsync(TeamSewing, new[] { W1 }, default));
+
+        // Assert — Failure TeamOrderBusy; caller Rollback; không commit
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.TeamOrderBusy);
+        result.Message.Should().Be(Messages.OutputLockBusy);
+        await _uow.Received(1).BeginTransactionAsync();
+        await _uow.Received(1).RollbackTransactionAsync();
+        await _uow.DidNotReceive().CommitTransactionAsync();
+        await _uow.DidNotReceive().SaveChangesAsync();
+        _lockKeys.Should().Equal(
+            $"work-allocation:{TeamSewing}:{Line100}",
+            $"work-allocation:{TeamSewing}:{Line101}");
+        h1.Status.Should().Be(HandoverStatuses.Pending);
+        r1.Status.Should().Be(HandoverStatuses.Pending);
+        oa.ValidTo.Should().BeNull();
+        _allocations.Should().NotContain(a => a.RetrievalReason == RetrievalReasons.Adjusted);
+    }
+
+    [Fact]
+    public async Task UTCID565_SettleOnTeamLeaveAsync_SecondSaveThrowsOutsideTx_PropagatesPartialCommit()
+    {
+        // Arrange — gọi ngoài TX; SaveChanges lần 2 ném
+        var h1 = PendingHandover(W1, Line100, 4);
+        var r1 = PendingRetrieval(W1, Line100, 10);
+        ConfirmedHandover(W1, Line100, 20);
+        var oa1 = OpenAssignment(W1, Op10);
+        var saves = 0;
+        _uow.SaveChangesAsync().Returns(_ =>
+        {
+            saves++;
+            if (saves >= 2) throw new InvalidOperationException("second save failed");
+            return Task.FromResult(1);
+        });
+        ResetCalls();
+
+        // Act
+        var act = async () => await Sut().SettleOnTeamLeaveAsync(TeamSewing, new[] { W1 }, default);
+
+        // Assert — exception đi ra; H1/R1 đã đổi ở Save 1; không rollback
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("second save failed");
+        saves.Should().Be(2);
+        h1.Status.Should().Be(HandoverStatuses.Rejected);
+        r1.Status.Should().Be(HandoverStatuses.Confirmed);
+        r1.ConfirmMode.Should().Be(ConfirmModes.System);
+        await _uow.Received(2).SaveChangesAsync();
+        await _uow.DidNotReceive().BeginTransactionAsync();
+        await _uow.DidNotReceive().RollbackTransactionAsync();
+        oa1.ValidTo.Should().Be(Today);
+    }
+
+    [Fact]
+    public async Task UTCID566_SettleOnTeamLeaveAsync_PendingHandoverOfLeaver_DoesNotNotify()
+    {
+        // Arrange — H1 PENDING của W1 (người nhận phiếu). W5 là người liên quan đáng được báo.
+        var h1 = PendingHandover(W1, Line100, 4);
+        ResetCalls();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(TeamSewing, new[] { W1 }, default);
+
+        // Assert — H1 bị từ chối; ⚠ không gọi notifier cho W5
+        result.IsSuccess.Should().BeTrue();
+        h1.Status.Should().Be(HandoverStatuses.Rejected);
+        h1.RejectReason.Should().Be(string.Format(WarehouseMessages.TeamLeavePendingWithdrawn, WarehouseMessages.TeamLeaveRetrieveNote));
+        _notifier.DidNotReceive().NotifyEmployees(
+            Arg.Is<IEnumerable<int>>(ids => ids.Contains(W5)),
+            Arg.Any<NotificationMessage>());
+        AssertNotifierSilent();
+    }
+
+    [Fact]
+    public async Task UTCID567_SettleOnTeamLeaveAsync_NullWorkerIds_ArgumentNullOrEmptySuccess()
+    {
+        // Arrange
+        ResetCalls();
+
+        // Act — spec: ArgumentNullException hoặc Success rỗng
+        Result? result = null;
+        Exception? error = null;
+        try
+        {
+            result = await Sut().SettleOnTeamLeaveAsync(TeamSewing, null!, default);
+        }
+        catch (Exception ex)
+        {
+            error = ex;
+        }
+
+        // Assert
+        if (error is null)
+        {
+            result!.IsSuccess.Should().BeTrue();
+            _uow.ReceivedCalls().Should().BeEmpty();
+            _locks.ReceivedCalls().Should().BeEmpty();
+            return;
+        }
+
+        error.Should().BeOfType<ArgumentNullException>(
+            "workerIds null phải ArgumentNullException hoặc Success rỗng, không ghi DB");
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    private DailyWorkAllocationService Sut() => new(_uow, _notifier, _locks, _clock, _rates);
+
+    private void ResetCalls()
+    {
+        _lockKeys.Clear();
+        _uow.ClearReceivedCalls();
+        _locks.ClearReceivedCalls();
+        _notifier.ClearReceivedCalls();
+    }
+
+    private void AssertNotifierSilent()
+    {
+        _notifier.DidNotReceiveWithAnyArgs().NotifyEmployees(default!, default!);
+        _notifier.DidNotReceiveWithAnyArgs().NotifyRoleAsync(default!, default!, default);
+        _notifier.DidNotReceiveWithAnyArgs().NotifyTeamLeadersAsync(default, default!, default);
     }
 
     private void Setup<T>(List<T> backing) where T : class
     {
         var repo = Substitute.For<IGenericRepository<T>>();
         repo.Query().Returns(_ => backing.AsTestAsyncQueryable());
+        repo.AddAsync(Arg.Do<T>(backing.Add)).Returns(Task.CompletedTask);
         _uow.Repository<T>().Returns(repo);
     }
 
-    private DailyWorkAllocationService Sut() => new(_uow, _notifier, _locks, _clock, _rates);
+    private static Team Team(int id, string code, string type) =>
+        new() { TeamId = id, TeamCode = code, TeamType = type, Status = RecordStatus.Active, CreatedAt = Now };
 
-    private void ConfirmedHandover(int qty, DateOnly day, int worker = WorkerW1, int line = Line100) =>
-        _allocations.Add(new WorkAllocation
-        {
-            WorkAllocationId = _allocations.Count + 1, WorkDate = day, MovementType = PieceMovementTypes.Handover,
-            SewingTeamId = TeamId, WorkerId = worker, OrderLineId = line, OperationId = Op10,
-            Quantity = qty, ConfirmedQty = qty, Status = HandoverStatuses.Confirmed, ConfirmMode = ConfirmModes.Worker, CreatedAt = Now,
-        });
+    private WorkAllocation ConfirmedHandover(int workerId, int lineId, int qty) =>
+        AddAllocation(workerId, lineId, PieceMovementTypes.Handover, qty, HandoverStatuses.Confirmed, ConfirmModes.Leader, qty);
 
-    private void PendingHandover(int qty, DateOnly day) => _allocations.Add(new WorkAllocation
+    private WorkAllocation PendingHandover(int workerId, int lineId, int qty) =>
+        AddAllocation(workerId, lineId, PieceMovementTypes.Handover, qty, HandoverStatuses.Pending, ConfirmModes.Worker, null);
+
+    private WorkAllocation PendingRetrieval(int workerId, int lineId, int qty) =>
+        AddAllocation(workerId, lineId, PieceMovementTypes.Retrieval, qty, HandoverStatuses.Pending, ConfirmModes.Worker, null);
+
+    private WorkAllocation AddAllocation(int workerId, int lineId, string movement, int qty, string status, string mode, int? confirmedQty)
     {
-        WorkAllocationId = _allocations.Count + 1, WorkDate = day, MovementType = PieceMovementTypes.Handover,
-        SewingTeamId = TeamId, WorkerId = WorkerW1, OrderLineId = Line100, OperationId = Op10,
-        Quantity = qty, Status = HandoverStatuses.Pending, ConfirmMode = ConfirmModes.Worker, CreatedAt = Now,
+        var row = new WorkAllocation
+        {
+            WorkAllocationId = _nextAllocationId++,
+            WorkDate = Today,
+            MovementType = movement,
+            SewingTeamId = TeamSewing,
+            WorkerId = workerId,
+            OrderLineId = lineId,
+            OperationId = Op10,
+            Quantity = qty,
+            ConfirmedQty = confirmedQty,
+            ConfirmMode = mode,
+            Status = status,
+            CreatedAt = Now,
+        };
+        _allocations.Add(row);
+        return row;
+    }
+
+    private void Output(int workerId, int lineId, int qty) => _outputs.Add(new OutputRecord
+    {
+        WorkDate = Today,
+        ShiftCode = "CA1",
+        SewingTeamId = TeamSewing,
+        WorkerId = workerId,
+        OrderLineId = lineId,
+        OperationId = Op10,
+        Quantity = qty,
+        Status = "SAVED",
     });
 
-    /// <summary>Phiếu thu hồi ADJUSTED đang chờ công nhân xác nhận (DEV-ALL-157).</summary>
-    private void PendingRetrieval(int qty, DateOnly day) => _allocations.Add(new WorkAllocation
+    private OperationAssignment OpenAssignment(int workerId, int operationId)
     {
-        WorkAllocationId = _allocations.Count + 1, WorkDate = day, MovementType = PieceMovementTypes.Retrieval,
-        SewingTeamId = TeamId, WorkerId = WorkerW1, OrderLineId = Line100, OperationId = Op10,
-        Quantity = qty, Status = HandoverStatuses.Pending, ConfirmMode = ConfirmModes.Worker,
-        RetrievalReason = RetrievalReasons.Adjusted, CreatedAt = Now,
-    });
-
-    private void Output(int qty, DateOnly day, int worker = WorkerW1, int line = Line100) =>
-        _outputs.Add(new OutputRecord { WorkDate = day, SewingTeamId = TeamId, WorkerId = worker, OrderLineId = line, OperationId = Op10, Quantity = qty });
-
-    private void CaptureAdds() =>
-        _uow.Repository<WorkAllocation>()
-            .AddAsync(Arg.Do<WorkAllocation>(a =>
-            {
-                if (a.WorkAllocationId == 0) a.WorkAllocationId = _allocations.Count + 1;
-                _allocations.Add(a);
-            }))
-            .Returns(Task.CompletedTask);
-
-    private static SaveDailyAllocationDto Save(int qty, string? reason = null, DateOnly? day = null,
-        int worker = WorkerW1, int line = Line100) =>
-        new(day ?? Today, [new SaveDailyAllocationItem(worker, line, Op10, qty)], reason);
-
-    [Fact]
-    public async Task UTCID470_GetBoardAsync_ComputesRemaining()
-    {
-        // Arrange
-        ConfirmedHandover(20, Today.AddDays(-1));
-        ConfirmedHandover(30, Today);
-        Output(25, Today);
-        ConfirmedHandover(60, Today.AddDays(-10));
-        Output(60, Today.AddDays(-10));
-
-        // Act
-        var result = await Sut().GetBoardAsync(TeamId, Today, OrderId, Line100, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        var row = result.Data!.Rows.Should().ContainSingle().Subject;
-        row.AllocatedQty.Should().Be(30); // DayGiven = DayNet + DayPending − DayPendingRetrieval
-        row.RemainingQty.Should().Be(25);
-        row.UnallocatedQty.Should().Be(50);
-        row.RateApproved.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task UTCID471_GetBoardAsync_NullLineId_AllottedLinesOnly()
-    {
-        // Act
-        var result = await Sut().GetBoardAsync(TeamId, Today, OrderId, null, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Data!.Rows.Select(r => r.OrderLineId).Distinct().Should().BeEquivalentTo([Line100, Line101]);
-        result.Data.Rows.Should().NotContain(r => r.OrderLineId == Line102);
-    }
-
-    [Fact]
-    public async Task UTCID472_GetBoardAsync_NegativeNet_FloorsRemainingToZero()
-    {
-        // Arrange
-        ConfirmedHandover(10, Today);
-        Output(20, Today);
-
-        // Act
-        var result = await Sut().GetBoardAsync(TeamId, Today, OrderId, Line100, default);
-
-        // Assert
-        result.Data!.Rows.Should().ContainSingle().Which.RemainingQty.Should().Be(0);
-    }
-
-    [Fact]
-    public async Task UTCID473_GetBoardAsync_NoAssignment_EmptyRows()
-    {
-        // Arrange
-        _assignments.Clear();
-        _allocations.Clear();
-
-        // Act
-        var result = await Sut().GetBoardAsync(TeamId, Today, OrderId, Line100, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Data!.Rows.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task UTCID474_GetBoardAsync_PastDate_SuccessViewOnly()
-    {
-        // Act
-        var result = await Sut().GetBoardAsync(TeamId, Today.AddDays(-1), OrderId, Line100, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task UTCID475_GetBoardAsync_NullConfirmedQty_SafeRemaining()
-    {
-        // Arrange
-        _allocations.Add(new WorkAllocation
+        var row = new OperationAssignment
         {
-            WorkDate = Today, MovementType = PieceMovementTypes.Handover, SewingTeamId = TeamId,
-            WorkerId = WorkerW1, OrderLineId = Line100, OperationId = Op10, Quantity = 30,
-            ConfirmedQty = null, Status = HandoverStatuses.Confirmed, ConfirmMode = ConfirmModes.Leader,
-        });
-
-        // Act
-        var result = await Sut().GetBoardAsync(TeamId, Today, OrderId, Line100, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Data!.Rows.Should().ContainSingle().Which.RemainingQty.Should().BeGreaterOrEqualTo(0);
+            OperationAssignmentId = _nextAssignmentId++,
+            SewingTeamId = TeamSewing,
+            OrderId = 7,
+            OperationId = operationId,
+            WorkerId = workerId,
+            ValidFrom = Today.AddDays(-7),
+            ValidTo = null,
+            AssignedAt = Now,
+        };
+        _assignments.Add(row);
+        return row;
     }
 
-    [Fact]
-    public async Task UTCID476_GetBoardAsync_UnknownTeam_Fails()
+    private WorkAllocation SingleAdjusted() =>
+        _allocations.Should().ContainSingle(a => a.RetrievalReason == RetrievalReasons.Adjusted).Which;
+
+    private WorkAllocation AdjustedOn(int lineId) =>
+        _allocations.Single(a => a.RetrievalReason == RetrievalReasons.Adjusted && a.OrderLineId == lineId);
+
+    private int ConfirmedRetrievalQty() =>
+        _allocations.Where(a => a.MovementType == PieceMovementTypes.Retrieval && a.Status == HandoverStatuses.Confirmed)
+            .Sum(a => a.ConfirmedQty ?? 0);
+
+    private static void AssertRetrievalConfirmed(WorkAllocation row, int qty)
     {
-        // Act
-        var result = await Sut().GetBoardAsync(999, Today, OrderId, Line100, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task UTCID477_GetBoardAsync_UnknownOrder_FailsOrEmpty()
-    {
-        // Act
-        var result = await Sut().GetBoardAsync(TeamId, Today, 999, Line100, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse("unknown order should be validated as NotFound per business spec");
-    }
-
-    [Fact]
-    public async Task UTCID478_GetBoardAsync_MissingOperationInSort_FailsOrSkips()
-    {
-        // Arrange
-        ConfirmedHandover(10, Today);
-        _operations.Add(new Operation { OperationId = 777, ProductId = 1, OperationCode = "X", StationSequence = 5, Status = RecordStatus.Active, TeamType = TeamTypes.Sewing });
-        _assignments.Add(new OperationAssignment { SewingTeamId = TeamId, OrderId = OrderId, OperationId = 777, WorkerId = WorkerW1 });
-
-        // Act
-        Func<Task> act = async () => await Sut().GetBoardAsync(TeamId, Today, OrderId, Line100, default);
-
-        // Assert
-        await act.Should().NotThrowAsync<KeyNotFoundException>();
-    }
-
-    [Fact]
-    public async Task UTCID479_SaveAsync_GiveMore_CreatesPending_LocksNotifier()
-    {
-        // Arrange
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(30), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Data!.Added.Should().Be(1);
-        result.Message.Should().Be(WarehouseMessages.DailySavedPendingConfirm);
-        var handover = _allocations.Should().ContainSingle().Subject;
-        handover.MovementType.Should().Be(PieceMovementTypes.Handover);
-        handover.Status.Should().Be(HandoverStatuses.Pending);
-        handover.ConfirmMode.Should().Be(ConfirmModes.Worker);
-        await _locks.Received(1).AcquireAsync($"work-allocation:{TeamId}:{Line100}", Arg.Any<CancellationToken>());
-        _notifier.Received(1).NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
-        await _uow.Received().SaveChangesAsync();
-    }
-
-    [Fact]
-    public async Task UTCID480_SaveAsync_LowerPending_First()
-    {
-        // Arrange — chỉ hạ pending → không awaiting, message PieceMovementCreated
-        PendingHandover(30, Today);
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(20, "Đổi việc"), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Data!.Adjusted.Should().Be(1);
-        result.Message.Should().Be(WarehouseMessages.PieceMovementCreated);
-        _allocations.Should().NotContain(a => a.MovementType == PieceMovementTypes.Retrieval);
-        _allocations.Single(a => a.Status == HandoverStatuses.Pending).Quantity.Should().Be(20);
-        _notifier.DidNotReceive().NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
-    }
-
-    [Fact]
-    public async Task UTCID481_SaveAsync_LowerMixedPendingAndConfirmed()
-    {
-        // Arrange — DEV-ALL-157: phần hạ từ confirmed → Retrieval PENDING (WORKER), không Confirmed ngay
-        ConfirmedHandover(20, Today);
-        PendingHandover(10, Today);
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(15, "Điều chuyển"), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Data!.Adjusted.Should().Be(1);
-        result.Message.Should().Be(WarehouseMessages.DailySavedPendingConfirm);
-        var retrieval = _allocations.Should().ContainSingle(a => a.MovementType == PieceMovementTypes.Retrieval).Subject;
-        retrieval.Quantity.Should().Be(5);
-        retrieval.Status.Should().Be(HandoverStatuses.Pending);
-        retrieval.ConfirmMode.Should().Be(ConfirmModes.Worker);
-        retrieval.RetrievalReason.Should().Be(RetrievalReasons.Adjusted);
-        retrieval.ConfirmedQty.Should().BeNull();
-        retrieval.ConfirmedAt.Should().BeNull();
-        _notifier.Received(1).NotifyEmployees(
-            Arg.Is<IEnumerable<int>>(ids => ids.Contains(WorkerW1)), Arg.Any<NotificationMessage>());
-    }
-
-    [Fact]
-    public async Task UTCID482_SaveAsync_GiveExactUnallocated_Success()
-    {
-        // Arrange
-        _progress[0].UnallocatedQty = 50;
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(50), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Data!.Added.Should().Be(1);
-    }
-
-    [Fact]
-    public async Task UTCID483_SaveAsync_OverUnallocated_Fails()
-    {
-        // Arrange
-        _progress[0].UnallocatedQty = 50;
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(51), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be(ErrorCodes.AllocationExceedsRequired);
-    }
-
-    [Fact]
-    public async Task UTCID484_SaveAsync_NoDelta_NoDbWrite()
-    {
-        // Arrange
-        ConfirmedHandover(30, Today);
-
-        // Act
-        var result = await Sut().SaveAsync(Save(30), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Data!.Added.Should().Be(0);
-        result.Data.Adjusted.Should().Be(0);
-        await _uow.DidNotReceive().SaveChangesAsync();
-    }
-
-    [Fact]
-    public async Task UTCID485_SaveAsync_Yesterday_Fails()
-    {
-        // Act
-        var result = await Sut().SaveAsync(Save(10, day: Today.AddDays(-1)), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Message.Should().Be(WarehouseMessages.DailyDateMustBeToday);
-    }
-
-    [Fact]
-    public async Task UTCID486_SaveAsync_Tomorrow_Fails()
-    {
-        // Act
-        var result = await Sut().SaveAsync(Save(10, day: Today.AddDays(1)), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task UTCID487_SaveAsync_EmptyItems_NoLock()
-    {
-        // Act
-        var result = await Sut().SaveAsync(new SaveDailyAllocationDto(Today, [], null), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        await _locks.DidNotReceive().AcquireAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task UTCID488_SaveAsync_ZeroQty_CancelsPendingOnly()
-    {
-        // Arrange
-        PendingHandover(10, Today);
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(0, "x"), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        _allocations.Should().NotContain(a => a.MovementType == PieceMovementTypes.Retrieval);
-    }
-
-    [Fact]
-    public async Task UTCID489_SaveAsync_NegativeQty_FailsValidation()
-    {
-        // Act
-        var result = await Sut().SaveAsync(Save(-1), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Kind.Should().Be(ResultKind.Validation);
-    }
-
-    [Fact]
-    public async Task UTCID490_SaveAsync_DuplicateKeys_Fails()
-    {
-        // Arrange
-        var dto = new SaveDailyAllocationDto(Today, [new SaveDailyAllocationItem(WorkerW1, Line100, Op10, 10), new(WorkerW1, Line100, Op10, 20)], null);
-
-        // Act
-        var result = await Sut().SaveAsync(dto, TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task UTCID491_SaveAsync_LowerWithoutReason_Fails()
-    {
-        // Arrange
-        ConfirmedHandover(30, Today);
-
-        // Act
-        var result = await Sut().SaveAsync(Save(20), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Message.Should().Be(WarehouseMessages.DailyReasonRequired);
-    }
-
-    [Fact]
-    public async Task UTCID492_SaveAsync_LowerConfirmedBeyondRemaining_Fails()
-    {
-        // Arrange
-        ConfirmedHandover(30, Today);
-        Output(25, Today);
-
-        // Act
-        var result = await Sut().SaveAsync(Save(20, "x"), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be(ErrorCodes.PieceRetrievalExceedsHolding);
-    }
-
-    [Fact]
-    public async Task UTCID493_SaveAsync_WorkerNotInTeam_Fails()
-    {
-        // Arrange
-        _employees.Add(new Employee { EmployeeId = 9, TeamId = 5, Status = RecordStatus.Active, Role = new Role { RoleCode = RoleCodes.Worker } });
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(10, worker: 9), TeamId, default);
-
-        // Assert
-        result.ErrorCode.Should().Be(ErrorCodes.WarehouseTeamMismatch);
-    }
-
-    [Fact]
-    public async Task UTCID494_SaveAsync_LineNotAllotted_Fails()
-    {
-        // Act
-        var result = await Sut().SaveAsync(Save(10, line: Line102), TeamId, default);
-
-        // Assert
-        result.ErrorCode.Should().Be(ErrorCodes.AssignmentProductNotAllotted);
-    }
-
-    [Fact]
-    public async Task UTCID495_SaveAsync_OrderClosed_Fails()
-    {
-        // Arrange
-        _orderLines.First(l => l.OrderLineId == Line100).Order.Status = OrderStatuses.Stopped;
-
-        // Act
-        var result = await Sut().SaveAsync(Save(10), TeamId, default);
-
-        // Assert
-        result.ErrorCode.Should().Be(ErrorCodes.WarehouseOrderClosed);
-    }
-
-    [Fact]
-    public async Task UTCID496_SaveAsync_CuttingTeam_Fails()
-    {
-        // Act
-        var result = await Sut().SaveAsync(Save(10), CuttingTeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task UTCID497_SaveAsync_UnknownTeam_Fails()
-    {
-        // Act
-        var result = await Sut().SaveAsync(Save(10), 999, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task UTCID498_SaveAsync_NoApprovedRate_Fails()
-    {
-        // Arrange
-        _ratesData.Clear();
-        _rates.FindEffectiveManyAsync(Arg.Any<IReadOnlyList<int>>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
-            .Returns(new Dictionary<int, EffectivePieceRate>());
-        _rates.FindEffectiveAsync(Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
-            .Returns((EffectivePieceRate?)null);
-
-        // Act
-        var result = await Sut().SaveAsync(Save(10), TeamId, default);
-
-        // Assert
-        result.ErrorCode.Should().Be(ErrorCodes.PieceRateNotApproved);
-    }
-
-    [Fact]
-    public async Task UTCID499_SaveAsync_ZeroQtyWithoutRate_Success()
-    {
-        // Arrange
-        ConfirmedHandover(10, Today);
-        _ratesData.Clear();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(0, "x"), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task UTCID500_SaveAsync_LockTimeout_Fails()
-    {
-        // Arrange
-        _locks.AcquireAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .ThrowsAsync(new TimeoutException("busy"));
-
-        // Act
-        var result = await Sut().SaveAsync(Save(10), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        await _uow.DidNotReceive().SaveChangesAsync();
-    }
-
-    [Fact]
-    public async Task UTCID501_SaveAsync_NotifierThrows_StillCommits()
-    {
-        // Arrange
-        CaptureAdds();
-        _notifier.When(n => n.NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>()))
-            .Do(_ => throw new InvalidOperationException("notify"));
-
-        // Act
-        var result = await Sut().SaveAsync(Save(10), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        await _uow.Received().SaveChangesAsync();
-    }
-
-    // ---------- DEV-ALL-157 (UTCID502–UTCID511) ----------
-
-    [Fact]
-    public async Task UTCID502_GetBoardAsync_DayGivenSubtractsPendingRetrieval()
-    {
-        // Arrange — DayNet=20, DayPending=10, DayPendingRetrieval=5 → DayGiven=25
-        ConfirmedHandover(20, Today);
-        PendingHandover(10, Today);
-        PendingRetrieval(5, Today);
-
-        // Act
-        var result = await Sut().GetBoardAsync(TeamId, Today, OrderId, Line100, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        var row = result.Data!.Rows.Should().ContainSingle().Subject;
-        row.AllocatedQty.Should().Be(25);
-        row.PendingQty.Should().Be(10);
-    }
-
-    [Fact]
-    public async Task UTCID503_GetBoardAsync_RemainingSubtractsPendingRetrieval()
-    {
-        // Arrange — Remaining = max(0, min(30−10, 30−10) − 15) = 5
-        ConfirmedHandover(30, Today);
-        Output(10, Today);
-        PendingRetrieval(15, Today);
-
-        // Act
-        var result = await Sut().GetBoardAsync(TeamId, Today, OrderId, Line100, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Data!.Rows.Should().ContainSingle().Which.RemainingQty.Should().Be(5);
-    }
-
-    [Fact]
-    public async Task UTCID504_SaveAsync_LowerConfirmed_CreatesPendingRetrieval()
-    {
-        // Arrange — 30 CONFIRMED → Qty=10 (hạ 20)
-        ConfirmedHandover(30, Today);
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(10, "Giảm ca"), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Data!.Adjusted.Should().Be(1);
-        result.Message.Should().Be(WarehouseMessages.DailySavedPendingConfirm);
-        var retrieval = _allocations.Should().ContainSingle(a => a.MovementType == PieceMovementTypes.Retrieval).Subject;
-        retrieval.Quantity.Should().Be(20);
-        retrieval.Status.Should().Be(HandoverStatuses.Pending);
-        retrieval.ConfirmMode.Should().Be(ConfirmModes.Worker);
-        retrieval.ConfirmedQty.Should().BeNull();
-        retrieval.ConfirmedAt.Should().BeNull();
-        retrieval.RetrievalReason.Should().Be(RetrievalReasons.Adjusted);
-        _notifier.Received(1).NotifyEmployees(
-            Arg.Is<IEnumerable<int>>(ids => ids.Contains(WorkerW1)), Arg.Any<NotificationMessage>());
-    }
-
-    [Fact]
-    public async Task UTCID505_SaveAsync_AdditionalLower_StacksPendingRetrieval()
-    {
-        // Arrange — DayGiven=20 (30−10), Remaining=8; hạ thêm 5 → Retrieval PENDING 5
-        ConfirmedHandover(30, Today);
-        Output(12, Today);
-        PendingRetrieval(10, Today);
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(15, "Hạ tiếp"), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        _allocations.Where(a => a.MovementType == PieceMovementTypes.Retrieval && a.Status == HandoverStatuses.Pending)
-            .Sum(a => a.Quantity).Should().Be(15);
-        var board = await Sut().GetBoardAsync(TeamId, Today, OrderId, Line100, default);
-        board.Data!.Rows.Single().RemainingQty.Should().Be(3);
-        board.Data.Rows.Single().AllocatedQty.Should().Be(15); // 30 + 0 − 15
-    }
-
-    [Fact]
-    public async Task UTCID506_SaveAsync_LowerWhenRemainingZero_Fails()
-    {
-        // Arrange — DayGiven=20, Remaining=0; Qty=15 cần fromConfirmed=5 > 0
-        ConfirmedHandover(30, Today);
-        Output(20, Today);
-        PendingRetrieval(10, Today);
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(15, "x"), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be(ErrorCodes.PieceRetrievalExceedsHolding);
-        _allocations.Count(a => a.MovementType == PieceMovementTypes.Retrieval).Should().Be(1);
-    }
-
-    [Fact]
-    public async Task UTCID507_SaveAsync_LowerBelowReportedOutput_Fails()
-    {
-        // Arrange — DayNet=30, DayOutput=25; Qty=4 → hạ 26 dưới sản lượng đã báo
-        ConfirmedHandover(30, Today);
-        Output(25, Today);
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(4, "x"), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be(ErrorCodes.PieceRetrievalExceedsHolding);
-        result.Message.Should().Contain(WarehouseMessages.DailyBelowOutput);
-        _allocations.Should().NotContain(a => a.MovementType == PieceMovementTypes.Retrieval);
-    }
-
-    [Fact]
-    public async Task UTCID508_SaveAsync_LowerExactPending_NoRetrieval_NoAwaiting()
-    {
-        // Arrange — DayPending=5, DayNet=20, DayGiven=25; cut=5 (== DayPending)
-        ConfirmedHandover(20, Today);
-        PendingHandover(5, Today);
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(20, "x"), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Message.Should().Be(WarehouseMessages.PieceMovementCreated);
-        _allocations.Should().NotContain(a => a.MovementType == PieceMovementTypes.Retrieval);
-        _notifier.DidNotReceive().NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
-    }
-
-    [Fact]
-    public async Task UTCID509_SaveAsync_LowerPastPending_CreatesPendingRetrieval()
-    {
-        // Arrange — DayPending=5, DayNet=20, DayGiven=25; cut=8 → Withdraw 5 + Retrieval 3
-        ConfirmedHandover(20, Today);
-        PendingHandover(5, Today);
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SaveAsync(Save(17, "x"), TeamId, default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Message.Should().Be(WarehouseMessages.DailySavedPendingConfirm);
-        var retrieval = _allocations.Should().ContainSingle(a => a.MovementType == PieceMovementTypes.Retrieval).Subject;
-        retrieval.Quantity.Should().Be(3);
-        retrieval.Status.Should().Be(HandoverStatuses.Pending);
-        retrieval.ConfirmMode.Should().Be(ConfirmModes.Worker);
-        _notifier.Received(1).NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
-    }
-
-    [Fact]
-    public async Task UTCID510_GetBoardAndSave_PendingRetrieval_NoDoubleCount()
-    {
-        // Arrange — DayNet=30, DayPendingRetrieval=10 → DayGiven=20; Save giữ nguyên
-        ConfirmedHandover(30, Today);
-        PendingRetrieval(10, Today);
-
-        // Act
-        var board = await Sut().GetBoardAsync(TeamId, Today, OrderId, Line100, default);
-        var save = await Sut().SaveAsync(Save(20), TeamId, default);
-
-        // Assert
-        board.Data!.Rows.Single().AllocatedQty.Should().Be(20);
-        save.IsSuccess.Should().BeTrue();
-        save.Data!.Added.Should().Be(0);
-        save.Data.Adjusted.Should().Be(0);
-        await _uow.DidNotReceive().SaveChangesAsync();
-        _allocations.Count(a => a.MovementType == PieceMovementTypes.Retrieval).Should().Be(1);
-    }
-
-    [Fact]
-    public async Task UTCID511_SaveAsync_AfterLower_UnallocatedFreedAllowsGiveMore()
-    {
-        // Arrange — hạ 20 frees Unallocated; view mock +20 rồi giao thêm 51 (vượt 50 cũ)
-        ConfirmedHandover(30, Today);
-        CaptureAdds();
-        var lower = await Sut().SaveAsync(Save(10, "Giảm"), TeamId, default);
-        lower.IsSuccess.Should().BeTrue();
-        _progress[0].UnallocatedQty = 70; // mô phỏng view sau khi hạ (+20)
-
-        // Act
-        var give = await Sut().SaveAsync(Save(61), TeamId, default); // DayGiven≈10 → delta 51
-
-        // Assert
-        give.IsSuccess.Should().BeTrue();
-        give.Data!.Added.Should().Be(1);
-        _allocations.Should().Contain(a =>
-            a.MovementType == PieceMovementTypes.Handover && a.Status == HandoverStatuses.Pending && a.Quantity == 51);
-    }
-
-    /// <summary>DEV-KH-10-3: chuyển tổ — giữ sản lượng đã báo, rút PENDING, thu hồi Remaining CONFIRMED SYSTEM, đóng phân công.</summary>
-    [Fact]
-    public async Task UTCID512_SettleOnTeamLeave_KeepsOutput_RetrievesRemaining_ClosesAssignment()
-    {
-        // Arrange — giao 30 (confirmed) + 10 pending; đã báo 12 → Remaining = 18 sau khi rút pending
-        ConfirmedHandover(30, Today);
-        PendingHandover(10, Today);
-        Output(12, Today);
-        CaptureAdds();
-
-        // Act
-        var result = await Sut().SettleOnTeamLeaveAsync(TeamId, [WorkerW1], default);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        _allocations.Should().Contain(a => a.Status == HandoverStatuses.Rejected && a.MovementType == PieceMovementTypes.Handover);
-        var retrieval = _allocations.Should().ContainSingle(a =>
-            a.MovementType == PieceMovementTypes.Retrieval && a.ConfirmMode == ConfirmModes.System).Subject;
-        retrieval.Quantity.Should().Be(18);
-        retrieval.ConfirmedQty.Should().Be(18);
-        retrieval.Status.Should().Be(HandoverStatuses.Confirmed);
-        retrieval.RetrievalReason.Should().Be(RetrievalReasons.Adjusted);
-        retrieval.RetrievalNote.Should().Be(WarehouseMessages.TeamLeaveRetrieveNote);
-        _assignments.Single().ValidTo.Should().Be(Today);
-        await _locks.Received(1).AcquireAsync($"work-allocation:{TeamId}:{Line100}", Arg.Any<CancellationToken>());
+        row.Status.Should().Be(HandoverStatuses.Confirmed);
+        row.ConfirmMode.Should().Be(ConfirmModes.System);
+        row.ConfirmedQty.Should().Be(qty);
+        row.ConfirmedAt.Should().Be(Now);
+        row.RetrievalNote.Should().Be(WarehouseMessages.TeamLeaveRetrieveNote);
     }
 }

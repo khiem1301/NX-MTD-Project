@@ -35,11 +35,20 @@ public sealed partial class HomeDashboardService
         return (day?.EstimatedPay ?? 0, result.Data.TotalEstimatedPay);
     }
 
-    private Task<HomePayslipDto?> LatestPayslipAsync(int employeeId, CancellationToken ct) =>
-        _uow.Repository<Payslip>().Query().AsNoTracking()
-            .Where(p => p.EmployeeId == employeeId && p.Payroll.Status == PayrollStatus.Approved)
-            .OrderByDescending(p => p.Payroll.Period.PeriodMonth)
-            .Select(p => new HomePayslipDto(p.Payroll.Period.PeriodMonth, p.NetPay)).FirstOrDefaultAsync(ct);
+    private async Task<HomePayslipDto?> LatestPayslipAsync(int employeeId, CancellationToken ct)
+    {
+        try
+        {
+            return await _uow.Repository<Payslip>().Query().AsNoTracking()
+                .Where(p => p.EmployeeId == employeeId && p.Payroll.Status == PayrollStatus.Approved)
+                .OrderByDescending(p => p.Payroll.Period.PeriodMonth)
+                .Select(p => new HomePayslipDto(p.Payroll.Period.PeriodMonth, p.NetPay)).FirstOrDefaultAsync(ct);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 
     /// <summary>Giao việc đang chờ công nhân xác nhận: tổng số và 5 phiếu mới nhất.</summary>
     private async Task<(int Count, IReadOnlyList<HomeItemDto> Items)> AllocationItemsAsync(int workerId, CancellationToken ct)

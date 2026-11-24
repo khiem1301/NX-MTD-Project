@@ -25,8 +25,16 @@ public sealed partial class HomeDashboardService
     /// <summary>Dòng NVL chờ nhận (đơn mua + khách cấp): tổng số dòng và 3 dòng đầu.</summary>
     private async Task<(int Count, IReadOnlyList<HomeItemDto> Items)> IncomingItemsAsync(CancellationToken ct)
     {
-        var result = await _incoming.GetAsync(ct);
-        if (!result.IsSuccess) return (0, []);
+        Result<IncomingMaterialsDto> result;
+        try
+        {
+            result = await _incoming.GetAsync(ct);
+        }
+        catch (Exception)
+        {
+            return (0, []);
+        }
+        if (!result.IsSuccess || result.Data is null) return (0, []);
         var d = result.Data!;
         var items = d.Supplier.Select(s => new HomeItemDto(
                 $"{s.PoCode} · {s.MaterialCode} {s.OutstandingQty:0.##} {s.Unit}", s.SupplierName, "NCC", "blue"))

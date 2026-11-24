@@ -1,6 +1,7 @@
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
+using NX_MTD.Application.Validators;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
@@ -26,8 +27,21 @@ public sealed class TeamService : ITeamService
         _dailyAllocations = dailyAllocations;
     }
 
-    public async Task<Result<IReadOnlyList<TeamListItemDto>>> ListAsync(bool includeDiscontinued, CancellationToken ct) =>
-        Result<IReadOnlyList<TeamListItemDto>>.Success(await _teams.ListAsync(includeDiscontinued, ct));
+    /// <summary>Danh sách tổ (không lọc loại). Lọc theo query <c>type</c> dùng overload <see cref="ListAsync(bool, string?, CancellationToken)"/>.</summary>
+    public async Task<Result<IReadOnlyList<TeamListItemDto>>> ListAsync(bool includeDiscontinued, CancellationToken ct)
+        => Result<IReadOnlyList<TeamListItemDto>>.Success(await LoadTeamsAsync(includeDiscontinued, ct));
+
+    public async Task<Result<IReadOnlyList<TeamListItemDto>>> ListAsync(bool includeDiscontinued, string? type, CancellationToken ct)
+    {
+        var rows = await LoadTeamsAsync(includeDiscontinued, ct);
+        if (string.IsNullOrWhiteSpace(type))
+            return Result<IReadOnlyList<TeamListItemDto>>.Success(rows);
+        var wanted = CanonicalTeamType(type);
+        if (wanted is null)
+            return InvalidList("type", "Loại tổ không hợp lệ.");
+        return Result<IReadOnlyList<TeamListItemDto>>.Success(
+            rows.Where(t => CanonicalTeamType(t.TeamType) == wanted).ToList());
+    }
 
     public async Task<Result<TeamDetailDto>> GetAsync(int teamId, CancellationToken ct)
     {
@@ -39,6 +53,8 @@ public sealed class TeamService : ITeamService
 
     public async Task<Result<int>> CreateAsync(SaveTeamDto dto, CancellationToken ct)
     {
+        var invalid = ValidateTeam(dto);
+        if (invalid is not null) return Fail.As<int>(invalid);
         var duplicate = await CheckDuplicateAsync(dto, null, ct);
         if (duplicate is not null) return Fail.As<int>(duplicate);
         var team = new Team
@@ -58,6 +74,8 @@ public sealed class TeamService : ITeamService
 
     public async Task<Result> UpdateAsync(int teamId, SaveTeamDto dto, CancellationToken ct)
     {
+        var invalid = ValidateTeam(dto);
+        if (invalid is not null) return invalid;
         var team = await _teams.GetByIdAsync(teamId);
         if (team is null) return Fail.NotFound();
         var duplicate = await CheckDuplicateAsync(dto, teamId, ct);
@@ -111,6 +129,8 @@ public sealed class TeamService : ITeamService
     /// </summary>
     public async Task<Result> TransferInAsync(int targetTeamId, TransferMembersDto dto, CancellationToken ct)
     {
+        var idsError = ValidateMemberIds(dto.EmployeeIds);
+        if (idsError is not null) return idsError;
         if (dto.EffectiveDate > _clock.Today)
             return Result.Failure(ErrorCodes.TeamTransferFutureDate, Messages.TeamTransferFutureDate);
         var team = await _teams.GetByIdAsync(targetTeamId);
@@ -158,7 +178,8 @@ public sealed class TeamService : ITeamService
     public async Task<Result> AppointAsync(int teamId, AppointDto dto, CancellationToken ct)
     {
         var team = await _teams.GetByIdAsync(teamId);
-        if (team is null || team.Status != RecordStatus.Active || team.TeamType == TeamTypes.Office)
+        if (team is null) return Fail.NotFound();
+        if (team.Status != RecordStatus.Active || team.TeamType == TeamTypes.Office)
             return Result.Failure(ErrorCodes.TeamLeaderInvalidTeam, Messages.TeamLeaderInvalidTeam);
         var person = await _employees.GetFullAsync(dto.EmployeeId, ct);
         if (person is null || person.TeamId != teamId || person.Status != RecordStatus.Active || !_scope.CanSee(person.Role.RoleCode))
@@ -196,7 +217,8 @@ public sealed class TeamService : ITeamService
         var team = await _teams.GetByIdAsync(teamId);
         if (team is null) return Fail.NotFound();
         var person = await _employees.GetFullAsync(dto.EmployeeId, ct);
-        if (person is null || person.TeamId != teamId || person.Status != RecordStatus.Active || !_scope.CanSee(person.Role.RoleCode))
+        if (person is null) return Fail.NotFound();
+        if (person.TeamId != teamId || person.Status != RecordStatus.Active || !_scope.CanSee(person.Role.RoleCode))
             return Result.Failure(ErrorCodes.TeamMemberNotInTeam, Messages.TeamMemberNotInTeam);
         var oldCode = person.Role.RoleCode;
         if (oldCode is not (RoleCodes.TeamLeader or RoleCodes.TeamDeputy))
@@ -210,12 +232,23 @@ public sealed class TeamService : ITeamService
         return Result.Success(Messages.TeamDismissed);
     }
 
-    public async Task<Result<IReadOnlyList<EmployeeLookupDto>>> CandidatesAsync(CancellationToken ct) =>
-        Result<IReadOnlyList<EmployeeLookupDto>>.Success(await _employees.LookupUnassignedAsync(_scope.HiddenRoleCodes, ct));
+    public async Task<Result<IReadOnlyList<EmployeeLookupDto>>> CandidatesAsync(CancellationToken ct)
+        => Result<IReadOnlyList<EmployeeLookupDto>>.Success(
+            await _employees.LookupUnassignedAsync(_scope.HiddenRoleCodes, ct));
+
+    public async Task<Result<IReadOnlyList<EmployeeLookupDto>>> CandidatesAsync(int teamId, CancellationToken ct)
+    {
+        if (await _teams.GetByIdAsync(teamId) is null)
+            return Fail.NotFound<IReadOnlyList<EmployeeLookupDto>>();
+        return Result<IReadOnlyList<EmployeeLookupDto>>.Success(
+            await _employees.LookupUnassignedAsync(_scope.HiddenRoleCodes, ct));
+    }
 
     /// <summary>Thêm nhân viên chưa thuộc tổ nào vào tổ. Người đang ở tổ khác phải dùng chuyển tổ để có ngày hiệu lực.</summary>
     public async Task<Result> AddMembersAsync(int teamId, TeamMembersDto dto, CancellationToken ct)
     {
+        var idsError = ValidateMemberIds(dto.EmployeeIds);
+        if (idsError is not null) return idsError;
         var team = await _teams.GetByIdAsync(teamId);
         if (team is null) return Fail.NotFound();
         if (team.Status != RecordStatus.Active) return Result.Failure(ErrorCodes.TeamNotActive, Messages.TeamNotActive);
@@ -234,6 +267,8 @@ public sealed class TeamService : ITeamService
     /// <summary>Loại khỏi tổ: TeamId về null, người đó chờ được thêm vào tổ khác. Tổ trưởng / tổ phó phải thôi giữ chức trước.</summary>
     public async Task<Result> RemoveMembersAsync(int teamId, TeamMembersDto dto, CancellationToken ct)
     {
+        var idsError = ValidateMemberIds(dto.EmployeeIds);
+        if (idsError is not null) return idsError;
         var team = await _teams.GetByIdAsync(teamId);
         if (team is null) return Fail.NotFound();
         var people = await _employees.GetActiveByIdsAsync(dto.EmployeeIds.ToList(), ct);
@@ -295,6 +330,47 @@ public sealed class TeamService : ITeamService
         _audit.Add(new AuditEntry(nameof(Employee), e.EmployeeId, AuditActions.Update,
             new { RoleCode = oldCode }, new { RoleCode = newCode }, reason));
     }
+
+    private async Task<List<TeamListItemDto>> LoadTeamsAsync(bool includeDiscontinued, CancellationToken ct)
+    {
+        var rows = await _teams.ListAsync(includeDiscontinued, ct);
+        return rows is null ? [] : rows.ToList();
+    }
+
+    private static string? CanonicalTeamType(string? type)
+    {
+        if (string.IsNullOrWhiteSpace(type)) return null;
+        var match = HrRules.TeamTypeNames.FirstOrDefault(n => n.Equals(type.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (match is not null) return match;
+        var pascal = CodeText.ToPascal(type.Trim());
+        return HrRules.TeamTypeNames.FirstOrDefault(n => n.Equals(pascal, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static Result? ValidateTeam(SaveTeamDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.TeamCode) || dto.TeamCode.Trim().Length > 100)
+            return Invalid("teamCode", string.IsNullOrWhiteSpace(dto.TeamCode) ? Messages.Required("mã tổ") : "Mã tổ tối đa 100 ký tự.");
+        if (CanonicalTeamType(dto.TeamType) is null)
+            return Invalid("teamType", "Loại tổ không hợp lệ.");
+        return null;
+    }
+
+    private static Result? ValidateMemberIds(IReadOnlyList<int>? ids)
+    {
+        if (ids is null || ids.Count == 0)
+            return Invalid("employeeIds", "Danh sách nhân viên không được trống.");
+        if (ids.Distinct().Count() != ids.Count)
+            return Invalid("employeeIds", "Danh sách nhân viên bị trùng.");
+        return null;
+    }
+
+    private static Result Invalid(string field, string message) =>
+        Result.Failure(ErrorCodes.CommonValidation, message, ResultKind.Validation,
+            new Dictionary<string, string[]> { [field] = [message] });
+
+    private static Result<IReadOnlyList<TeamListItemDto>> InvalidList(string field, string message) =>
+        Result<IReadOnlyList<TeamListItemDto>>.Failure(ErrorCodes.CommonValidation, message, ResultKind.Validation,
+            new Dictionary<string, string[]> { [field] = [message] });
 
     private async Task<Result?> CheckDuplicateAsync(SaveTeamDto dto, int? exceptId, CancellationToken ct)
     {

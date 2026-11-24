@@ -36,13 +36,21 @@ public sealed partial class HomeDashboardService : IHomeDashboardService
         _attendance = attendance; _incoming = incoming; _pay = pay; _meals = meals;
     }
 
-    /// <summary>Đơn đang sản xuất / đang giao / giao một phần (không gồm đơn mới chờ NVL).</summary>
-    private static readonly IReadOnlySet<string> RunningStatuses = new HashSet<string>
+    /// <summary>Đơn đang sản xuất / đang giao / giao một phần (không gồm đơn mới chờ NVL). PascalCase, so khớp không phân biệt hoa thường.</summary>
+    private static readonly HashSet<string> RunningStatuses = new(StringComparer.OrdinalIgnoreCase)
     {
         CodeText.ToPascal(OrderStatuses.InProduction),
         CodeText.ToPascal(OrderStatuses.InDelivery),
         CodeText.ToPascal(OrderStatuses.PartiallyDelivered),
     };
+
+    /// <summary>Chấp nhận cả mã DB (IN_PRODUCTION) lẫn PascalCase (InProduction).</summary>
+    private static bool IsRunningStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return false;
+        var normalized = status.Contains('_') ? CodeText.ToPascal(status) : status;
+        return RunningStatuses.Contains(normalized);
+    }
 
     private (string This, string Last) Months()
     {

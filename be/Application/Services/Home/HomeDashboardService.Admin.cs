@@ -18,13 +18,22 @@ public sealed partial class HomeDashboardService
         var (thisMonth, lastMonth) = Months();
         var revenue = new HomeMoneyDto(await RevenueOfAsync(thisMonth, ct), await RevenueOfAsync(lastMonth, ct));
         var cost = new HomeMoneyDto(await CostOfAsync(thisMonth, ct), await CostOfAsync(lastMonth, ct));
-        var running = (await OpenOrdersAsync(ct)).Where(o => RunningStatuses.Contains(o.Status)).ToList();
+        var running = (await OpenOrdersAsync(ct)).Where(o => IsRunningStatus(o.Status)).ToList();
         return Result<AdminHomeDto>.Success(new AdminHomeDto(pieceRates, payrolls, running.Count, revenue, cost, running));
     }
 
-    /// <summary>Doanh thu một tháng, cùng nguồn với màn Doanh thu (vw_MonthlyRevenue).</summary>
-    private async Task<decimal> RevenueOfAsync(string month, CancellationToken ct) =>
-        (await _finance.GetRevenueRowsAsync(month, null, null, ct)).Sum(r => r.Revenue ?? 0);
+    /// <summary>Doanh thu một tháng, cùng nguồn với màn Doanh thu (vw_MonthlyRevenue). Lỗi nguồn thì 0 để trang chủ vẫn mở.</summary>
+    private async Task<decimal> RevenueOfAsync(string month, CancellationToken ct)
+    {
+        try
+        {
+            return (await _finance.GetRevenueRowsAsync(month, null, null, ct)).Sum(r => r.Revenue ?? 0);
+        }
+        catch (Exception)
+        {
+            return 0;
+        }
+    }
 
     /// <summary>Tổng chi phí một tháng như màn Tổng hợp chi phí; null khi tháng đó chưa nhập chi phí.</summary>
     private async Task<decimal?> CostOfAsync(string month, CancellationToken ct)

@@ -19,6 +19,7 @@ public sealed partial class SpecImportService
     public async Task<Result<SpecImportPreviewDto>> CheckAsync(int? productId, int? orderId, SpecWorkbookDto workbook,
         CancellationToken ct, bool replace = false)
     {
+        ArgumentNullException.ThrowIfNull(workbook);
         var start = await CheckStartAsync(productId, orderId, ct);
         if (!start.IsSuccess) return Fail.As<SpecImportPreviewDto>(start);
         var (spec, target) = start.Data!;
@@ -91,14 +92,18 @@ public sealed partial class SpecImportService
         var actions = preview.Components.Select(c => c.Action).Concat(norms.Select(n => n.Action))
             .Concat(groups.Select(g => g.Action)).Concat(markers.Select(m => m.Action)).ToList();
         var errors = actions.Count(a => a == SpecImportBuilder.ActionError);
+        var changes = actions.Count(a => a is SpecImportBuilder.ActionNew or SpecImportBuilder.ActionUpdate) + preview.RemovedCount;
+        var pending = actions.Any(a => a == SpecImportBuilder.ActionPending);
         return preview with
         {
             Norms = norms,
             MarkerGroups = groups,
             OrderMarkers = markers,
-            HasOrderMarkers = workbook.HasOrderMarkers,
+            HasOrderMarkers = workbook.HasOrderMarkers && !string.IsNullOrEmpty(target.ProductCode),
             ValidCount = actions.Count - errors,
             ErrorCount = errors - duplicates,
+            ChangeCount = changes,
+            CanImport = !pending && changes > 0 && preview.CrossErrors.Count == 0,
             Notes = preview.Notes.Where(n => n != Messages.SpecImportMarkersSkipped && n != Messages.SpecImportNoChange).ToList(),
         };
     }

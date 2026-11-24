@@ -144,6 +144,7 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
     /// <inheritdoc />
     public async Task<Result> SettleOnTeamLeaveAsync(int oldTeamId, IReadOnlyList<int> workerIds, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(workerIds);
         if (workerIds.Count == 0) return Result.Success();
 
         var team = await _uow.Repository<Team>().Query().AsNoTracking()

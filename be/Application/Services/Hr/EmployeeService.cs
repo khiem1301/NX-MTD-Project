@@ -57,6 +57,12 @@ public sealed class EmployeeService : IEmployeeService
     /// Chỉ role văn phòng; công nhân / tổ trưởng / tổ phó tạo qua ImportFromRjAsync.</summary>
     public async Task<Result<CreatedEmployeeDto>> CreateAsync(CreateEmployeeDto dto, CancellationToken ct)
     {
+        if (dto is null) throw new ArgumentNullException(nameof(dto));
+        var nameError = InvalidName<CreatedEmployeeDto>(dto.FullName);
+        if (nameError is not null) return nameError;
+        var emailError = await DuplicateEmailAsync<CreatedEmployeeDto>(dto.Email, ct);
+        if (emailError is not null) return emailError;
+
         var code = dto.EmployeeCode.Trim().ToUpperInvariant();
         if (await _employees.CodeExistsAsync(code, ct))
             return Result<CreatedEmployeeDto>.Failure(ErrorCodes.EmployeeCodeDuplicate, Messages.EmployeeCodeDuplicate);
@@ -118,6 +124,8 @@ public sealed class EmployeeService : IEmployeeService
         if (RoleCodes.IsFloorFromRj(roleCode) && !RoleCodes.IsFloorFromRj(employee.Role.RoleCode))
             return Result.Failure(ErrorCodes.EmployeeFloorRoleWebCreateForbidden, Messages.EmployeeFloorRoleWebCreateForbidden,
                 ResultKind.Validation);
+        if (dto.TeamId != employee.TeamId && employee.Role.RoleCode is RoleCodes.TeamLeader or RoleCodes.TeamDeputy)
+            return Result.Failure(ErrorCodes.TeamTransferLeader, string.Format(Messages.TeamTransferLeader, employee.FullName));
         var attChanged = dto.AttendanceCode != employee.AttendanceCode;
         var check = await CheckPlacementAsync(roleCode, dto.TeamId, attChanged ? dto.AttendanceCode : null, employeeId, ct);
         if (!check.IsSuccess) return check;
@@ -142,6 +150,9 @@ public sealed class EmployeeService : IEmployeeService
     {
         var employee = await _employees.GetFullAsync(employeeId, ct);
         if (employee is null || !_scope.CanSee(employee.Role.RoleCode)) return Fail.NotFound();
+        if (_user.Role == Roles.Manager && _user.TeamId is int scopeTeam
+            && employee.TeamId is int currentTeam && currentTeam != scopeTeam)
+            return Fail.NotFound();
         if (employee.Status != RecordStatus.Active) return Result.Failure(ErrorCodes.EmployeeNotActive, Messages.EmployeeNotActive);
 
         // GBR-01: Quản đốc không được gán vai trò Admin / Quản đốc / Kế toán (cũng là những vai trò anh ta không nhìn thấy).
@@ -186,19 +197,35 @@ public sealed class EmployeeService : IEmployeeService
                 new Dictionary<string, string[]> { ["resignDate"] = new[] { "Ngày nghỉ không được trước ngày vào làm." } });
 
         _employees.SetOriginalRowVersion(employee, dto.RowVer);
-        employee.Status = RecordStatus.Resigned;
-        employee.ResignDate = dto.ResignDate;
-        employee.UpdatedAt = _clock.Now;
-        RotateStamp(employee);
-        _audit.Add(new AuditEntry(nameof(Employee), employeeId, AuditActions.Update, new { Status = RecordStatus.Active },
-            new { Status = RecordStatus.Resigned, ResignDate = dto.ResignDate }, dto.Reason.Trim()));
-        await _uow.SaveChangesAsync();
 
-        var wasLeader = employee.Role.RoleCode is RoleCodes.TeamLeader or RoleCodes.TeamDeputy;
-        var message = wasLeader
-            ? string.Format(Messages.ResignedWasLeader, employee.Team?.TeamCode, employee.Role.RoleCode == RoleCodes.TeamLeader ? "tổ trưởng" : "tổ phó")
-            : Messages.EmployeeResigned;
-        return Result.Success(message);
+        async Task<Result> Apply()
+        {
+            if (employee.TeamId is int fromTeam)
+            {
+                var settle = await _dailyAllocations.SettleOnTeamLeaveAsync(fromTeam, [employee.EmployeeId], ct);
+                if (!settle.IsSuccess) return settle;
+                employee.TeamId = null;
+            }
+
+            var wasLeader = employee.Role.RoleCode is RoleCodes.TeamLeader or RoleCodes.TeamDeputy;
+            var teamCode = employee.Team?.TeamCode;
+            var leaderLabel = employee.Role.RoleCode == RoleCodes.TeamLeader ? "tổ trưởng" : "tổ phó";
+            employee.Status = RecordStatus.Resigned;
+            employee.ResignDate = dto.ResignDate;
+            employee.UpdatedAt = _clock.Now;
+            RotateStamp(employee);
+            _audit.Add(new AuditEntry(nameof(Employee), employeeId, AuditActions.Update, new { Status = RecordStatus.Active },
+                new { Status = RecordStatus.Resigned, ResignDate = dto.ResignDate }, dto.Reason.Trim()));
+            await _uow.SaveChangesAsync();
+            var message = wasLeader
+                ? string.Format(Messages.ResignedWasLeader, teamCode, leaderLabel)
+                : Messages.EmployeeResigned;
+            return Result.Success(message);
+        }
+
+        if (employee.TeamId is not null)
+            return await _uow.InTransactionAsync(Apply);
+        return await Apply();
     }
 
     private async Task<Result<CreatedEmployeeDto>> CreateWithAccountAsync(
@@ -281,10 +308,39 @@ public sealed class EmployeeService : IEmployeeService
                 var holder = await _employees.FindTeamRoleHolderAsync(tid, roleCode, exceptEmployeeId, ct);
                 if (holder is not null) return PositionTaken(roleCode, team.TeamCode, holder.FullName);
             }
+            else if (!RoleFitsTeam(roleCode, team.TeamType))
+                return Result.Failure(ErrorCodes.CommonValidation, Messages.EmployeeTeamTypeMismatch, ResultKind.Validation);
         }
         if (attendanceCode is int att && await _employees.AttendanceCodeTakenAsync(att, exceptEmployeeId, ct))
             return Result.Failure(ErrorCodes.EmployeeAttendanceCodeTaken, string.Format(Messages.EmployeeAttendanceCodeTaken, att));
         return Result.Success();
+    }
+
+    /// <summary>Công nhân không vào tổ văn phòng. Kế toán không vào tổ may. Vai trò văn phòng khác vẫn gắn được tổ sản xuất.</summary>
+    private static bool RoleFitsTeam(string roleCode, string teamType) =>
+        roleCode switch
+        {
+            RoleCodes.Worker when teamType == TeamTypes.Office => false,
+            RoleCodes.Accountant when teamType == TeamTypes.Sewing => false,
+            _ => true,
+        };
+
+    private async Task<Result<T>?> DuplicateEmailAsync<T>(string? email, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return null;
+        if (!await _accounts.EmailExistsAsync(email, ct)) return null;
+        return Result<T>.Failure(ErrorCodes.CommonDuplicate, Messages.EmployeeEmailDuplicate);
+    }
+
+    private static Result<T>? InvalidName<T>(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            return Result<T>.Failure(ErrorCodes.CommonValidation, Messages.Required("họ tên"), ResultKind.Validation,
+                new Dictionary<string, string[]> { ["fullName"] = [Messages.Required("họ tên")] });
+        if (fullName.Trim().Length > 100)
+            return Result<T>.Failure(ErrorCodes.CommonValidation, "Họ tên tối đa 100 ký tự.", ResultKind.Validation,
+                new Dictionary<string, string[]> { ["fullName"] = ["Họ tên tối đa 100 ký tự."] });
+        return null;
     }
 
     private static Result PositionTaken(string roleCode, string teamCode, string holderName) =>
