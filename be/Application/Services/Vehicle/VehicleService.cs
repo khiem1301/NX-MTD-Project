@@ -231,6 +231,11 @@ public sealed class VehicleService : IVehicleService
                 new Dictionary<string, string[]> { ["odometerEnd"] = [message] });
         }
 
+        // DEV-ALL-173: có tiền xăng thì bắt buộc có ảnh hóa đơn xăng (ảnh đính kèm vào chuyến đang chạy trước khi bấm Lưu).
+        if (dto.FuelCost is not null && !await HasFuelReceiptAsync(tripId, ct))
+            return Result<VehicleTripDto>.Failure(ErrorCodes.VehicleTripInvalid, WarehouseMessages.FuelReceiptRequired, ResultKind.Validation,
+                new Dictionary<string, string[]> { ["fuelCost"] = [WarehouseMessages.FuelReceiptRequired] });
+
         trip.OdometerEnd = dto.OdometerEnd;
         trip.FuelLiters = dto.FuelLiters;
         trip.FuelCost = dto.FuelCost;
@@ -248,6 +253,10 @@ public sealed class VehicleService : IVehicleService
     }
 
     // ---------- Nội bộ ----------
+
+    private Task<bool> HasFuelReceiptAsync(int tripId, CancellationToken ct) =>
+        _uow.Repository<Attachment>().Query().AsNoTracking().AnyAsync(a => a.OwnerType == AttachmentOwnerTypes.VehicleTrip
+            && a.OwnerId == tripId && a.Purpose == AttachmentPurposes.FuelReceipt && a.IsCurrent, ct);
 
     /// <summary>Km cuối của chuyến đã hoàn thành gần nhất (theo km lớn nhất).</summary>
     private async Task<int?> LastOdometerAsync(int vehicleId, CancellationToken ct) =>

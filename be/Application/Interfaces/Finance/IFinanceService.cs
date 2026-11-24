@@ -18,9 +18,12 @@ public interface IFinanceService
 
     // ---------- Hòa vốn + giá trị thặng dư (UC11) — CHỈ Admin ----------
 
-    /// <summary>Chạy một lần tính mới cho một tháng theo cách phân bổ Admin chọn; chặn nếu bảng lương
+    /// <summary>Chạy một lần tính mới cho một tháng, cả hai cách chia định phí (DEV-ALL-171); chặn nếu bảng lương
     /// tháng chưa duyệt hoặc chi phí tháng chưa nhập (MSG25/GBR-17).</summary>
     Task<Result<BreakEvenCalculationResultDto>> CalculateAsync(BreakEvenCalculateDto dto, CancellationToken ct);
+
+    /// <summary>DEV-ALL-171: kiểm tra dữ liệu đầu vào của tháng (popup Tính hòa vốn).</summary>
+    Task<Result<BreakEvenInputsDto>> GetBreakEvenInputsAsync(string periodMonth, CancellationToken ct);
 
     /// <summary>Xem kết quả đã tính của một tháng; history=false (mặc định) chỉ lấy lần tính gần nhất.</summary>
     Task<Result<BreakEvenListResultDto>> GetBreakEvenAsync(

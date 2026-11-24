@@ -28,6 +28,7 @@ public class VehicleServiceTests
     private readonly List<Vehicle> _vehicles = new();
     private readonly List<VehicleTrip> _trips = new();
     private readonly List<DispatchNote> _notes = new();
+    private readonly List<Attachment> _attachments = new();
     private readonly Vehicle _truck = new() { VehicleId = 1, PlateNumber = "29C-12345", VehicleType = "Xe tải", FuelNormPer100Km = 12m, Status = RecordStatus.Active };
 
     public VehicleServiceTests()
@@ -37,7 +38,7 @@ public class VehicleServiceTests
         _settings.GetDecimalAsync(SettingKeys.FuelNormTolerancePercent, Arg.Any<decimal>(), Arg.Any<CancellationToken>()).Returns(15m);
         _locks.AcquireAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
         _vehicles.Add(_truck);
-        Setup(_vehicles); Setup(_trips); Setup(_notes);
+        Setup(_vehicles); Setup(_trips); Setup(_notes); Setup(_attachments);
     }
 
     private void Setup<T>(List<T> backing) where T : class
@@ -46,6 +47,12 @@ public class VehicleServiceTests
         repo.Query().Returns(_ => backing.AsTestAsyncQueryable());
         _uow.Repository<T>().Returns(repo);
     }
+
+    /// <summary>Gắn một ảnh hóa đơn xăng đang hiệu lực vào chuyến (DEV-ALL-173).</summary>
+    private void AddFuelReceipt(VehicleTrip trip) => _attachments.Add(new Attachment
+    {
+        OwnerType = AttachmentOwnerTypes.VehicleTrip, OwnerId = trip.VehicleTripId, Purpose = AttachmentPurposes.FuelReceipt, IsCurrent = true,
+    });
 
     private VehicleService Service() => new(_uow, _settings, _audit, _clock, _locks);
 
@@ -556,6 +563,7 @@ public class VehicleServiceTests
     public async Task Fuel_within_the_norm_plus_tolerance_gives_no_warning()
     {
         var trip = Trip(TripStatuses.Started, 1000, null);
+        AddFuelReceipt(trip);
 
         // Định mức 12 l/100 km × 200 km = 24 lít; ngưỡng cảnh báo = 24 × 1,15 = 27,6 lít
         var result = await Service().CompleteTripAsync(trip.VehicleTripId, new CompleteVehicleTripDto(1200, 27.6m, 600000), default);
@@ -571,6 +579,7 @@ public class VehicleServiceTests
     public async Task Fuel_above_the_norm_plus_tolerance_is_saved_with_the_msg30_warning()
     {
         var trip = Trip(TripStatuses.Started, 1000, null);
+        AddFuelReceipt(trip);
 
         var result = await Service().CompleteTripAsync(trip.VehicleTripId, new CompleteVehicleTripDto(1200, 27.7m, 650000), default);
 
@@ -616,6 +625,35 @@ public class VehicleServiceTests
         (await Service().CompleteTripAsync(trip.VehicleTripId, new CompleteVehicleTripDto(1100, 5, null), default)).IsSuccess.Should().BeTrue();
         (await Service().CompleteTripAsync(trip.VehicleTripId, new CompleteVehicleTripDto(1200, 5, null), default))
             .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
+    }
+
+    // ---------- Tiền xăng bắt buộc có ảnh hóa đơn (DEV-ALL-173) ----------
+
+    [Fact]
+    public async Task Fuel_cost_without_a_receipt_photo_is_rejected_and_the_trip_stays_open()
+    {
+        var trip = Trip(TripStatuses.Started, 1000, null);
+
+        var result = await Service().CompleteTripAsync(trip.VehicleTripId, new CompleteVehicleTripDto(1200, null, 100000), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.VehicleTripInvalid);
+        result.Kind.Should().Be(ResultKind.Validation);
+        result.Errors!["fuelCost"].Single().Should().Be(WarehouseMessages.FuelReceiptRequired);
+        trip.Status.Should().Be(TripStatuses.Started);
+    }
+
+    [Fact]
+    public async Task A_removed_or_other_purpose_photo_does_not_count_as_a_fuel_receipt()
+    {
+        var trip = Trip(TripStatuses.Started, 1000, null);
+        _attachments.Add(new Attachment { OwnerType = AttachmentOwnerTypes.VehicleTrip, OwnerId = trip.VehicleTripId, Purpose = AttachmentPurposes.FuelReceipt, IsCurrent = false });
+        _attachments.Add(new Attachment { OwnerType = AttachmentOwnerTypes.VehicleTrip, OwnerId = trip.VehicleTripId, Purpose = AttachmentPurposes.Photo, IsCurrent = true });
+
+        (await Service().CompleteTripAsync(trip.VehicleTripId, new CompleteVehicleTripDto(1200, null, 100000), default))
+            .ErrorCode.Should().Be(ErrorCodes.VehicleTripInvalid);
+
+        AddFuelReceipt(trip);
+        (await Service().CompleteTripAsync(trip.VehicleTripId, new CompleteVehicleTripDto(1200, null, 100000), default)).IsSuccess.Should().BeTrue();
     }
 
     // ---------- Danh sách, quyền ảnh, validator ----------

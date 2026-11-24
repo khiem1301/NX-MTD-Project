@@ -3,7 +3,7 @@ import { message } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import type { ApiError } from '@/types/api';
 import { breakEvenApi } from '../api/breakEvenApi';
-import type { AllocationBasis, BreakEvenCalculationResult, BreakEvenFilter } from '../types';
+import type { BreakEvenCalculationResult, BreakEvenFilter } from '../types';
 
 export const BREAK_EVEN_KEY = ['break-even'] as const;
 const listKey = (filter: BreakEvenFilter) => [...BREAK_EVEN_KEY, filter] as const;
@@ -17,10 +17,18 @@ export const useBreakEven = (filter: BreakEvenFilter) =>
     throwOnError: false,
   });
 
+/** Dữ liệu đầu vào của tháng; chỉ gọi khi popup "Tính hòa vốn" đang mở. */
+export const useBreakEvenInputs = (periodMonth: string, enabled: boolean) =>
+  useQuery({
+    queryKey: [...BREAK_EVEN_KEY, 'inputs', periodMonth],
+    queryFn: () => breakEvenApi.inputs(periodMonth),
+    enabled,
+  });
+
 export const useCalculateBreakEven = (periodMonth: string) => {
   const queryClient = useQueryClient();
-  return useMutation<BreakEvenCalculationResult, ApiError, AllocationBasis>({
-    mutationFn: (allocationBasis) => breakEvenApi.calculate(periodMonth, allocationBasis),
+  return useMutation<BreakEvenCalculationResult, ApiError, void>({
+    mutationFn: () => breakEvenApi.calculate(periodMonth),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: BREAK_EVEN_KEY });
       void message.success(MESSAGES.breakEven.calculated);

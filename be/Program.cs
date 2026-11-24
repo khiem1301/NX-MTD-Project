@@ -29,6 +29,7 @@ builder.Services.AddCostSummaryModule(builder.Configuration);     // Minh (MI-19
 builder.Services.AddAccountingReportModule(builder.Configuration);    // Minh (MI-19, UC36)
 builder.Services.AddPurchaseModule(builder.Configuration);        // Minh (MI-07, UC14/UC23/UC34)
 builder.Services.AddProductionModule(builder.Configuration);      // Minh làm hộ Kiều (KI-01…KI-11)
+builder.Services.AddHomeModule();                                 // Trang chủ theo vai trò (DEV-ALL-170), sau các module trên
 
 var app = builder.Build();
 

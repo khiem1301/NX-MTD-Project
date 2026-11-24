@@ -27,6 +27,5 @@ public sealed class BreakEvenCalculateDtoValidator : AbstractValidator<BreakEven
     public BreakEvenCalculateDtoValidator()
     {
         RuleFor(x => x.PeriodMonth).NotEmpty().WithMessage(Messages.BreakEvenPeriodMonthInvalid);
-        RuleFor(x => x.AllocationBasis).NotEmpty().WithMessage(Messages.BreakEvenInvalidAllocationBasis);
     }
 }

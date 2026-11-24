@@ -1,121 +1,141 @@
-import { Alert, Button, Space, Switch, Tag, Tooltip, Typography } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { useState } from 'react';
+import { Button, Space, Switch, Tag, Tooltip, Typography, type TableColumnsType } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
-import { formatDateTime, formatCurrency } from '@/utils/format';
+import { DataTable } from '@/components/common/DataTable';
+import { formatCurrency, formatDateTime, formatQty } from '@/utils/format';
 import { BREAK_EVEN_TEXT, RISK_LABEL } from '../constants';
 import { useExportBreakEven } from '../hooks/useBreakEven';
-import type { BreakEvenFilter, BreakEvenResultItem } from '../types';
-import { DataTable } from '@/components/common/DataTable';
+import type { BreakEvenFilter, BreakEvenResultItem, BreakEvenRow } from '../types';
+import { BreakEvenDetailModal } from './BreakEvenDetailModal';
 
-type Props = {
-  items: BreakEvenResultItem[];
-  filter: BreakEvenFilter;
-  onFilterChange: (filter: BreakEvenFilter) => void;
+const T = BREAK_EVEN_TEXT.table;
+const EMPTY = '—';
+
+const surplus = (v: number | undefined) =>
+  v === undefined ? (
+    EMPTY
+  ) : (
+    <Typography.Text type={v < 0 ? 'danger' : 'success'}>{formatCurrency(v)}</Typography.Text>
+  );
+
+/** Bốn cột của một cách chia định phí, gom dưới một tiêu đề nhóm. */
+const basisColumns = (
+  title: string,
+  pick: (r: BreakEvenRow) => BreakEvenResultItem | null,
+): TableColumnsType<BreakEvenRow>[number] => ({
+  title,
+  children: [
+    {
+      title: T.allocatedFixedCost,
+      key: `${title}-fixed`,
+      align: 'right',
+      render: (_, r) => (pick(r) ? formatCurrency(pick(r)!.allocatedFixedCost) : EMPTY),
+    },
+    {
+      title: T.breakEvenQty,
+      key: `${title}-qty`,
+      align: 'right',
+      render: (_, r) => {
+        const v = pick(r)?.breakEvenQty;
+        return v === null || v === undefined ? EMPTY : formatQty(v);
+      },
+    },
+    {
+      title: T.percentReached,
+      key: `${title}-pct`,
+      align: 'right',
+      render: (_, r) => {
+        const v = pick(r)?.percentReached;
+        return v === null || v === undefined ? EMPTY : `${v}%`;
+      },
+    },
+    {
+      title: T.surplusValue,
+      key: `${title}-surplus`,
+      align: 'right',
+      render: (_, r) => surplus(pick(r)?.surplusValue),
+    },
+  ],
+});
+
+/** Nhãn rủi ro: lỗ theo cách nào (hoặc cả hai). */
+const riskTag = (r: BreakEvenRow) => {
+  const output = r.output?.isAtRisk ?? false;
+  const labour = r.labour?.isAtRisk ?? false;
+  if (!output && !labour) return <Tag color={RISK_LABEL.safe.color}>{RISK_LABEL.safe.text}</Tag>;
+  const which =
+    output && labour
+      ? ''
+      : ` (${output ? BREAK_EVEN_TEXT.basis.Output : BREAK_EVEN_TEXT.basis.LabourHours})`.toLowerCase();
+  const warning = (r.output?.atRiskWarning ?? r.labour?.atRiskWarning) || undefined;
+  return (
+    <Tooltip title={warning}>
+      <Tag color={RISK_LABEL.atRisk.color}>{`${RISK_LABEL.atRisk.text}${which}`}</Tag>
+    </Tooltip>
+  );
 };
 
-const columns: ColumnsType<BreakEvenResultItem> = [
-  {
-    title: BREAK_EVEN_TEXT.table.product,
-    key: 'product',
-    render: (_, row) => `${row.productCode}`,
-  },
-  { title: BREAK_EVEN_TEXT.table.allocationBasis, dataIndex: 'allocationBasis' },
-  { title: BREAK_EVEN_TEXT.table.finishedQty, dataIndex: 'finishedQty', align: 'right' },
-  {
-    title: BREAK_EVEN_TEXT.table.cmtUnitPrice,
-    dataIndex: 'cmtUnitPrice',
-    align: 'right',
-    render: (v: number) => formatCurrency(v),
-  },
-  {
-    title: BREAK_EVEN_TEXT.table.revenue,
-    dataIndex: 'revenue',
-    align: 'right',
-    render: (v: number) => formatCurrency(v),
-  },
-  {
-    title: BREAK_EVEN_TEXT.table.variableCost,
-    dataIndex: 'variableCost',
-    align: 'right',
-    render: (v: number) => formatCurrency(v),
-  },
-  {
-    title: BREAK_EVEN_TEXT.table.allocatedFixedCost,
-    dataIndex: 'allocatedFixedCost',
-    align: 'right',
-    render: (v: number) => formatCurrency(v),
-  },
-  {
-    title: BREAK_EVEN_TEXT.table.breakEvenQty,
-    dataIndex: 'breakEvenQty',
-    align: 'right',
-    render: (v: number | null) => (v === null ? '—' : v),
-  },
-  {
-    title: BREAK_EVEN_TEXT.table.percentReached,
-    dataIndex: 'percentReached',
-    align: 'right',
-    render: (v: number | null) => (v === null ? '—' : `${v}%`),
-  },
-  {
-    title: BREAK_EVEN_TEXT.table.surplusValue,
-    dataIndex: 'surplusValue',
-    align: 'right',
-    render: (v: number) => (
-      <Typography.Text type={v < 0 ? 'danger' : 'success'}>{formatCurrency(v)}</Typography.Text>
-    ),
-  },
-  {
-    title: BREAK_EVEN_TEXT.table.risk,
-    key: 'risk',
-    render: (_, row) => {
-      const label = row.isAtRisk ? RISK_LABEL.atRisk : RISK_LABEL.safe;
-      const tag = <Tag color={label.color}>{label.text}</Tag>;
-      return row.atRiskWarning ? <Tooltip title={row.atRiskWarning}>{tag}</Tooltip> : tag;
-    },
-  },
-  {
-    title: BREAK_EVEN_TEXT.table.calculatedAt,
-    dataIndex: 'calculatedAt',
-    render: (v: string) => formatDateTime(v),
-  },
-];
-
-/** UC11 — kết quả hòa vốn: lần gần nhất hoặc toàn bộ lịch sử, xuất Excel theo đúng bộ lọc đang xem. */
-export function BreakEvenResultTable({ items, filter, onFilterChange }: Props) {
-  const exportBreakEven = useExportBreakEven();
-  const atRiskWarnings = items.filter((i) => i.atRiskWarning).map((i) => i.atRiskWarning!);
+/** Kết quả hòa vốn: mỗi mã hàng một dòng, hai nhóm cột theo sản lượng / theo giờ công; bấm dòng mở chi tiết. */
+export function BreakEvenResultTable({
+  rows,
+  filter,
+  onFilterChange,
+}: {
+  rows: BreakEvenRow[];
+  filter: BreakEvenFilter;
+  onFilterChange: (filter: BreakEvenFilter) => void;
+}) {
+  const exportExcel = useExportBreakEven();
+  const [viewing, setViewing] = useState<BreakEvenRow | null>(null);
+  const columns: TableColumnsType<BreakEvenRow> = [
+    ...(filter.history
+      ? [
+          {
+            title: T.calculatedAt,
+            dataIndex: 'calculatedAt',
+            render: (v: string) => formatDateTime(v),
+          },
+        ]
+      : []),
+    { title: T.product, dataIndex: 'productCode', fixed: 'left' },
+    { title: T.finishedQty, dataIndex: 'finishedQty', align: 'right', render: formatQty },
+    { title: T.cmtUnitPrice, dataIndex: 'cmtUnitPrice', align: 'right', render: formatCurrency },
+    { title: T.revenue, dataIndex: 'revenue', align: 'right', render: formatCurrency },
+    { title: T.variableCost, dataIndex: 'variableCost', align: 'right', render: formatCurrency },
+    basisColumns(BREAK_EVEN_TEXT.basis.Output, (r) => r.output),
+    basisColumns(BREAK_EVEN_TEXT.basis.LabourHours, (r) => r.labour),
+    { title: T.risk, key: 'risk', render: (_, r) => riskTag(r) },
+  ];
 
   return (
     <Space direction="vertical" size={12} style={{ width: '100%' }}>
-      <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
+      <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
         <Space>
-          <span>{BREAK_EVEN_TEXT.viewHistory}</span>
           <Switch
             checked={filter.history ?? false}
             onChange={(history) => onFilterChange({ ...filter, history })}
           />
+          <Typography.Text>{BREAK_EVEN_TEXT.viewHistory}</Typography.Text>
         </Space>
         <Button
           icon={<DownloadOutlined />}
-          loading={exportBreakEven.isPending}
-          onClick={() => exportBreakEven.mutate(filter)}
+          loading={exportExcel.isPending}
+          onClick={() => exportExcel.mutate(filter)}
         >
           {BREAK_EVEN_TEXT.export}
         </Button>
       </Space>
-
-      {atRiskWarnings.length > 0 ? (
-        <Alert type="warning" showIcon message={atRiskWarnings.join(' ')} />
-      ) : null}
-
-      <DataTable<BreakEvenResultItem>
-        rowKey="breakEvenResultId"
+      <DataTable<BreakEvenRow>
+        rowKey="key"
         size="small"
+        bordered
         columns={columns}
-        dataSource={items}
+        dataSource={rows}
+        pagination={false}
         scroll={{ x: 'max-content' }}
+        onRow={(r) => ({ onClick: () => setViewing(r), style: { cursor: 'pointer' } })}
       />
+      <BreakEvenDetailModal row={viewing} onClose={() => setViewing(null)} />
     </Space>
   );
 }

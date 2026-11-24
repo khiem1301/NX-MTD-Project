@@ -110,11 +110,6 @@ public sealed class FinanceService : IFinanceService
             return Result<BreakEvenCalculationResultDto>.Failure(ErrorCodes.BreakEvenPeriodMonthInvalid,
                 Messages.BreakEvenPeriodMonthInvalid, ResultKind.Validation);
 
-        var allocationBasis = ToRawAllocationBasis(dto.AllocationBasis);
-        if (allocationBasis is null)
-            return Result<BreakEvenCalculationResultDto>.Failure(ErrorCodes.BreakEvenInvalidAllocationBasis,
-                Messages.BreakEvenInvalidAllocationBasis, ResultKind.Validation);
-
         var period = await FindReadyPeriodAsync(dto.PeriodMonth, ct);
         if (period is null)
             return Result<BreakEvenCalculationResultDto>.Failure(ErrorCodes.BreakEvenNotReady,
@@ -127,34 +122,58 @@ public sealed class FinanceService : IFinanceService
             return Result<BreakEvenCalculationResultDto>.Failure(ErrorCodes.BreakEvenNoOutput,
                 Messages.BreakEvenNoOutput);
 
-        var (entities, warningsByProductId, products, calculatedAt) =
-            await BuildEntitiesAsync(period, allocationBasis, revenueRows, ct);
-        await SaveResultsAsync(period, dto.PeriodMonth, allocationBasis, entities, calculatedAt, ct);
+        var (entities, warnings, products, calculatedAt, totalFixedCost) = await BuildEntitiesAsync(period, revenueRows, ct);
+        await SaveResultsAsync(period, dto.PeriodMonth, entities, calculatedAt, ct);
 
-        var items = entities.Select(e => ToDto(e, dto.PeriodMonth, products, warningsByProductId)).ToList();
-        var warnings = items.Where(i => i.AtRiskWarning is not null).Select(i => i.AtRiskWarning!).ToList();
+        var items = entities.Select(e => ToDto(e, dto.PeriodMonth, products, warnings, totalFixedCost)).ToList();
+        var atRisk = items.Where(i => i.AtRiskWarning is not null).Select(i => i.AtRiskWarning!).Distinct().ToList();
 
-        _logger.LogInformation(
-            "Tính hòa vốn tháng {PeriodMonth} ({AllocationBasis}): {Count} mã hàng, {AtRisk} nguy cơ lỗ",
-            dto.PeriodMonth, allocationBasis, items.Count, warnings.Count);
+        _logger.LogInformation("Tính hòa vốn tháng {PeriodMonth}: {Count} mã hàng × 2 cách, {AtRisk} cảnh báo",
+            dto.PeriodMonth, items.Count / AllocationBasis.All.Length, atRisk.Count);
 
         return Result<BreakEvenCalculationResultDto>.Success(
-            new BreakEvenCalculationResultDto(period.PeriodId, dto.PeriodMonth, CodeText.ToPascal(allocationBasis),
-                calculatedAt, items, warnings),
+            new BreakEvenCalculationResultDto(period.PeriodId, dto.PeriodMonth, calculatedAt, items, atRisk),
             string.Format(Messages.BreakEvenCalculated, dto.PeriodMonth));
     }
 
+    /// <summary>DEV-ALL-171: dữ liệu đầu vào của tháng cho popup "Tính hòa vốn" (chỉ đọc).</summary>
+    public async Task<Result<BreakEvenInputsDto>> GetBreakEvenInputsAsync(string periodMonth, CancellationToken ct)
+    {
+        if (!IsValidMonth(periodMonth))
+            return Result<BreakEvenInputsDto>.Failure(ErrorCodes.BreakEvenPeriodMonthInvalid,
+                Messages.BreakEvenPeriodMonthInvalid, ResultKind.Validation);
+
+        var period = await _repo.FindPeriodByMonthAsync(periodMonth, ct);
+        var revenueRows = await _repo.GetRevenueRowsAsync(periodMonth, null, null, ct);
+        var productCount = revenueRows.Select(r => r.ProductId).Distinct().Count();
+        var finishedQty = revenueRows.Sum(r => r.FinishedQty ?? 0);
+        var revenue = revenueRows.Sum(r => r.Revenue ?? 0m);
+        if (period is null)
+            return Result<BreakEvenInputsDto>.Success(
+                new BreakEvenInputsDto(false, false, false, false, 0, 0, 0, productCount, finishedQty, revenue, 0, false));
+
+        var payrollApproved = await _repo.IsPayrollApprovedAsync(period.PeriodId, ct);
+        var costs = await _repo.GetMonthlyCostsAsync(period.PeriodId, ct);
+        var fixedTotal = costs.Where(c => c.CostType == MonthlyCostType.Fixed).Sum(c => c.Amount);
+        var variable = costs.Where(c => c.CostType == MonthlyCostType.Variable).ToList();
+        var labourHours = (await ComputeLaborHoursByProductAsync(period, ct)).Values.Sum();
+        var canCalculate = payrollApproved && costs.Count > 0 && productCount > 0;
+        return Result<BreakEvenInputsDto>.Success(new BreakEvenInputsDto(true, period.Status == RecordStatus.Locked, payrollApproved, costs.Count > 0, fixedTotal,
+            variable.Sum(c => c.Amount), variable.Where(c => c.ProductId.HasValue).Select(c => c.ProductId).Distinct().Count(),
+            productCount, finishedQty, revenue, Math.Round(labourHours, 1, MidpointRounding.AwayFromZero), canCalculate));
+    }
+
     /// <summary>Lưu kết quả hòa vốn kèm AuditLog.</summary>
-    private async Task SaveResultsAsync(AccountingPeriod period, string periodMonth, string allocationBasis,
-        List<BreakEvenResult> entities, DateTime calculatedAt, CancellationToken ct)
+    private async Task SaveResultsAsync(AccountingPeriod period, string periodMonth, List<BreakEvenResult> entities,
+        DateTime calculatedAt, CancellationToken ct)
     {
         _repo.AddBreakEvenResults(entities);
         // Kết quả hòa vốn là dữ liệu mật (GBR-02): log chỉ ghi cách tính + số mã hàng, không ghi doanh thu / đơn giá CMT (D26).
         _audit.Add(new AuditEntry(nameof(BreakEvenResult), period.PeriodId, AuditActions.Insert, null,
             new
             {
-                PeriodMonth = periodMonth, AllocationBasis = allocationBasis, CalculatedAt = calculatedAt,
-                ProductCount = entities.Count, AtRiskCount = entities.Count(e => e.IsAtRisk),
+                PeriodMonth = periodMonth, AllocationBasis = string.Join(", ", AllocationBasis.All), CalculatedAt = calculatedAt,
+                ProductCount = entities.Select(e => e.ProductId).Distinct().Count(), AtRiskCount = entities.Count(e => e.IsAtRisk),
             }));
         await _repo.SaveChangesAsync(ct);
     }
@@ -174,11 +193,13 @@ public sealed class FinanceService : IFinanceService
         return payrollApproved && hasMonthlyCost ? period : null;
     }
 
-    /// <summary>Tính kết quả hòa vốn cho từng mã hàng có doanh thu trong tháng (bước 1-6 của UC11).</summary>
-    private async Task<(List<BreakEvenResult> Entities, Dictionary<int, string> Warnings,
-        IReadOnlyDictionary<int, string> Products, DateTime CalculatedAt)>
-        BuildEntitiesAsync(AccountingPeriod period, string allocationBasis, IReadOnlyList<VwMonthlyRevenue> revenueRows,
-            CancellationToken ct)
+    /// <summary>
+    /// Tính kết quả hòa vốn cho từng mã hàng có doanh thu trong tháng (bước 1-6 của UC11), cả hai cách chia định phí
+    /// (DEV-ALL-171): mỗi mã hàng 2 dòng cùng CalculatedAt, khác AllocationBasis.
+    /// </summary>
+    private async Task<(List<BreakEvenResult> Entities, Dictionary<(int, string), string> Warnings,
+        IReadOnlyDictionary<int, string> Products, DateTime CalculatedAt, decimal TotalFixedCost)>
+        BuildEntitiesAsync(AccountingPeriod period, IReadOnlyList<VwMonthlyRevenue> revenueRows, CancellationToken ct)
     {
         var byProduct = revenueRows
             .GroupBy(r => r.ProductId)
@@ -199,28 +220,27 @@ public sealed class FinanceService : IFinanceService
         var outputShare = productIds.ToDictionary(
             id => id, id => totalFinishedQty > 0 ? (decimal)byProduct[id].FinishedQty / totalFinishedQty : 0m);
 
-        var laborHoursByProduct = allocationBasis == AllocationBasis.LabourHours
-            ? await ComputeLaborHoursByProductAsync(period, ct)
-            : new Dictionary<int, decimal>();
-        var totalLaborHours = productIds.Sum(id => laborHoursByProduct.GetValueOrDefault(id));
-
+        var labourShare = LabourShares(productIds, await ComputeLaborHoursByProductAsync(period, ct), outputShare);
         var calculatedAt = await NextCalculatedAtAsync(period.PeriodId, ct);
 
-        var entities = new List<BreakEvenResult>(productIds.Count);
-        var warningsByProductId = new Dictionary<int, string>();
+        var entities = new List<BreakEvenResult>(productIds.Count * AllocationBasis.All.Length);
+        var warnings = new Dictionary<(int, string), string>();
 
         foreach (var productId in productIds.OrderBy(id => ProductCodeOf(products, id)))
         {
             var (finishedQty, revenue) = byProduct[productId];
-            var share = AllocationShare(allocationBasis, productId, laborHoursByProduct, totalLaborHours, outputShare);
-            var (entity, warning) = ComputeBreakEven(
-                period.PeriodId, productId, allocationBasis, finishedQty, revenue,
-                variableByProduct.GetValueOrDefault(productId), totalFixedCost, share, calculatedAt,
-                ProductCodeOf(products, productId));
-            entities.Add(entity);
-            if (warning is not null) warningsByProductId[productId] = warning;
+            foreach (var basis in AllocationBasis.All)
+            {
+                var share = basis == AllocationBasis.LabourHours ? labourShare[productId] : outputShare[productId];
+                var (entity, warning) = ComputeBreakEven(
+                    period.PeriodId, productId, basis, finishedQty, revenue,
+                    variableByProduct.GetValueOrDefault(productId), totalFixedCost, share, calculatedAt,
+                    ProductCodeOf(products, productId));
+                entities.Add(entity);
+                if (warning is not null) warnings[(productId, basis)] = warning;
+            }
         }
-        return (entities, warningsByProductId, products, calculatedAt);
+        return (entities, warnings, products, calculatedAt, totalFixedCost);
     }
 
     /// <summary>
@@ -241,18 +261,21 @@ public sealed class FinanceService : IFinanceService
     }
 
     /// <summary>
-    /// Tỉ lệ phân bổ định phí của một mã hàng. DEV-MI-13-1: với LABOUR_HOURS, mã hàng không quy đổi được giờ công hợp lệ
-    /// trong kỳ (không có OutputRecord nào, hoặc công nhân không có DailyTimesheet khớp ngày) dùng tỉ lệ OUTPUT thay thế
-    /// riêng cho mã hàng đó, các mã hàng khác vẫn theo LABOUR_HOURS.
+    /// Tỉ lệ chia định phí theo giờ công. DEV-MI-13-1: mã hàng không quy đổi được giờ công hợp lệ trong kỳ (không có
+    /// OutputRecord, hoặc công nhân không có DailyTimesheet khớp ngày) tạm dùng tỉ lệ sản lượng. DEV-ALL-171: sau đó chuẩn
+    /// hóa để tổng các tỉ lệ đúng bằng 100%, tức tổng định phí chia ra đúng bằng định phí tháng.
     /// </summary>
-    private static decimal AllocationShare(
-        string allocationBasis, int productId, IReadOnlyDictionary<int, decimal> laborHoursByProduct,
-        decimal totalLaborHours, IReadOnlyDictionary<int, decimal> outputShare)
+    private static Dictionary<int, decimal> LabourShares(
+        IReadOnlyList<int> productIds, IReadOnlyDictionary<int, decimal> hoursByProduct, IReadOnlyDictionary<int, decimal> outputShare)
     {
-        if (allocationBasis != AllocationBasis.LabourHours) return outputShare[productId];
-
-        var hours = laborHoursByProduct.GetValueOrDefault(productId);
-        return hours > 0 && totalLaborHours > 0 ? hours / totalLaborHours : outputShare[productId];
+        var totalHours = productIds.Sum(id => hoursByProduct.GetValueOrDefault(id));
+        var raw = productIds.ToDictionary(id => id, id =>
+        {
+            var hours = hoursByProduct.GetValueOrDefault(id);
+            return hours > 0 && totalHours > 0 ? hours / totalHours : outputShare[id];
+        });
+        var sum = raw.Values.Sum();
+        return raw.ToDictionary(p => p.Key, p => sum > 0 ? p.Value / sum : 0m);
     }
 
     /// <summary>Tính hòa vốn và giá trị thặng dư cho một mã hàng; trả thêm câu cảnh báo MSG26 khi nguy cơ lỗ.</summary>
@@ -321,7 +344,10 @@ public sealed class FinanceService : IFinanceService
             rows = rows.Where(r => r.CalculatedAt == latest).ToList();
         }
 
-        var dtos = rows.Select(r => ToDto(r, periodMonth)).ToList();
+        // Tỉ lệ chia định phí của mỗi dòng = định phí của dòng / tổng định phí cùng lần tính, cùng cách chia.
+        var fixedByRun = rows.GroupBy(r => (r.CalculatedAt, r.AllocationBasis))
+            .ToDictionary(g => g.Key, g => g.Sum(r => r.AllocatedFixedCost));
+        var dtos = rows.Select(r => ToDto(r, periodMonth, fixedByRun[(r.CalculatedAt, r.AllocationBasis)])).ToList();
         return Result<BreakEvenListResultDto>.Success(new BreakEvenListResultDto(period.PeriodId, periodMonth, dtos));
     }
 
@@ -346,15 +372,9 @@ public sealed class FinanceService : IFinanceService
         IReadOnlyDictionary<int, string> products, int productId) =>
         products.TryGetValue(productId, out var p) ? p : "";
 
-    /// <summary>"Output"/"LabourHours" (FE, PascalCase theo Coding Rules 2.2) → "OUTPUT"/"LABOUR_HOURS" (DB).
-    /// Cũng chấp nhận luôn giá trị UPPER_SNAKE gốc (gọi trực tiếp qua Swagger/test). Giá trị lạ trả về null
-    /// để Service báo lỗi validation thay vì lưu rác.</summary>
-    private static string? ToRawAllocationBasis(string? value) => value switch
-    {
-        "Output" or "OUTPUT" => AllocationBasis.Output,
-        "LabourHours" or "LABOUR_HOURS" => AllocationBasis.LabourHours,
-        _ => null,
-    };
+    /// <summary>Tỉ lệ (%) định phí tháng chia cho một dòng; định phí tháng bằng 0 thì 0%.</summary>
+    private static decimal SharePct(decimal allocatedFixedCost, decimal totalFixedCost) =>
+        totalFixedCost > 0 ? Math.Round(allocatedFixedCost / totalFixedCost * 100m, 2, MidpointRounding.AwayFromZero) : 0m;
 
     /// <summary>DEV-MI-13-1: quy đổi giờ công (DailyTimesheet.WorkedHours) sang theo mã hàng bằng tỉ lệ
     /// Quantity trong ngày của từng OutputRecord (OrderLine → ProductId) — xem docs/CODE_DEVIATIONS.md.</summary>
@@ -384,17 +404,18 @@ public sealed class FinanceService : IFinanceService
 
     private static BreakEvenResultDto ToDto(BreakEvenResult r, string periodMonth,
         IReadOnlyDictionary<int, string> products,
-        IReadOnlyDictionary<int, string> warningsByProductId)
+        IReadOnlyDictionary<(int, string), string> warnings, decimal totalFixedCost)
     {
         var productCode = products.GetValueOrDefault(r.ProductId, "");
         return new BreakEvenResultDto(r.BreakEvenResultId, r.PeriodId, periodMonth, r.ProductId, productCode,
             CodeText.ToPascal(r.AllocationBasis), r.FinishedQty, r.CmtUnitPrice, r.Revenue,
             r.VariableCost, r.AllocatedFixedCost, r.BreakEvenQty, r.PercentReached, r.SurplusValue, r.IsAtRisk,
-            r.CalculatedAt, warningsByProductId.GetValueOrDefault(r.ProductId));
+            r.CalculatedAt, warnings.GetValueOrDefault((r.ProductId, r.AllocationBasis)),
+            SharePct(r.AllocatedFixedCost, totalFixedCost));
     }
 
     /// <summary>Dùng khi đọc lại từ DB (Product đã Include sẵn) — không cần dictionary tra cứu riêng.</summary>
-    private static BreakEvenResultDto ToDto(BreakEvenResult r, string periodMonth)
+    private static BreakEvenResultDto ToDto(BreakEvenResult r, string periodMonth, decimal totalFixedCost)
     {
         string? warning = null;
         if (r.IsAtRisk)
@@ -406,6 +427,6 @@ public sealed class FinanceService : IFinanceService
 
         return new BreakEvenResultDto(r.BreakEvenResultId, r.PeriodId, periodMonth, r.ProductId, r.Product.ProductCode, CodeText.ToPascal(r.AllocationBasis), r.FinishedQty, r.CmtUnitPrice, r.Revenue,
             r.VariableCost, r.AllocatedFixedCost, r.BreakEvenQty, r.PercentReached, r.SurplusValue, r.IsAtRisk,
-            r.CalculatedAt, warning);
+            r.CalculatedAt, warning, SharePct(r.AllocatedFixedCost, totalFixedCost));
     }
 }

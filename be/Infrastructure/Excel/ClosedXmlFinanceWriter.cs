@@ -53,7 +53,7 @@ public sealed class ClosedXmlFinanceWriter : IFinanceExcelWriter
             var c = 1;
             sheet.Cell(r, c++).Value = row.PeriodMonth;
             sheet.Cell(r, c++).Value = row.ProductCode;
-            sheet.Cell(r, c++).Value = row.AllocationBasis;
+            sheet.Cell(r, c++).Value = BasisLabel(row.AllocationBasis);
             sheet.Cell(r, c++).Value = row.FinishedQty;
             sheet.Cell(r, c++).Value = row.CmtUnitPrice;
             sheet.Cell(r, c++).Value = row.Revenue;
@@ -86,4 +86,12 @@ public sealed class ClosedXmlFinanceWriter : IFinanceExcelWriter
         workbook.SaveAs(stream);
         return stream.ToArray();
     }
+
+    /// <summary>Nhãn tiếng Việt của cách chia định phí (DTO trả "Output" / "LabourHours").</summary>
+    private static string BasisLabel(string allocationBasis) => allocationBasis switch
+    {
+        "Output" => "Theo sản lượng",
+        "LabourHours" => "Theo giờ công",
+        _ => allocationBasis,
+    };
 }

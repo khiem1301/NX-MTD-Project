@@ -45,6 +45,11 @@ public class FinanceServiceTests
         _repo.FindPeriodByMonthAsync(Month, Arg.Any<CancellationToken>()).Returns(period);
         _repo.IsPayrollApprovedAsync(period.PeriodId, Arg.Any<CancellationToken>()).Returns(payrollApproved);
         _repo.HasMonthlyCostAsync(period.PeriodId, Arg.Any<CancellationToken>()).Returns(hasCost);
+        // Mặc định không có giờ công: cách giờ công chia theo sản lượng.
+        _repo.GetOutputForLabourAsync(Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            .Returns(new List<(int WorkerId, DateOnly WorkDate, int ProductId, int Quantity)>());
+        _repo.GetWorkedHoursAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<(int, DateOnly), decimal>());
     }
 
     private void SetupProducts(params (int Id, string Code)[] products) =>
@@ -66,7 +71,7 @@ public class FinanceServiceTests
     {
         _repo.FindPeriodByMonthAsync(Month, Arg.Any<CancellationToken>()).Returns((AccountingPeriod?)null);
 
-        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month, "Output"), CancellationToken.None);
+        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
         result.ErrorCode.Should().Be(ErrorCodes.BreakEvenNotReady);
@@ -78,7 +83,7 @@ public class FinanceServiceTests
     {
         SetupReady(Period(), payrollApproved: false, hasCost: true);
 
-        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month, "Output"), CancellationToken.None);
+        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month), CancellationToken.None);
 
         result.ErrorCode.Should().Be(ErrorCodes.BreakEvenNotReady);
     }
@@ -88,7 +93,7 @@ public class FinanceServiceTests
     {
         SetupReady(Period(), payrollApproved: true, hasCost: false);
 
-        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month, "Output"), CancellationToken.None);
+        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month), CancellationToken.None);
 
         result.ErrorCode.Should().Be(ErrorCodes.BreakEvenNotReady);
     }
@@ -96,19 +101,10 @@ public class FinanceServiceTests
     [Fact]
     public async Task CalculateAsync_InvalidMonth_ReturnsValidationFailure()
     {
-        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto("2026-13", "Output"), CancellationToken.None);
+        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto("2026-13"), CancellationToken.None);
 
         result.Kind.Should().Be(ResultKind.Validation);
         result.ErrorCode.Should().Be(ErrorCodes.BreakEvenPeriodMonthInvalid);
-    }
-
-    [Fact]
-    public async Task CalculateAsync_InvalidAllocationBasis_ReturnsValidationFailure()
-    {
-        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month, "SOMETHING_ELSE"), CancellationToken.None);
-
-        result.Kind.Should().Be(ResultKind.Validation);
-        result.ErrorCode.Should().Be(ErrorCodes.BreakEvenInvalidAllocationBasis);
     }
 
     [Fact]
@@ -119,7 +115,7 @@ public class FinanceServiceTests
         _repo.GetRevenueRowsAsync(Month, null, null, Arg.Any<CancellationToken>())
             .Returns(new List<VwMonthlyRevenue>());
 
-        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month, "Output"), CancellationToken.None);
+        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month), CancellationToken.None);
 
         result.ErrorCode.Should().Be(ErrorCodes.BreakEvenNoOutput);
     }
@@ -141,14 +137,14 @@ public class FinanceServiceTests
             .Returns(new List<BreakEvenResult> { new() { PeriodId = period.PeriodId, ProductId = 1, CalculatedAt = Now } });
         CaptureAddedResults(out var getAdded);
 
-        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month, "Output"), CancellationToken.None);
+        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         getAdded().Should().OnlyContain(r => r.CalculatedAt == Now.AddSeconds(1));
     }
 
     [Fact]
-    public async Task CalculateAsync_OutputBasis_AllocatesFixedCostByFinishedQtyShare()
+    public async Task CalculateAsync_OutputBasis_AllocatesFixedCostByFinishedQtyShare_AndStoresBothBases()
     {
         var period = Period();
         SetupReady(period);
@@ -170,20 +166,21 @@ public class FinanceServiceTests
         });
         CaptureAddedResults(out var getAdded);
 
-        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month, "Output"), CancellationToken.None);
+        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Data!.Items.Should().HaveCount(2);
+        result.Data!.Items.Should().HaveCount(4);   // 2 mã hàng × 2 cách chia
 
-        var p1 = result.Data.Items.Single(i => i.ProductId == 1);
+        var p1 = result.Data.Items.Single(i => i.ProductId == 1 && i.AllocationBasis == "Output");
         p1.AllocatedFixedCost.Should().Be(1_000_000m); // 1,500,000 * (100/150)
         p1.CmtUnitPrice.Should().Be(100_000m);
         p1.BreakEvenQty.Should().Be(12.5m);            // 1,000,000 / (100,000 - 20,000)
         p1.PercentReached.Should().Be(800m);           // 100 / 12.5 * 100
         p1.SurplusValue.Should().Be(7_000_000m);       // 10,000,000 - 2,000,000 - 1,000,000
         p1.IsAtRisk.Should().BeFalse();
+        p1.SharePct.Should().Be(66.67m);
 
-        var p2 = result.Data.Items.Single(i => i.ProductId == 2);
+        var p2 = result.Data.Items.Single(i => i.ProductId == 2 && i.AllocationBasis == "Output");
         p2.AllocatedFixedCost.Should().Be(500_000m);   // 1,500,000 * (50/150)
         p2.CmtUnitPrice.Should().Be(80_000m);
         p2.BreakEvenQty.Should().BeNull();             // đơn giá <= biến phí/sp
@@ -192,12 +189,12 @@ public class FinanceServiceTests
         p2.IsAtRisk.Should().BeTrue();
         p2.AtRiskWarning.Should().Contain("SP002").And.Contain("không thể đạt điểm hòa vốn");
 
-        result.Data.AtRiskWarnings.Should().ContainSingle();
+        result.Data.AtRiskWarnings.Should().ContainSingle();   // cùng một câu cho cả 2 cách
 
         var added = getAdded();
-        added.Should().HaveCount(2);
-        added.Should().OnlyContain(r => r.PeriodId == period.PeriodId && r.AllocationBasis == AllocationBasis.Output
-                                         && r.CalculatedAt == Now);
+        added.Should().HaveCount(4);
+        added.Should().OnlyContain(r => r.PeriodId == period.PeriodId && r.CalculatedAt == Now);
+        added.Select(r => r.AllocationBasis).Distinct().Should().BeEquivalentTo(AllocationBasis.All);
         await _repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
 
         // Log cách tính + số mã hàng, KHÔNG chứa doanh thu / đơn giá CMT (dữ liệu mật, GBR-02/D26).
@@ -211,7 +208,7 @@ public class FinanceServiceTests
     {
         _repo.FindPeriodByMonthAsync(Month, Arg.Any<CancellationToken>()).Returns((AccountingPeriod?)null);
 
-        await _sut.CalculateAsync(new BreakEvenCalculateDto(Month, "Output"), CancellationToken.None);
+        await _sut.CalculateAsync(new BreakEvenCalculateDto(Month), CancellationToken.None);
 
         _audit.DidNotReceiveWithAnyArgs().Add(default!);
     }
@@ -219,7 +216,7 @@ public class FinanceServiceTests
     // ================= LABOUR_HOURS: phân bổ theo giờ công quy đổi + fallback OUTPUT =================
 
     [Fact]
-    public async Task CalculateAsync_LabourHoursBasis_AllocatesByAttributedHours_FallsBackToOutputWhenNoHours()
+    public async Task CalculateAsync_LabourHoursBasis_AllocatesByAttributedHours_FallbackThenNormalizedToFullFixedCost()
     {
         var period = Period();
         SetupReady(period);
@@ -249,24 +246,21 @@ public class FinanceServiceTests
             .Returns(new Dictionary<(int, DateOnly), decimal> { [(1, workDate)] = 8m });
         CaptureAddedResults(out var getAdded);
 
-        var result = await _sut.CalculateAsync(
-            new BreakEvenCalculateDto(Month, "LabourHours"), CancellationToken.None);
+        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Data!.AllocationBasis.Should().Be("LabourHours");
 
         // Giờ quy đổi: SP1 = 8 * 60/100 = 4.8h, SP2 = 8 * 40/100 = 3.2h, tổng trong phạm vi (SP1+SP2+SP3=0) = 8h.
-        var p1 = result.Data.Items.Single(i => i.ProductId == 1);
-        var p2 = result.Data.Items.Single(i => i.ProductId == 2);
-        var p3 = result.Data.Items.Single(i => i.ProductId == 3);
+        var labour = result.Data!.Items.Where(i => i.AllocationBasis == "LabourHours").ToDictionary(i => i.ProductId);
 
-        p1.AllocatedFixedCost.Should().Be(600_000m); // 1,000,000 * (4.8/8)
-        p2.AllocatedFixedCost.Should().Be(400_000m); // 1,000,000 * (3.2/8)
-        // SP3 không có giờ quy đổi -> fallback OUTPUT: share = 50/(100+50+50) = 0.25 -> 250,000
-        p3.AllocatedFixedCost.Should().Be(250_000m);
+        // Tỉ lệ thô: SP1 = 4.8/8 = 0.6, SP2 = 3.2/8 = 0.4, SP3 không có giờ -> tỉ lệ sản lượng 50/200 = 0.25; tổng 1.25.
+        // DEV-ALL-171: chuẩn hóa về 100% -> 0.48 / 0.32 / 0.20, tổng định phí chia đúng bằng 1,000,000.
+        labour[1].AllocatedFixedCost.Should().Be(480_000m);
+        labour[2].AllocatedFixedCost.Should().Be(320_000m);
+        labour[3].AllocatedFixedCost.Should().Be(200_000m);
+        labour.Values.Sum(i => i.AllocatedFixedCost).Should().Be(1_000_000m);
 
-        var added = getAdded();
-        added.Should().OnlyContain(r => r.AllocationBasis == AllocationBasis.LabourHours);
+        getAdded().Should().Contain(r => r.AllocationBasis == AllocationBasis.LabourHours);
     }
 
     // ================= GetBreakEvenAsync: lịch sử vs. lần tính gần nhất =================
@@ -366,5 +360,59 @@ public class FinanceServiceTests
 
         result.Kind.Should().Be(ResultKind.Validation);
         result.ErrorCode.Should().Be(ErrorCodes.RevenuePeriodMonthInvalid);
+    }
+
+    // ================= Dữ liệu đầu vào (DEV-ALL-171) =================
+
+    [Fact]
+    public async Task GetBreakEvenInputsAsync_Ready_ReportsTotalsAndCanCalculate()
+    {
+        var period = Period();
+        SetupReady(period);
+        _repo.GetRevenueRowsAsync(Month, null, null, Arg.Any<CancellationToken>()).Returns(new List<VwMonthlyRevenue>
+        {
+            Revenue(orderId: 10, productId: 1, qty: 100, revenue: 10_000_000m),
+            Revenue(orderId: 11, productId: 1, qty: 20, revenue: 2_000_000m),
+            Revenue(orderId: 11, productId: 2, qty: 50, revenue: 4_000_000m),
+        });
+        _repo.GetMonthlyCostsAsync(period.PeriodId, Arg.Any<CancellationToken>()).Returns(new List<MonthlyCost>
+        {
+            new() { CostType = MonthlyCostType.Fixed, Amount = 1_500_000m },
+            new() { CostType = MonthlyCostType.Variable, ProductId = 1, Amount = 2_000_000m },
+            new() { CostType = MonthlyCostType.Variable, ProductId = 1, Amount = 500_000m },
+        });
+
+        var dto = (await _sut.GetBreakEvenInputsAsync(Month, CancellationToken.None)).Data!;
+
+        dto.Should().BeEquivalentTo(new BreakEvenInputsDto(true, false, true, true, 1_500_000m, 2_500_000m, 1, 2, 170,
+            16_000_000m, 0m, true));
+    }
+
+    [Fact]
+    public async Task GetBreakEvenInputsAsync_PayrollNotApproved_CannotCalculate()
+    {
+        var period = Period();
+        SetupReady(period, payrollApproved: false);
+        _repo.GetRevenueRowsAsync(Month, null, null, Arg.Any<CancellationToken>())
+            .Returns(new List<VwMonthlyRevenue> { Revenue(10, 1, 100, 10_000_000m) });
+        _repo.GetMonthlyCostsAsync(period.PeriodId, Arg.Any<CancellationToken>())
+            .Returns(new List<MonthlyCost> { new() { CostType = MonthlyCostType.Fixed, Amount = 1m } });
+
+        var dto = (await _sut.GetBreakEvenInputsAsync(Month, CancellationToken.None)).Data!;
+
+        dto.PayrollApproved.Should().BeFalse();
+        dto.CanCalculate.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetBreakEvenInputsAsync_NoPeriod_NothingReady()
+    {
+        _repo.FindPeriodByMonthAsync(Month, Arg.Any<CancellationToken>()).Returns((AccountingPeriod?)null);
+        _repo.GetRevenueRowsAsync(Month, null, null, Arg.Any<CancellationToken>()).Returns(new List<VwMonthlyRevenue>());
+
+        var dto = (await _sut.GetBreakEvenInputsAsync(Month, CancellationToken.None)).Data!;
+
+        dto.PeriodExists.Should().BeFalse();
+        dto.CanCalculate.Should().BeFalse();
     }
 }

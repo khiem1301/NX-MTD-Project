@@ -2,9 +2,9 @@ import { API } from '@/constants/apiEndpoints';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse } from '@/types/api';
 import type {
-  AllocationBasis,
   BreakEvenCalculationResult,
   BreakEvenFilter,
+  BreakEvenInputs,
   BreakEvenListResult,
 } from '../types';
 
@@ -16,8 +16,12 @@ const post = async <T>(url: string, body?: unknown): Promise<T> =>
 export const breakEvenApi = {
   getBreakEven: (filter: BreakEvenFilter) => get<BreakEvenListResult>(API.breakEven.base, filter),
 
-  calculate: (periodMonth: string, allocationBasis: AllocationBasis) =>
-    post<BreakEvenCalculationResult>(API.breakEven.calculate, { periodMonth, allocationBasis }),
+  /** Dữ liệu đầu vào của tháng (bảng lương, chi phí, thành phẩm, giờ công) — DEV-ALL-171. */
+  inputs: (periodMonth: string) => get<BreakEvenInputs>(API.breakEven.inputs, { periodMonth }),
+
+  /** Một lần tính chạy cả hai cách chia định phí (DEV-ALL-171). */
+  calculate: (periodMonth: string) =>
+    post<BreakEvenCalculationResult>(API.breakEven.calculate, { periodMonth }),
 
   /** Tải file Excel hòa vốn về máy theo đúng bộ lọc đang xem (MSG27). */
   export: async (filter: BreakEvenFilter): Promise<void> => {

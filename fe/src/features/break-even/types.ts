@@ -20,12 +20,14 @@ export type BreakEvenResultItem = {
   calculatedAt: string;
   /** MSG26 (hoặc biến thể khi không tính được điểm hòa vốn), đã dựng sẵn ở BE — chỉ hiện khi isAtRisk. */
   atRiskWarning: string | null;
+  /** Tỉ lệ (%) định phí tháng chia cho mã hàng theo cách của dòng này (DEV-ALL-171). */
+  sharePct: number;
 };
 
+/** Mỗi lần tính có cả hai cách chia định phí (DEV-ALL-171). */
 export type BreakEvenCalculationResult = {
   periodId: number;
   periodMonth: string;
-  allocationBasis: AllocationBasis;
   calculatedAt: string;
   items: BreakEvenResultItem[];
   atRiskWarnings: string[];
@@ -42,4 +44,35 @@ export type BreakEvenFilter = {
   productId?: number;
   /** false (mặc định) = chỉ lần tính gần nhất; true = toàn bộ lịch sử các lần tính. */
   history?: boolean;
+};
+
+/** Dữ liệu đầu vào của tháng, hiện trong popup "Tính hòa vốn" (DEV-ALL-171). */
+export type BreakEvenInputs = {
+  periodExists: boolean;
+  /** Tháng đã khóa sổ (duyệt lương): vẫn tính được, chỉ cảnh báo (DEV-ALL-172). */
+  periodLocked: boolean;
+  payrollApproved: boolean;
+  costEntered: boolean;
+  fixedTotal: number;
+  variableTotal: number;
+  variableProductCount: number;
+  productCount: number;
+  finishedQty: number;
+  revenue: number;
+  labourHours: number;
+  canCalculate: boolean;
+};
+
+/** Một mã hàng trong một lần tính: số chung và kết quả của hai cách chia định phí. */
+export type BreakEvenRow = {
+  key: string;
+  calculatedAt: string;
+  productId: number;
+  productCode: string;
+  finishedQty: number;
+  cmtUnitPrice: number;
+  revenue: number;
+  variableCost: number;
+  output: BreakEvenResultItem | null;
+  labour: BreakEvenResultItem | null;
 };

@@ -146,7 +146,6 @@ public static class ErrorCodes
     // --- Doanh thu + hòa vốn (Minh, UC27/UC11) ---
     public const string RevenuePeriodMonthInvalid = "REVENUE_PERIOD_MONTH_INVALID";
     public const string BreakEvenPeriodMonthInvalid = "BREAK_EVEN_PERIOD_MONTH_INVALID";
-    public const string BreakEvenInvalidAllocationBasis = "BREAK_EVEN_INVALID_ALLOCATION_BASIS";
     public const string BreakEvenNotReady = "BREAK_EVEN_NOT_READY";                 // MSG25 (GBR-17)
     public const string BreakEvenNoOutput = "BREAK_EVEN_NO_OUTPUT";
     public const string BreakEvenNotFound = "BREAK_EVEN_NOT_FOUND";
