@@ -151,9 +151,9 @@ public class ProductValidatorTests
 
     [Theory]
     [InlineData(1, true)]
-    [InlineData(20, true)]
+    [InlineData(99, true)]
     [InlineData(0, false)]
-    [InlineData(21, false)]
+    [InlineData(100, false)]
     public void MarkerNo_Boundaries(int no, bool expected) => SpecIsValid(WithMarker(no)).Should().Be(expected);
 
     [Theory]
@@ -173,7 +173,8 @@ public class ProductValidatorTests
     [Fact]
     public void OversizedMarkerList_ReportsOneMessage()
     {
-        var groups = Enumerable.Range(0, 4001).Select(_ => new SaveProductMarkerComponentDto(0, "")).ToList();
+        var over = SaveProductSpecDtoValidator.MaxMarkerRows + 1;
+        var groups = Enumerable.Range(0, over).Select(_ => new SaveProductMarkerComponentDto(0, "")).ToList();
 
         new SaveProductSpecDtoValidator().Validate(Spec() with { MarkerComponents = groups }).Errors.Select(e => e.ErrorMessage)
             .Should().Equal("Danh sách chi tiết của nhóm bìa quá dài.");
