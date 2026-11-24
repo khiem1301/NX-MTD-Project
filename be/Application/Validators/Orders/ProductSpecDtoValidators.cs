@@ -14,8 +14,8 @@ public sealed class SaveProductSpecDtoValidator : AbstractValidator<SaveProductS
     public const int MaxComponents = 200;
     public const int MaxVariants = 200;
     public const int MaxNorms = 5000;
-    /// <summary>Số nhóm bìa của một mã hàng (1–99); số dòng tối đa = số nhóm × số thành phần (chi tiết) hoặc × số màu – size.</summary>
-    public const int MaxMarkerNo = 99;
+    /// <summary>Số nhóm bìa của một mã hàng (1–20); số dòng tối đa = số nhóm × số thành phần (chi tiết) hoặc × số màu – size. Giữ 20 để tránh payload/UI phình.</summary>
+    public const int MaxMarkerNo = 20;
     public const int MaxMarkerRows = MaxMarkerNo * MaxVariants;
 
     public SaveProductSpecDtoValidator()

@@ -151,9 +151,9 @@ public class ProductValidatorTests
 
     [Theory]
     [InlineData(1, true)]
-    [InlineData(99, true)]
+    [InlineData(20, true)]
     [InlineData(0, false)]
-    [InlineData(100, false)]
+    [InlineData(21, false)]
     public void MarkerNo_Boundaries(int no, bool expected) => SpecIsValid(WithMarker(no)).Should().Be(expected);
 
     [Theory]

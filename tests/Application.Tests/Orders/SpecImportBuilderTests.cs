@@ -200,26 +200,26 @@ public class SpecImportBuilderTests
     }
 
     [Fact]
-    public void UTCID761_Build_MarkerNo99_Valid()
+    public void UTCID761_Build_MarkerNo20_Valid()
     {
-        // Arrange — case: MarkerNo max = 99
+        // Arrange — product decision: MaxMarkerNo = 20 (tránh phình); biên trên hợp lệ
         var spec = Spec(components: [Part(1, Body, "Panel", 1)], variants: [ColorSize(1, Red, "S")]);
-        var workbook = Book(groups: [GroupExcel(4, 99, [Body], [Red])]);
+        var workbook = Book(groups: [GroupExcel(4, 20, [Body], [Red])]);
 
         // Act
         var row = Build(spec, workbook).MarkerGroups.Single();
 
-        // Assert — MarkerNo 99 hợp lệ. ⚠ Code MaxMarkerNo = 20 → Action=Error.
+        // Assert
         row.Action.Should().NotBe(SpecImportBuilder.ActionError);
         row.Error.Should().BeNull();
     }
 
     [Fact]
-    public void UTCID762_Build_MarkerNo100_ActionError()
+    public void UTCID762_Build_MarkerNo21_ActionError()
     {
-        // Arrange — case: MarkerNo max = 99
+        // Arrange — MaxMarkerNo = 20 → 21 là ngoài biên
         var spec = Spec(components: [Part(1, Body, "Panel", 1)], variants: [ColorSize(1, Red, "S")]);
-        var workbook = Book(groups: [GroupExcel(4, 100, [Body], [Red])]);
+        var workbook = Book(groups: [GroupExcel(4, 21, [Body], [Red])]);
 
         // Act
         var row = Build(spec, workbook).MarkerGroups.Single();

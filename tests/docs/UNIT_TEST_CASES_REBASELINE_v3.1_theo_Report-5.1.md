@@ -344,8 +344,8 @@ Kiểm thử qua constructor `(spec, materials, orderProduct?, productCode, work
 | UTCID758 | SpecImportBuilder.Build | Boundary | — | Pieces=100 | Action=Error |
 | UTCID759 | SpecImportBuilder.Build | Boundary | — | norm Note = 200 ký tự | Hợp lệ |
 | UTCID760 | SpecImportBuilder.Build | Boundary | — | norm Note = 201 ký tự | Action=Error (Note > 200) |
-| UTCID761 | SpecImportBuilder.Build | Boundary | MarkerNo max = 99 | group MarkerNo=99 | Hợp lệ |
-| UTCID762 | SpecImportBuilder.Build | Boundary | MarkerNo max = 99 | group MarkerNo=100 | Action=Error |
+| UTCID761 | SpecImportBuilder.Build | Boundary | MarkerNo max = 20 (tránh phình payload/UI) | group MarkerNo=20 | Hợp lệ |
+| UTCID762 | SpecImportBuilder.Build | Boundary | MarkerNo max = 20 | group MarkerNo=21 | Action=Error |
 | UTCID763 | SpecImportBuilder.Build | Boundary | — | workbook không có dòng dữ liệu ở mọi sheet | Không có dòng; ErrorCount=0; SpecChanged=false |
 | UTCID764 | SpecImportBuilder.Build | Boundary | Màu "Vàng" color-only: key có Size=`"?"` | workbook có norm "Vàng" | Sau MergeSpec, entry Size=`"?"` bị strip; spec kết quả không có Variant size `"?"` |
 | UTCID765 | SpecImportBuilder.Build | Boundary | Đơn có size thật tên `"?"` | workbook norm size `"?"` | Size thật vẫn được giữ. ⚠ Bị strip như color-only |
