@@ -24,6 +24,10 @@ export type ReviewColumnsCtx<R> = {
   remove: (rowNumber: number) => void;
   status: Map<number, RowStatus>;
   creating?: boolean;
+  /** Bảng có mã NVL (Định mức, NVL của đơn): mã NVL của dòng và thao tác mở lại NVL ngừng sử dụng (chỉ Admin). */
+  materialCodeOf?: (r: R) => string;
+  reopenMaterial?: (code: string) => void;
+  reopeningCode?: string;
 };
 
 /**
@@ -72,6 +76,12 @@ const tail = <R extends { rowNumber: number; parseError?: string | null }>(
         status={ctx.status.get(r.rowNumber)}
         parseError={r.parseError}
         creating={ctx.creating}
+        onReopen={
+          ctx.reopenMaterial && ctx.materialCodeOf
+            ? () => ctx.reopenMaterial?.(ctx.materialCodeOf?.(r) ?? '')
+            : undefined
+        }
+        reopening={ctx.reopeningCode !== undefined && ctx.reopeningCode === ctx.materialCodeOf?.(r)}
       />
     ),
   },

@@ -1,15 +1,14 @@
-import { Alert, Modal, Select, Space, Upload } from 'antd';
-import { InboxOutlined } from '@ant-design/icons';
+import { Alert, Button, Modal, Select, Space, Table, Typography, Upload } from 'antd';
+import { InboxOutlined, PlusOutlined, UndoOutlined } from '@ant-design/icons';
 import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
 import { ReplaceImportOption } from '@/components/common/ReplaceImportOption';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
-import type { OperationImportRow } from '../types';
-import { DataTable } from '@/components/common/DataTable';
+import type { OperationDraftRow } from '../utils/operationImportDraft';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { useOperationImport } from '../hooks/useOperationImport';
-import { operationImportColumns } from './operationImportColumns';
+import { operationImportEditColumns } from './operationImportEditColumns';
 import { OperationImportRateOptions } from './OperationImportRateOptions';
 import { OperationImportSummary } from './OperationImportSummary';
 import { HintTip } from '@/components/common/HintTip';
@@ -28,6 +27,8 @@ const text = PRODUCTION_TEXT.operations.import;
  * file là xem trước ngay (thêm mới / cập nhật / không đổi / lỗi), chọn sheet nếu file có nhiều bảng, chọn công đoạn cuối (chọn
  * sẵn theo cột CUỐI). Cột TIỀN được đọc thành đơn giá công đoạn hiệu lực từ ngày chọn (Nháp, hoặc gửi Admin duyệt luôn).
  * DEV-ALL-116: cột NHÓM CÔNG ĐOẠN, CHI TIẾT (tùy chọn) được nhập kèm.
+ * DEV-ALL-179: bảng xem trước sửa được từng ô (STT, tên, bậc, TGCT, thiết bị, nhóm, chi tiết, TIỀN), thêm / xóa dòng; máy chủ kiểm lại
+ * sau mỗi lần sửa. Chưa sửa gì thì nhập thẳng từ file.
  * Trang chỉ gắn hộp thoại khi đang mở nên state tự reset mỗi lần mở.
  */
 export function OperationImportModal({ open, productId, productLabel, onClose }: Props) {
@@ -49,9 +50,18 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
     data,
     ratesOn,
     runPreview,
+    reapply,
     handleConfirm,
     importable,
     finalOptions,
+    rows,
+    checking,
+    checkError,
+    update,
+    remove,
+    add,
+    reset,
+    edited,
   } = useOperationImport(productId, onClose);
 
   return (
@@ -61,7 +71,10 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
       title={`${text.title} — ${productLabel}`}
       okText={text.confirm}
       cancelText={MESSAGES.common.cancel}
-      okButtonProps={{ disabled: !data || importable === 0, loading: importOps.isPending }}
+      okButtonProps={{
+        disabled: !data || importable === 0 || checking,
+        loading: importOps.isPending,
+      }}
       onOk={handleConfirm}
       onCancel={onClose}
       destroyOnHidden
@@ -150,11 +163,11 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
               submitRates={submitRates}
               onWithRatesChange={(checked) => {
                 setWithRates(checked);
-                runPreview(file, { withRates: checked });
+                reapply({ withRates: checked });
               }}
               onEffectiveDateChange={(date) => {
                 setEffectiveDate(date);
-                runPreview(file, { date });
+                reapply({ date });
               }}
               onSubmitRatesChange={setSubmitRates}
             />
@@ -169,13 +182,33 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
               />
             )}
 
-            <DataTable<OperationImportRow>
-              rowKey={(r) => `${r.rowNumber}-${r.stt}`}
+            {checkError && <Alert type="error" showIcon message={checkError} />}
+            <Space wrap>
+              <Typography.Text type="secondary">
+                {checking ? text.checking : text.editHint}
+              </Typography.Text>
+              {edited && (
+                <Button size="small" icon={<UndoOutlined />} onClick={reset}>
+                  {text.resetEdits}
+                </Button>
+              )}
+            </Space>
+            <Table<OperationDraftRow>
+              rowKey="rowNumber"
               size="small"
-              columns={operationImportColumns}
-              dataSource={data.rows}
-              scroll={{ x: 'max-content' }}
+              pagination={false}
+              columns={operationImportEditColumns({ data, update, remove })}
+              dataSource={rows}
+              scroll={{ x: 'max-content', y: 360 }}
+              onRow={(r) => {
+                const failed =
+                  data.rows.find((x) => x.rowNumber === r.rowNumber)?.action === 'Error';
+                return { style: failed ? { background: 'var(--ant-color-error-bg)' } : undefined };
+              }}
             />
+            <Button icon={<PlusOutlined />} size="small" onClick={add}>
+              {text.addRow}
+            </Button>
           </>
         )}
       </Space>

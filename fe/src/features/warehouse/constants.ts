@@ -205,8 +205,9 @@ export const LABELS = {
   importOrderMaterials: 'Nhập từ Excel',
   importOrderMaterialsTitle: 'Nhập NVL của đơn từ Excel',
   importOrderMaterialsHint:
-    'Cột: Mã NVL, Số cần, Khách cấp và Ghi chú (tùy chọn). Phải mua = Số cần − Khách cấp. NVL có rồi thì cập nhật, chưa có thì thêm, không có trong file thì giữ nguyên. Chọn file là xem trước, chưa lưu.',
+    'Cột: Mã NVL, Số cần, Khách cấp và Ghi chú (tùy chọn). Phải mua = Số cần − Khách cấp. NVL có rồi thì cập nhật, chưa có thì thêm, không có trong file thì giữ nguyên. Chọn file là mở bảng kiểm tra để sửa từng ô, chưa lưu.',
   importOrderMaterialsConfirm: 'Nhập',
+  importOrderMaterialsNoTable: 'File không có bảng NVL của đơn (cột Mã NVL, Số cần). Hãy dùng file mẫu của hệ thống.',
   importOrderMaterialsConfirmTitle: 'Nhập NVL của đơn?',
   importOrderMaterialsConfirmBody:
     'Các dòng hợp lệ có thay đổi sẽ được lưu một lần (lỗi thì không lưu gì). Tiếp tục?',

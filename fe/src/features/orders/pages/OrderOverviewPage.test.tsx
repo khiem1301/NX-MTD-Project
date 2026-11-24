@@ -52,6 +52,8 @@ jest.mock('../hooks/useSpecImport', () => ({
   useSpecImport: () => ({ mutateAsync: jest.fn(), isPending: false }),
   useProductOrders: () => ({ data: undefined, isLoading: false }),
 }));
+// Popup nhập Excel (DEV-ALL-175) gọi API khi mở: bỏ hẳn trong test.
+jest.mock('../components/SpecImportModal', () => ({ SpecImportModal: () => null }));
 
 const renderAt = (url: string) =>
   render(

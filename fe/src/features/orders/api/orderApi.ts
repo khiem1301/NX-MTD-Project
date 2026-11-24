@@ -1,5 +1,6 @@
 import { API, type ProductScope } from '@/constants/apiEndpoints';
 import { apiClient } from '@/services/apiClient';
+import type { OrderMaterialImportResult } from '../utils/importMessages';
 import type { ApiResponse, Paginated } from '@/types/api';
 import type {
   CreateOrderPayload,
@@ -27,6 +28,7 @@ import type {
   SaveOrderMarkersPayload,
   SaveProductPayload,
   SaveProductSpecPayload,
+  OrderImportCheckBody,
   OrderImportPreview,
   OrderSaveResult,
   SpecImportPreview,
@@ -112,18 +114,53 @@ const specImportRequest = async <T>(
 export const orderImportApi = {
   preview: (file: File) =>
     post<OrderImportPreview>(API.customerOrders.importPreview, asFormData(file)),
+  previewData: (body: OrderImportCheckBody) =>
+    post<OrderImportPreview>(API.customerOrders.importPreviewData, body),
 };
 
 /** DEV-ALL-115: nhập Excel định mức mã hàng + bìa của đơn. */
 /** DEV-ALL-122: popup kiểm tra Excel nhiều sheet — đọc file, kiểm bản đã sửa (không ghi), xem trước / nhập định mức từ JSON. */
+/** Popup kiểm tra Excel gọi API Admin; Quản đốc (bìa cắt, NVL của đơn) gọi API Quản đốc cùng chức năng. */
+export type ReviewScope = 'admin' | 'manager';
+
 export const excelBundleApi = {
-  parse: (file: File) => post<ExcelBundle>(API.products.excelParse, asFormData(file)),
-  check: (body: {
-    productId: number | null;
-    orderId: number | null;
-    bundle: ExcelBundle;
-    replace?: boolean;
-  }) => post<ExcelBundleCheck>(API.products.excelCheck, body),
+  parse: (file: File, scope: ReviewScope = 'admin') =>
+    post<ExcelBundle>(
+      scope === 'admin' ? API.products.excelParse : API.orderMarkers.excelParse,
+      asFormData(file),
+    ),
+  check: (
+    body: {
+      productId: number | null;
+      orderId: number | null;
+      bundle: ExcelBundle;
+      replace?: boolean;
+    },
+    scope: ReviewScope = 'admin',
+  ) =>
+    post<ExcelBundleCheck>(
+      scope === 'admin' ? API.products.excelCheck : API.orderMarkers.excelCheck,
+      body,
+    ),
+  /** Nhập định mức + bìa của đơn từ bảng đã sửa; Quản đốc bắt buộc có đơn. */
+  importSpecScoped: async (
+    scope: ReviewScope,
+    productId: number,
+    workbook: SpecWorkbook,
+    orderId: number | undefined,
+    parts: SpecImportPart[],
+    replace = false,
+  ) => {
+    if (scope === 'admin')
+      return excelBundleApi.importSpec(productId, workbook, orderId, parts, replace);
+    return (
+      await apiClient.post<ApiResponse<SpecImportResult>>(
+        API.orderMarkers.importData(orderId ?? 0, productId),
+        workbook,
+        { params: { parts: parts.join(','), replace: replace || undefined } },
+      )
+    ).data;
+  },
   previewSpec: async (
     productId: number,
     workbook: SpecWorkbook,
@@ -164,12 +201,17 @@ export const excelBundleApi = {
         { params: { orderId } },
       )
     ).data.data,
-  importOrderMaterials: async (orderId: number, rows: OrderMaterialExcelRow[]) =>
+  importOrderMaterials: async (
+    orderId: number,
+    rows: OrderMaterialExcelRow[],
+    replace = false,
+    scope: ReviewScope = 'admin',
+  ) =>
     (
-      await apiClient.post<ApiResponse<unknown>>(
-        `${API.warehouse.orderMaterials('admin')}/import-data`,
+      await apiClient.post<ApiResponse<OrderMaterialImportResult | null>>(
+        `${API.warehouse.orderMaterials(scope)}/import-data`,
         rows,
-        { params: { orderId } },
+        { params: { orderId, replace: replace || undefined } },
       )
     ).data,
 };
@@ -203,6 +245,8 @@ export const orderApi = {
 /** Bìa cắt của đơn (DEV-ALL-85). */
 export const orderMarkerApi = {
   get: (orderId: number) => get<OrderMarkers>(API.orderMarkers.byOrder(orderId)),
+  /** Định mức của mã hàng, Quản đốc chỉ đọc (API Admin của mã hàng không mở cho Quản đốc). */
+  productSpec: (productId: number) => get<ProductSpec>(API.orderMarkers.productSpec(productId)),
   save: (orderId: number, productId: number, body: SaveOrderMarkersPayload) =>
     put<OrderMarkers>(API.orderMarkers.byProduct(orderId, productId), body),
 };

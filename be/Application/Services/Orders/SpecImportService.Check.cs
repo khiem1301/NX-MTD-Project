@@ -70,7 +70,7 @@ public sealed partial class SpecImportService
     {
         var found = await MaterialsAsync(workbook.Norms.Select(n => n.MaterialCode), ct);
         var missing = workbook.Norms.Select(n => Up(n.MaterialCode))
-            .Where(c => c.Length > 0 && !found.ContainsKey(c)).Distinct().ToList();
+            .Where(c => c.Length > 0 && !found.ContainsKey(c) && SpecImportBuilder.MaterialCodeProblem(c) is null).Distinct().ToList();
         if (missing.Count == 0) return (found, []);
         var temp = missing.Select((c, i) => KeyValuePair.Create(c, new SpecImportMaterial(-(i + 1), c, c, string.Empty, string.Empty)));
         return (new Dictionary<string, SpecImportMaterial>(found.Concat(temp), StringComparer.OrdinalIgnoreCase),

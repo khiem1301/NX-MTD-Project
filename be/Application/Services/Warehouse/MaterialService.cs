@@ -111,6 +111,18 @@ public sealed class MaterialService : IMaterialService
         return Result.Success(WarehouseMessages.MaterialStatusChanged);
     }
 
+    public async Task<Result> ReopenByCodeAsync(string materialCode, CancellationToken ct)
+    {
+        var code = CodeOf(materialCode ?? string.Empty);
+        var material = await Materials.FirstOrDefaultAsync(m => m.MaterialCode.ToUpper() == code, ct);
+        if (material is null) return Result.Failure(ErrorCodes.CommonNotFound, WarehouseMessages.NotFound, ResultKind.NotFound);
+        if (material.Status == MaterialStatuses.Active) return Result.Success(WarehouseMessages.MaterialStatusChanged);
+
+        material.Status = MaterialStatuses.Active;
+        await _uow.SaveChangesAsync();
+        return Result.Success(WarehouseMessages.MaterialStatusChanged);
+    }
+
     /// <summary>Mã NVL lưu chữ hoa (UQ_Material_Code); so trùng không phân biệt hoa thường.</summary>
     public static string CodeOf(string code) => code.Trim().ToUpperInvariant();
 

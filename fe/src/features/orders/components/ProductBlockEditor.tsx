@@ -1,4 +1,4 @@
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Card, Flex, Form, Select, Space, Tooltip, Typography } from 'antd';
 import { useState } from 'react';
 import { SIZE_ORDER } from '@/constants/orderStatus';
@@ -26,6 +26,8 @@ type ProductBlockEditorProps = {
   onChange: (block: ProductBlock) => void;
   onRemove: () => void;
   onCreateProduct: () => void;
+  /** Mã hàng khai trên form (chưa lưu): mở lại để xem / sửa. */
+  onEditStagedProduct?: () => void;
 };
 
 const SIZE_OPTIONS = SIZE_ORDER.map((s) => ({ value: s, label: s }));
@@ -44,6 +46,7 @@ export function ProductBlockEditor({
   onChange,
   onRemove,
   onCreateProduct,
+  onEditStagedProduct,
 }: ProductBlockEditorProps) {
   const [keyword, setKeyword] = useState<string>();
   const products = useProductLookup(keyword);
@@ -123,6 +126,15 @@ export function ProductBlockEditor({
                   onChange={(productId: number) => onChange({ ...block, productId })}
                 />
               </Tooltip>
+              {onEditStagedProduct && block.productId !== null && block.productId < 0 && (
+                <Tooltip title={MESSAGES.orders.viewStagedProduct}>
+                  <Button
+                    icon={<EditOutlined />}
+                    aria-label={MESSAGES.orders.viewStagedProduct}
+                    onClick={onEditStagedProduct}
+                  />
+                </Tooltip>
+              )}
               <Tooltip title={MESSAGES.orders.createProduct}>
                 <Button
                   icon={<PlusOutlined />}

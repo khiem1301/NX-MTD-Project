@@ -18,6 +18,9 @@ public sealed record UpdateMaterialDto(string MaterialName, string MaterialType,
 
 public sealed record ChangeMaterialStatusDto(string Status);
 
+/// <summary>DEV-ALL-181: mở lại NVL ngừng sử dụng theo mã (từ popup nhập Excel, nơi chỉ biết mã NVL).</summary>
+public sealed record ReopenMaterialDto(string MaterialCode);
+
 public sealed record MaterialQuery : PageQuery
 {
     public string? MaterialType { get; init; }

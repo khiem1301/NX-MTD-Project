@@ -5,6 +5,7 @@ import { PRODUCTION_TEXT } from '../constants';
 import { operationsKey, pieceRatesKey } from './productionKeys';
 import { useOperationRole } from './useOperationRole';
 import type {
+  OperationExcelSheetBody,
   OperationImportParams,
   SaveOperationPayload,
   SetOperationsGroupPayload,
@@ -50,6 +51,33 @@ export const usePreviewOperationImport = () => {
       replace?: boolean;
     }) => productionApi.previewOperationImport(role, file, params),
     { invalidate: [] },
+  );
+};
+
+/** DEV-ALL-179: kiểm lại bảng công đoạn đã sửa trên popup — không ghi DB. */
+export const usePreviewOperationImportData = () => {
+  const role = useOperationRole();
+  return useApiMutation(
+    ({
+      body,
+      ...params
+    }: {
+      body: OperationExcelSheetBody;
+      productId: number;
+      effectiveDate?: string;
+      replace?: boolean;
+    }) => productionApi.previewOperationImportData(role, body, params),
+    { invalidate: [] },
+  );
+};
+
+/** DEV-ALL-179: nhập công đoạn từ bảng đã sửa trên popup. */
+export const useImportOperationsData = () => {
+  const role = useOperationRole();
+  return useApiMutation(
+    ({ body, params }: { body: OperationExcelSheetBody; params: OperationImportParams }) =>
+      productionApi.importOperationsData(role, body, params),
+    { invalidate: [operationsKey, pieceRatesKey] },
   );
 };
 

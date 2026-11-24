@@ -232,11 +232,13 @@ public sealed partial class SpecImportService : ISpecImportService
         var wanted = codes.Where(c => c.Length > 0).Distinct().ToList();
         if (wanted.Count == 0) return new Dictionary<string, SpecImportMaterial>();
         var rows = await _uow.Repository<Material>().Query().AsNoTracking()
-            .Where(m => wanted.Contains(m.MaterialCode) && m.Status == MaterialStatuses.Active)
-            .Select(m => new SpecImportMaterial(m.MaterialId, m.MaterialCode, m.MaterialName, m.Unit, m.Color))
+            .Where(m => wanted.Contains(m.MaterialCode))
+            .Select(m => new SpecImportMaterial(m.MaterialId, m.MaterialCode, m.MaterialName, m.Unit, m.Color, m.MaterialType == MaterialTypes.Fabric,
+                m.Status != MaterialStatuses.Active))
             .ToListAsync(ct);
+        // NVL ngừng dùng vẫn tra được để báo đúng lỗi (không coi là NVL chưa có); trùng mã thì ưu tiên bản đang dùng.
         return rows.GroupBy(m => m.MaterialCode, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(g => g.Key, g => g.OrderBy(m => m.Discontinued).First(), StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -266,6 +268,8 @@ public sealed partial class SpecImportService : ISpecImportService
                 var check = await _markers.CheckAsync(id, productId, builder.Markers, ct);
                 if (!check.IsSuccess) errors.Add(check.Message ?? Messages.SpecImportExcelInvalid);
             }
+            else if (format.IsValid)
+                errors.AddRange(await _markers.SizeProblemsAsync(id, productId, builder.Markers, builder.Spec.MarkerColors, ct) ?? []);
         }
         return errors;
     }

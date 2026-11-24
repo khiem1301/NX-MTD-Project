@@ -20,16 +20,32 @@ const applyRow = (row: GridRow, source: OrderImportRow): GridRow => {
   return { ...row, cells };
 };
 
+/** Size của dòng màu vừa nhập mà file không có số lượng: ghi 0 (không để trống). Ô đã có số lượng giữ nguyên. */
+const fillZeroSizes = (row: GridRow, sizes: string[]): GridRow => {
+  const cells: Record<string, GridCell> = { ...row.cells };
+  for (const size of sizes) {
+    const cell = cells[size];
+    if (!cell || cell.qty === null) cells[size] = { ...(cell ?? { orderLineId: null }), qty: 0 };
+  }
+  return { ...row, cells };
+};
+
 const mergeIntoBlock = (block: ProductBlock, rows: OrderImportRow[]): ProductBlock => {
   let gridRows = [...block.rows];
+  const touched = new Set<string>();
   for (const source of rows) {
     const index = gridRows.findIndex((r) => sameColor(r.color, source.color));
-    if (index >= 0) gridRows[index] = applyRow(gridRows[index]!, source);
-    else
-      gridRows = [
-        ...gridRows,
-        applyRow({ key: nextKey('import-row'), color: source.color, cells: {} }, source),
-      ];
+    if (index >= 0) {
+      gridRows[index] = applyRow(gridRows[index]!, source);
+      touched.add(gridRows[index]!.key);
+    } else {
+      const added = applyRow(
+        { key: nextKey('import-row'), color: source.color, cells: {} },
+        source,
+      );
+      gridRows = [...gridRows, added];
+      touched.add(added.key);
+    }
   }
   const sizes = sortSizes([
     ...block.sizes,
@@ -39,7 +55,7 @@ const mergeIntoBlock = (block: ProductBlock, rows: OrderImportRow[]): ProductBlo
     ...block,
     cmtUnitPrice: rows[0]?.cmtUnitPrice ?? block.cmtUnitPrice,
     sizes,
-    rows: gridRows,
+    rows: gridRows.map((r) => (touched.has(r.key) ? fillZeroSizes(r, sizes) : r)),
   };
 };
 

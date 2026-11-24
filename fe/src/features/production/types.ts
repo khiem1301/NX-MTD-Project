@@ -124,6 +124,32 @@ export type OperationImportParams = {
   replace?: boolean;
 };
 
+/** Một dòng công đoạn đã đọc từ file và sửa trên màn hình (khớp OperationExcelRowDto của BE). */
+export type OperationExcelRowBody = {
+  rowNumber: number;
+  stt: number;
+  name: string | null;
+  skillLevel: number | null;
+  standardTimeSec: number | null;
+  equipment: string | null;
+  rate: number | null;
+  /** Lỗi ô lúc đọc file (vd TGCT không phải số); sửa dòng thì bỏ, máy chủ kiểm lại nội dung. */
+  parseError: string | null;
+  groupName: string | null;
+  componentNames: string[] | null;
+  isFinal: boolean;
+};
+
+/** Bảng công đoạn gửi lên để kiểm lại / nhập (khớp OperationExcelSheetDto của BE). */
+export type OperationExcelSheetBody = {
+  sheetName: string;
+  productText: string | null;
+  hasRateColumn: boolean;
+  hasGroupColumn: boolean;
+  hasComponentColumn: boolean;
+  rows: OperationExcelRowBody[];
+};
+
 /** API công đoạn theo vai trò: Admin không đặt được đơn giá (DEV-ALL-50). */
 export type OperationRole = 'accountant' | 'admin';
 

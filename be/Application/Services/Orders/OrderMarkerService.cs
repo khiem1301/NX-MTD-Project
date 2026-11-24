@@ -99,6 +99,24 @@ public sealed class OrderMarkerService : IOrderMarkerService
         return check ?? Result.Success();
     }
 
+    public async Task<IReadOnlyList<string>> SizeProblemsAsync(int orderId, int productId, SaveOrderMarkersDto dto,
+        IReadOnlyList<SaveProductMarkerColorDto> groupColors, CancellationToken ct)
+    {
+        var lines = await LinesAsync(l => l.OrderId == orderId && l.ProductId == productId, ct);
+        if (lines.Count == 0) return [];
+        var errors = new List<string>();
+        foreach (var marker in dto.Markers)
+        {
+            var colors = groupColors.Where(c => c.MarkerNo == marker.MarkerNo).Select(c => Upper(c.Color)).ToHashSet();
+            if (colors.Count == 0) continue;
+            var sizes = lines.Where(l => colors.Contains(Upper(l.Color))).Select(l => Upper(l.SizeCode)).ToHashSet();
+            var wrong = marker.Ratios.Select(r => Upper(r.SizeCode)).Where(s => !sizes.Contains(s)).Distinct().ToList();
+            if (wrong.Count > 0)
+                errors.Add(string.Format(Messages.OrderMarkerSizeNotInOrder, Upper(marker.MarkerCode), string.Join(", ", wrong)));
+        }
+        return errors;
+    }
+
     /// <summary>Ghi bìa đã qua <see cref="CheckAsync"/>, không mở giao dịch: người gọi tự bọc giao dịch (DEV-ALL-115).</summary>
     public async Task<Result<int>> WriteAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct)
     {

@@ -189,7 +189,7 @@ const importSpecPart = async (
 };
 
 /** DEV-ALL-123: tạo NVL mới vào danh mục (API Admin) trước khi nhập; NVL lỗi (vd mã vừa có người tạo) báo riêng, không chặn. */
-const createMaterials = async (materials: SaveMaterialPayload[]): Promise<ProductImportOutcome> => {
+export const createMaterials = async (materials: SaveMaterialPayload[]): Promise<ProductImportOutcome> => {
   const created: string[] = [];
   const failed: string[] = [];
   for (const m of materials) {

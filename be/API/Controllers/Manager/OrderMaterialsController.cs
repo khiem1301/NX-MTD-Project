@@ -73,4 +73,10 @@ public sealed class OrderMaterialsController : ManagerBaseController
         await using var stream = file.OpenReadStream();
         return this.ToResponse(await _orderMaterials.ImportAsync(orderId, stream, ct, replace));
     }
+
+    /// <summary>Nhập NVL của đơn từ dòng đã sửa trên popup kiểm tra Excel (body JSON), lưu một lần.</summary>
+    [HttpPost("import-data")]
+    public async Task<IActionResult> ImportData([FromBody] IReadOnlyList<OrderMaterialExcelRow> rows, [FromQuery] int orderId,
+        CancellationToken ct, [FromQuery] bool replace = false) =>
+        this.ToResponse(await _orderMaterials.ImportAsync(orderId, rows, ct, replace));
 }

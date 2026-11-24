@@ -13,6 +13,8 @@ type ExcelReviewTableProps<R extends { rowNumber: number }> = {
   stateOf: (row: R) => RowState;
   onlyErrors: boolean;
   onAdd: () => void;
+  /** Tắt nút Thêm dòng (vd bảng Mã hàng chỉ nhận một dòng). */
+  addDisabled?: boolean;
 };
 
 /** DEV-ALL-122: một bảng sửa được của popup kiểm tra Excel — dòng lỗi nền đỏ, dòng dùng NVL chưa có nền vàng, nút Thêm dòng. */
@@ -22,6 +24,7 @@ export function ExcelReviewTable<R extends { rowNumber: number }>({
   stateOf,
   onlyErrors,
   onAdd,
+  addDisabled = false,
 }: ExcelReviewTableProps<R>) {
   const { token } = theme.useToken();
   const background: Partial<Record<RowState, string>> = {
@@ -43,7 +46,7 @@ export function ExcelReviewTable<R extends { rowNumber: number }>({
           return { style: color ? { background: color } : undefined };
         }}
       />
-      <Button icon={<PlusOutlined />} size="small" onClick={onAdd}>
+      <Button icon={<PlusOutlined />} size="small" disabled={addDisabled} onClick={onAdd}>
         {text.addRow}
       </Button>
     </Space>

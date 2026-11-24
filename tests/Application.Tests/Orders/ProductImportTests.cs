@@ -38,23 +38,34 @@ public class ProductImportTests : ProductionTestBase
         return ms;
     }
 
-    [Fact]
-    public async Task Preview_ClassifiesNewExistsAndErrors()
+    [Theory]
+    [InlineData("ao01", "Exists")]   // đã có
+    [InlineData("QU02", "New")]      // mới
+    [InlineData("MA HANG", "Error")] // mã sai ký tự
+    public async Task Preview_SingleRow_ClassifiesNewExistsAndErrors(string code, string expected)
     {
-        using var stream = Book(
-            ["ao01", null],          // đã có
-            ["QU02", "Vải kaki"],  // mới
-            ["qu02", null],     // trùng dòng 5
-            ["MA HANG", null]); // mã sai ký tự
+        using var stream = Book([code, null]);
 
         var rows = new ClosedXmlProductParser().Parse(stream);
         var data = (await Sut().PreviewAsync(rows, default)).Data!;
 
-        data.Rows.Select(r => r.Action).Should().Equal("Exists", "New", "Error", "Error");
-        data.Rows[2].Error.Should().Contain("dòng 5");
+        data.Rows.Single().Action.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task Preview_SecondRowOnward_ErrorSingleProductOnly()
+    {
+        using var stream = Book(
+            ["QU02", "Vải kaki"],   // mã hàng đang nhập
+            ["QU03", null],         // hợp lệ nhưng là mã thứ hai
+            ["MA HANG", null]);     // lỗi riêng của dòng vẫn được báo trước
+
+        var rows = new ClosedXmlProductParser().Parse(stream);
+        var data = (await Sut().PreviewAsync(rows, default)).Data!;
+
+        data.Rows.Select(r => r.Action).Should().Equal("New", "Error", "Error");
+        data.Rows[1].Error.Should().Be(NX_MTD.Application.Common.Messages.ProductImportSingleOnly);
+        data.Rows[2].Error.Should().NotBe(NX_MTD.Application.Common.Messages.ProductImportSingleOnly);
         data.NewCount.Should().Be(1);
-        data.ExistsCount.Should().Be(1);
-        data.DuplicateCount.Should().Be(1);
-        data.ErrorCount.Should().Be(1);
     }
 }

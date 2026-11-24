@@ -32,14 +32,14 @@ public sealed partial class OrderMaterialService
 
     /// <summary>DEV-ALL-122: xem trước từ dòng đã đọc và sửa trên màn hình (không đọc lại file).</summary>
     public Task<Result<OrderMaterialImportPreviewDto>> PreviewImportAsync(int orderId, IReadOnlyList<OrderMaterialExcelRow> rows,
-        CancellationToken ct) => PreviewImportCoreAsync(orderId, () => rows, ct);
+        CancellationToken ct, bool replace = false) => PreviewImportCoreAsync(orderId, () => rows, ct, replace);
 
     public Task<Result<OrderMaterialImportResultDto>> ImportAsync(int orderId, Stream stream, CancellationToken ct,
         bool replace = false) => ImportCoreAsync(orderId, () => _excel.Parse(stream), ct, replace);
 
     /// <summary>DEV-ALL-122: nhập từ dòng đã đọc và sửa trên màn hình.</summary>
     public Task<Result<OrderMaterialImportResultDto>> ImportAsync(int orderId, IReadOnlyList<OrderMaterialExcelRow> rows,
-        CancellationToken ct) => ImportCoreAsync(orderId, () => rows, ct);
+        CancellationToken ct, bool replace = false) => ImportCoreAsync(orderId, () => rows, ct, replace);
 
     private async Task<Result<OrderMaterialImportPreviewDto>> PreviewImportCoreAsync(int orderId,
         Func<IReadOnlyList<OrderMaterialExcelRow>> read, CancellationToken ct, bool replace = false)

@@ -37,6 +37,20 @@ public sealed class OperationsController : AccountantBaseController
             await _operations.ImportAsync(productId, stream, sheetName, finalStt, effectiveDate, submitRates, ct, replace));
     }
 
+    /// <summary>DEV-ALL-179: xem trước từ bảng công đoạn đã sửa trên popup (body JSON), không ghi gì.</summary>
+    [HttpPost("import/preview-data")]
+    public async Task<IActionResult> PreviewImportData(
+        [FromBody] OperationExcelSheetDto sheet, [FromQuery] int productId, [FromQuery] DateOnly? effectiveDate,
+        CancellationToken ct, [FromQuery] bool replace = false) =>
+        this.ToResponse(await _operations.PreviewImportAsync(productId, sheet, effectiveDate, ct, replace));
+
+    /// <summary>DEV-ALL-179: nhập công đoạn từ bảng đã sửa trên popup (body JSON), cùng quy tắc với nhập từ file.</summary>
+    [HttpPost("import-data")]
+    public async Task<IActionResult> ImportData(
+        [FromBody] OperationExcelSheetDto sheet, [FromQuery] int productId, [FromQuery] int? finalStt,
+        [FromQuery] DateOnly? effectiveDate, [FromQuery] bool submitRates, CancellationToken ct, [FromQuery] bool replace = false) =>
+        this.ToResponse(await _operations.ImportAsync(productId, sheet, finalStt, effectiveDate, submitRates, ct, replace));
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] SaveOperationDto dto, CancellationToken ct) =>
         this.ToResponse(await _operations.CreateAsync(dto, ct));

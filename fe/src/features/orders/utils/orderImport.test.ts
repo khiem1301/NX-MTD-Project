@@ -115,3 +115,42 @@ describe('acceptMissingProduct', () => {
     expect(next.validCount).toBe(1);
   });
 });
+
+describe('mergeOrderImport — size không có trong file', () => {
+  it('khối mới: size file không nhập ghi 0 (không để trống), size có số lượng giữ đúng số', () => {
+    const { blocks } = mergeOrderImport(
+      [],
+      [
+        row({ color: 'Trắng', quantities: [{ sizeCode: 'S', qty: 10 }] }),
+        row({ rowNumber: 5, color: 'Đen', quantities: [{ sizeCode: 'M', qty: 4 }] }),
+      ],
+    );
+    const [block] = blocks;
+    expect(block?.sizes).toEqual(['S', 'M']);
+    const cellsOf = (color: string) =>
+      Object.fromEntries(
+        Object.entries(block!.rows.find((r) => r.color === color)!.cells).map(([k, c]) => [
+          k,
+          c.qty,
+        ]),
+      );
+    expect(cellsOf('Trắng')).toEqual({ S: 10, M: 0 });
+    expect(cellsOf('Đen')).toEqual({ S: 0, M: 4 });
+  });
+
+  it('màu đã có: ô đã có số lượng giữ nguyên, ô trống mới ghi 0', () => {
+    const block: ProductBlock = {
+      ...existing,
+      sizes: ['S', 'M', 'L'],
+      rows: [{ key: 'r1', color: 'Đen', cells: { S: { orderLineId: 11, qty: 5 } } }],
+    };
+    const { blocks } = mergeOrderImport(
+      [block],
+      [row({ quantities: [{ sizeCode: 'M', qty: 2 }] })],
+    );
+    const cells = blocks[0]!.rows[0]!.cells;
+    expect(cells.S).toEqual({ orderLineId: 11, qty: 5 });
+    expect(cells.M?.qty).toBe(2);
+    expect(cells.L?.qty).toBe(0);
+  });
+});

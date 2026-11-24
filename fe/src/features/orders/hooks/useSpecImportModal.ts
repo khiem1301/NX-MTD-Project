@@ -1,10 +1,18 @@
 import { useState } from 'react';
 import { message } from 'antd';
+import { useApiMutation } from '@/hooks/useApiMutation';
+import { useRolePath } from '@/hooks/useRolePath';
 import { MESSAGES } from '@/constants/messages';
-import { fill } from '@/utils/format';
-import { confirmDialog } from '@/utils/confirmDialog';
-import type { SpecImportTarget } from '../types';
-import { usePreviewSpecImport, useSpecImport } from './useSpecImport';
+import type { SaveMaterialPayload } from '@/types/material';
+import { excelBundleApi, type ReviewScope } from '../api/orderApi';
+import type { ExcelBundle, SpecImportPart } from '../types';
+import { restrictBundle, type ReviewTable } from '../utils/excelReview';
+import { specImportDoneMessage } from '../utils/importMessages';
+import {
+  createMaterials,
+  refreshAfterImport,
+  showImportResults,
+} from '../utils/productExcelImports';
 
 const text = MESSAGES.orders.specImport;
 
@@ -21,91 +29,129 @@ export type SpecImportSource =
   | { scope: 'admin'; productId: number; productLabel: string }
   | { scope: 'manager'; orderId: number; orderCode: string; products: SpecImportProductOption[] };
 
-const targetOf = (
-  source: SpecImportSource,
-  orderId: number | undefined,
-  productId: number | undefined,
-): SpecImportTarget | null => {
-  if (source.scope === 'admin') return { scope: 'admin', productId: source.productId, orderId };
-  return productId === undefined ? null : { scope: 'manager', orderId: source.orderId, productId };
+/** Popup đang mở: file đã đọc, người dùng sửa trực tiếp trước khi nhập. */
+type Reviewing = { bundle: ExcelBundle; fileName: string };
+
+/**
+ * Bảng lấy từ file. Tab Bìa cắt của đơn (màn Đơn hàng) chỉ lấy bìa cắt, không đụng định mức mã hàng; màn Mã hàng lấy định mức, và
+ * bìa của đơn khi đã chọn đơn.
+ */
+const reviewTablesOf = (scope: SpecImportSource['scope'], orderId: number | undefined): ReviewTable[] => {
+  if (scope === 'manager') return ['markers'];
+  return orderId === undefined ? ['components', 'norms', 'groups'] : ['components', 'norms', 'groups', 'markers'];
 };
 
-/** DEV-ALL-115: trạng thái hộp thoại nhập Excel — chọn file, chọn đích, xem trước, xác nhận nhập (lưu ngay). */
+/** Bảng nào có trong file (và nằm trong phạm vi) thì mới gửi nhập. */
+const partsOf = (
+  bundle: ExcelBundle,
+  orderId: number | undefined,
+  tables: readonly ReviewTable[],
+): SpecImportPart[] => {
+  const spec = bundle.spec;
+  const has: [SpecImportPart, boolean][] = [
+    ['components', spec.hasComponents],
+    ['norms', spec.hasNorms],
+    ['groups', spec.hasMarkerGroups],
+    ['markers', orderId !== undefined && spec.hasOrderMarkers],
+  ];
+  const inScope: Record<SpecImportPart, ReviewTable> = {
+    components: 'components',
+    norms: 'norms',
+    groups: 'groups',
+    markers: 'markers',
+  };
+  return has.filter(([part, present]) => present && tables.includes(inScope[part])).map(([part]) => part);
+};
+
+/**
+ * DEV-ALL-115/175: trạng thái hộp thoại nhập Excel định mức + bìa của đơn — chọn đích, chọn file; đọc file xong thì mở popup kiểm tra
+ * cho sửa từng ô (máy chủ kiểm lại sau mỗi lần sửa), Xác nhận thì nhập bảng đã sửa một lần.
+ */
 export function useSpecImportModal(source: SpecImportSource, onClose: () => void) {
-  const [file, setFile] = useState<File | null>(null);
+  // API theo người đăng nhập: Admin dùng API Admin (cả ở màn Bìa cắt của đơn), Quản đốc dùng API Quản đốc.
+  const scope: ReviewScope = useRolePath() === 'admin' ? 'admin' : 'manager';
   const [orderId, setOrderId] = useState<number | undefined>(undefined);
-  const [replace, setReplaceState] = useState(false);
   const [productId, setProductId] = useState<number | undefined>(
     source.scope === 'manager' && source.products.length === 1
       ? source.products[0]?.productId
-      : undefined,
+      : source.scope === 'admin'
+        ? source.productId
+        : undefined,
   );
-  const preview = usePreviewSpecImport();
-  const doImport = useSpecImport();
-  const target = targetOf(source, orderId, productId);
+  const [reviewing, setReviewing] = useState<Reviewing | null>(null);
+  const effectiveOrderId = source.scope === 'manager' ? source.orderId : orderId;
 
-  const runPreview = (
-    nextFile: File | null,
-    nextTarget: SpecImportTarget | null,
-    nextReplace: boolean = replace,
+  const parse = useApiMutation((file: File) => excelBundleApi.parse(file, scope), {
+    invalidate: [],
+  });
+  const doImport = useApiMutation(
+    (args: { bundle: ExcelBundle; replace: boolean }) =>
+      excelBundleApi.importSpecScoped(
+        scope,
+        productId ?? 0,
+        args.bundle.spec,
+        effectiveOrderId,
+        partsOf(args.bundle, effectiveOrderId, reviewTablesOf(source.scope, effectiveOrderId)),
+        args.replace,
+      ),
+    { invalidate: [] },
+  );
+
+  const chooseFile = (file: File) => {
+    if (productId === undefined) {
+      void message.warning(text.productPlaceholder);
+      return;
+    }
+    parse.mutate(file, { onSuccess: (bundle) => setReviewing({ bundle, fileName: file.name }) });
+  };
+
+  const confirm = async (
+    edited: ExcelBundle,
+    materials: SaveMaterialPayload[],
+    replace: boolean,
   ) => {
-    if (!nextFile || !nextTarget) return;
-    preview.mutate({ target: nextTarget, file: nextFile, replace: nextReplace });
-  };
-
-  const setReplace = (next: boolean) => {
-    setReplaceState(next);
-    runPreview(file, target, next);
-  };
-
-  const chooseFile = (nextFile: File | null) => {
-    setFile(nextFile);
-    if (nextFile) runPreview(nextFile, target);
-    else preview.reset();
-  };
-
-  const chooseOrder = (next: number | undefined) => {
-    setOrderId(next);
-    runPreview(file, targetOf(source, next, productId));
-  };
-
-  const chooseProduct = (next: number | undefined) => {
-    setProductId(next);
-    preview.reset();
-    runPreview(file, targetOf(source, orderId, next));
-  };
-
-  const handleConfirm = () => {
-    if (!file || !target) return;
-    const removed = replace ? (preview.data?.removedCount ?? 0) : 0;
-    confirmDialog({
-      title: text.confirmTitle,
-      content:
-        removed > 0
-          ? `${text.confirmBody} ${fill(MESSAGES.common.importReplace.confirmExtra, removed)}`
-          : text.confirmBody,
-      onOk: () =>
-        doImport.mutateAsync({ target, file, replace }).then((result) => {
-          void message.success(result.message ?? MESSAGES.common.saved);
+    if (doImport.isPending) return;
+    // Chỉ nhập đúng các bảng của hộp thoại này: bảng khác trong file không bị kiểm, không bị ghi.
+    const bundle = restrictBundle(edited, reviewTablesOf(source.scope, effectiveOrderId));
+    if (partsOf(bundle, effectiveOrderId, reviewTablesOf(source.scope, effectiveOrderId)).length === 0) {
+      void message.warning(text.nothingToImport);
+      return;
+    }
+    if (materials.length > 0) {
+      const created = await createMaterials(materials);
+      if (!created.ok) {
+        showImportResults(text.confirmTitle, [created]);
+        return;
+      }
+    }
+    const parts = partsOf(bundle, effectiveOrderId, reviewTablesOf(source.scope, effectiveOrderId));
+    doImport.mutate(
+      { bundle, replace },
+      {
+        onSuccess: async (result) => {
+          await refreshAfterImport();
+          void message.success(specImportDoneMessage(result.data, parts, materials.length));
+          setReviewing(null);
           onClose();
-        }),
-    });
+        },
+      },
+    );
   };
 
   return {
-    file,
-    replace,
-    setReplace,
+    scope,
     // Màn đơn hàng: đơn cố định theo màn; màn Mã hàng: đơn do người dùng chọn (có thể chưa chọn).
-    orderId: source.scope === 'manager' ? source.orderId : orderId,
+    orderId: effectiveOrderId,
     productId,
-    preview,
-    doImport,
-    data: preview.data,
-    canImport: preview.data?.canImport === true && !preview.isPending,
+    reviewing,
+    parsing: parse.isPending,
+    parseError: parse.error?.message,
+    importing: doImport.isPending,
+    reviewTables: reviewTablesOf(source.scope, effectiveOrderId),
     chooseFile,
-    chooseOrder,
-    chooseProduct,
-    handleConfirm,
+    chooseOrder: setOrderId,
+    chooseProduct: setProductId,
+    confirm,
+    closeReview: () => setReviewing(null),
   };
 }

@@ -388,6 +388,18 @@ export type OrderImportRow = {
   /** true khi dòng chỉ thiếu mã hàng; form đơn nhận dòng sau khi khai mã, mã được ghi khi lưu đơn. */
   missingProduct?: boolean;
 };
+/** Body kiểm lại dòng hàng đã sửa (khớp OrderImportExcelDto của BE). */
+export type OrderImportCheckBody = {
+  sizeColumns: string[];
+  rows: {
+    rowNumber: number;
+    productCode: string;
+    color: string;
+    cmtUnitPrice: number | null;
+    quantities: OrderImportQty[];
+    parseError: string | null;
+  }[];
+};
 export type OrderImportPreview = {
   sizeColumns: string[];
   rows: OrderImportRow[];
@@ -495,6 +507,9 @@ export type OrderMaterialCheck = {
   errorCount: number;
   duplicateCount: number;
   changeCount: number;
+  /** Chế độ thay thế: NVL cũ sẽ xóa / giữ lại vì đã dùng. */
+  removed?: string[];
+  blocked?: string[];
 };
 export type ExcelBundleCheck = {
   products: ProductImportPreview | null;

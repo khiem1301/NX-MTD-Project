@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import type { SaveMaterialPayload } from '@/types/material';
-import { excelBundleApi } from '../api/orderApi';
+import { excelBundleApi, type ReviewScope } from '../api/orderApi';
 import type { ExcelBundle, ExcelBundleCheck } from '../types';
 import {
   addRow,
   defaultMaterial,
   patchRow,
   removeRow,
+  restrictBundle,
   rowStateOf,
   rowsOf,
   statusMaps,
@@ -16,6 +17,7 @@ import {
   type RowOf,
   type RowState,
 } from '../utils/excelReview';
+import { mergeExisting, type ExistingData } from '../utils/excelReviewExisting';
 
 /** Chờ người dùng ngừng gõ rồi mới kiểm lại (ms). */
 const RECHECK_DELAY_MS = 500;
@@ -30,10 +32,14 @@ export function useExcelReview(
   tables: readonly ReviewTable[],
   orderId: number | null = null,
   replace = false,
+  scope: ReviewScope = 'admin',
 ) {
   const [draft, setDraft] = useState(initial);
   const check = useApiMutation(
-    (bundle: ExcelBundle) => excelBundleApi.check({ productId, orderId, bundle, replace }),
+    (bundle: ExcelBundle) => excelBundleApi.check(
+        { productId, orderId, bundle: restrictBundle(bundle, tables), replace },
+        scope,
+      ),
     { invalidate: [] },
   );
   const { mutate } = check;
@@ -85,6 +91,12 @@ export function useExcelReview(
     removeRow: (table: ReviewTable, rowNumber: number) =>
       setDraft((d) => removeRow(d, table, rowNumber)),
     addRow: (table: ReviewTable) => setDraft((d) => addRow(d, table)),
+    /** Nạp dữ liệu đang có trong hệ thống vào bản nháp (chỉ thêm dòng chưa có); trả về các bảng được nạp. */
+    loadExisting: (existing: ExistingData, scopeTables: readonly ReviewTable[]): ReviewTable[] => {
+      const merged = mergeExisting(draft, existing, scopeTables);
+      setDraft(merged.bundle);
+      return merged.loaded;
+    },
     recheck: () => mutate(draft),
     updateMaterial: (code: string, patch: Partial<SaveMaterialPayload>) =>
       setMaterialEdits((e) => ({ ...e, [code]: { ...e[code], ...patch } })),

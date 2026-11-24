@@ -554,7 +554,7 @@ public class SpecImportBuilderTests
     }
 
     [Fact]
-    public void UTCID782_Build_OtherProductMarker_Skipped()
+    public void UTCID782_Build_OtherProductMarker_ActionErrorNamingBothProducts()
     {
         // Arrange
         var workbook = Book(markers: [MarkerExcel(4, 1, "1A", 2m, 1.5m, productCode: "AO02")]);
@@ -562,9 +562,11 @@ public class SpecImportBuilderTests
         // Act
         var builder = Build(Spec(), workbook, orderProduct: Order(), productCode: "AO01");
 
-        // Assert
-        builder.OrderMarkers.Should().BeEmpty();
-        builder.Notes.Should().Contain(string.Format(Messages.SpecImportOtherProductRows, 1));
+        // Assert: dòng của mã hàng khác hiện lỗi từng dòng, không bị bỏ qua âm thầm và không vào bìa hợp lệ
+        var row = builder.OrderMarkers.Single();
+        row.Action.Should().Be(SpecImportBuilder.ActionError);
+        row.Error.Should().Be(string.Format(Messages.SpecImportOtherProductRow, "AO02", "AO01"));
+        builder.Markers!.Markers.Should().BeEmpty();
     }
 
     [Fact]

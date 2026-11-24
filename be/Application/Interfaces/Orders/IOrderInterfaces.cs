@@ -141,6 +141,9 @@ public interface IOrderMarkerService
     Task<Result<OrderMarkersDto>> SaveAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct);
     /// <summary>Mọi kiểm tra của Lưu bìa, không ghi (DEV-ALL-115).</summary>
     Task<Result> CheckAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct);
+    /// <summary>Size của bìa không có trong đơn ở các màu dùng nhóm (màu nhóm theo bản định mức đã gộp, so theo tên màu); xem trước nhập Excel khi định mức đổi.</summary>
+    Task<IReadOnlyList<string>> SizeProblemsAsync(int orderId, int productId, SaveOrderMarkersDto dto,
+        IReadOnlyList<SaveProductMarkerColorDto> groupColors, CancellationToken ct);
     /// <summary>Ghi bìa đã kiểm, KHÔNG mở giao dịch: người gọi bọc giao dịch (DEV-ALL-115).</summary>
     Task<Result<int>> WriteAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct);
 }

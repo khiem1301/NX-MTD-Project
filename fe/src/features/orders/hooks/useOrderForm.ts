@@ -182,6 +182,46 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
     return true;
   };
 
+  /** Dữ liệu mã hàng đã khai trên form (chưa ghi) của một khối, để mở lại xem / sửa. */
+  const stagedOfBlock = (blockKey: string) => {
+    const block = blocks.find((b) => b.key === blockKey);
+    const tempId = block?.productId;
+    if (tempId === null || tempId === undefined || tempId >= 0) return undefined;
+    const entry = staged.find((s) => s.tempId === tempId);
+    return entry
+      ? { tempId, body: entry.body, selection: pendingImports[tempId]?.selection }
+      : undefined;
+  };
+
+  /** Lưu lại thông tin mã hàng đã khai trên form (cùng tempId): đổi mã, mô tả, ảnh, file Excel. Trả false khi mã đã có trên đơn. */
+  const updateStagedProduct = (
+    blockKey: string,
+    body: SaveProductPayload,
+    selection: ProductImportSelection,
+  ): boolean => {
+    const current = stagedOfBlock(blockKey);
+    if (!current) return false;
+    const productCode = body.productCode.trim().toUpperCase();
+    if (codeInUse(productCode, blockKey)) {
+      void message.error(fill(MESSAGES.orders.stagedDuplicate, productCode));
+      return false;
+    }
+    const { tempId } = current;
+    setStaged((prev) =>
+      prev.map((s) => (s.tempId === tempId ? { tempId, body: { ...body, productCode } } : s)),
+    );
+    setPendingImports((prev) => {
+      const { [tempId]: _old, ...rest } = prev;
+      return hasImportFiles(selection)
+        ? { ...rest, [tempId]: { code: productCode, selection } }
+        : rest;
+    });
+    setLabels((l) => ({ ...l, [tempId]: productCode }));
+    setDirty(true);
+    void message.success(fill(MESSAGES.orders.stagedUpdated, productCode));
+    return true;
+  };
+
   /** Bỏ mã khai trong hộp nhập Excel khi đóng hộp mà không Áp dụng. */
   const unstageProduct = (tempId: number) => {
     setStaged((prev) => prev.filter((p) => p.tempId !== tempId));
@@ -340,7 +380,20 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
     setProductBlock,
     stageProduct,
     stagedProducts,
+    /** Màu đã có định mức trong file Excel đã chọn của mã hàng khai trên form (tempId → màu). */
+    stagedNormColors: Object.fromEntries(
+      staged.map((s) => [
+        s.tempId,
+        [
+          ...new Set(
+            (pendingImports[s.tempId]?.selection.bundle?.spec.norms ?? []).map((n) => n.color),
+          ),
+        ],
+      ]),
+    ) as Record<number, string[]>,
     stageOntoBlock,
+    stagedOfBlock,
+    updateStagedProduct,
     unstageProduct,
     orderImports,
   };

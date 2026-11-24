@@ -1,5 +1,11 @@
-import { Button, Card, Col, Flex, Row, Space, Tag, Tooltip, Typography, theme } from 'antd';
-import { EditOutlined, FileExcelOutlined } from '@ant-design/icons';
+import { Button, Card, Flex, Space, Tag, Tooltip, Typography, theme } from 'antd';
+import {
+  CheckCircleFilled,
+  CloseOutlined,
+  EditOutlined,
+  FileExcelOutlined,
+} from '@ant-design/icons';
+import { EXCEL_ICON_COLOR } from '../constants';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
@@ -11,7 +17,6 @@ import {
   type ProductImportKind,
   type ProductImportSelection,
 } from '../utils/productExcelImports';
-import { ExcelKindSlot } from './ExcelKindSlot';
 import { ExcelReviewModal } from './ExcelReviewModal';
 import { ExcelUploadButton } from './ExcelUploadButton';
 import { HintTip } from '@/components/common/HintTip';
@@ -39,15 +44,6 @@ type ProductExcelImportsProps = {
   showMissing?: boolean;
 };
 
-function GroupTitle({ title, note }: { title: string; note: string }) {
-  return (
-    <div>
-      <Typography.Text strong>{title}</Typography.Text>
-      <Typography.Text type="secondary"> · {note}</Typography.Text>
-    </div>
-  );
-}
-
 /**
  * DEV-ALL-121/122: khung "Nhập từ Excel" của form mã hàng. Chọn file (chung nhiều sheet, hoặc riêng từng mục) thì đọc file rồi mở
  * popup kiểm tra để sửa và Xác nhận; khung chỉ giữ dữ liệu đã xác nhận. Việc ghi chạy sau khi Lưu mã hàng (hoặc Lưu đơn).
@@ -68,23 +64,71 @@ export function ProductExcelImports({
   const { bundle, fileName, newMaterials = [] } = value;
   const rowsOfKind = (kind: ProductImportKind) => (bundle ? rowCountOf(bundle, kind) : 0);
 
+  /** Ô trạng thái từng mục: chỉ hiện số dòng đã đọc từ file chung, không có nút chọn file riêng. */
   const slots = (kinds: readonly ProductImportKind[], span: number) => (
-    <Row gutter={[token.marginSM, token.marginSM]}>
-      {kinds.map((kind) => (
-        <Col key={kind} xs={24} md={span}>
-          <ExcelKindSlot
-            label={text.kinds[kind]}
-            rows={rowsOfKind(kind)}
-            disabled={disabled}
-            loading={imports.parsing(kind)}
-            onFile={(file) => imports.openFile(file, kind)}
-            onClear={() => bundle && onChange({ ...value, bundle: clearKind(bundle, kind) })}
-            required={required.includes(kind)}
-            missing={showMissing && required.includes(kind) && rowsOfKind(kind) === 0}
-          />
-        </Col>
-      ))}
-    </Row>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(auto-fit, minmax(${span * 24}px, 1fr))`,
+        gap: token.marginSM,
+      }}
+    >
+      {kinds.map((kind) => {
+        const rows = rowsOfKind(kind);
+        const isRequired = required.includes(kind);
+        const missing = showMissing && isRequired && rows === 0;
+        const accent = rows
+          ? EXCEL_ICON_COLOR
+          : missing
+            ? token.colorError
+            : token.colorTextQuaternary;
+        return (
+          <div key={kind} style={{ minWidth: 0 }}>
+            <Flex
+              align="center"
+              gap={token.marginSM}
+              style={{
+                padding: `${token.paddingXS}px ${token.paddingSM}px`,
+                borderRadius: token.borderRadiusLG,
+                border: `1px solid ${missing ? token.colorError : token.colorBorderSecondary}`,
+                borderLeft: `4px solid ${accent}`,
+                background: token.colorFillAlter,
+              }}
+            >
+              {rows ? (
+                <CheckCircleFilled style={{ fontSize: 18, color: accent }} />
+              ) : (
+                <FileExcelOutlined style={{ fontSize: 18, color: accent }} />
+              )}
+              <div style={{ flex: 1, minWidth: 0, lineHeight: 1.3 }}>
+                <Typography.Text strong>
+                  {isRequired && <span style={{ color: token.colorError }}>* </span>}
+                  {text.kinds[kind]}
+                </Typography.Text>
+                <div>
+                  <Typography.Text
+                    type={missing ? 'danger' : rows ? undefined : 'secondary'}
+                    style={{ fontSize: token.fontSizeSM }}
+                  >
+                    {rows ? fill(text.rowsReady, rows) : missing ? text.slotRequired : text.noData}
+                  </Typography.Text>
+                </div>
+              </div>
+              {rows > 0 && (
+                <Button
+                  size="small"
+                  type="text"
+                  aria-label={`${MESSAGES.common.delete} ${text.kinds[kind]}`}
+                  icon={<CloseOutlined />}
+                  disabled={disabled}
+                  onClick={() => bundle && onChange({ ...value, bundle: clearKind(bundle, kind) })}
+                />
+              )}
+            </Flex>
+          </div>
+        );
+      })}
+    </div>
   );
 
   return (
@@ -129,19 +173,15 @@ export function ProductExcelImports({
           </Space>
         }
       >
-        <Space size={8} style={{ marginBottom: token.marginSM }}>
-          <HintTip text={deferred ? text.hintDeferred : text.hint} />
-          {required.length > 0 && (
-            <Typography.Text type="danger">
-              {fill(text.requiredHint, required.map((k) => text.kinds[k]).join(', '))}
-            </Typography.Text>
-          )}
-        </Space>
-        <Flex vertical gap={8}>
-          <GroupTitle
-            title={text.specGroup}
-            note={deferred ? text.specGroupNoteDeferred : text.specGroupNote}
-          />
+        <Flex vertical gap={token.marginXS}>
+          <Space size={8} wrap>
+            <HintTip text={deferred ? text.hintDeferred : text.hint} />
+            {required.length > 0 && (
+              <Typography.Text type="danger">
+                {fill(text.requiredHint, required.map((k) => text.kinds[k]).join(', '))}
+              </Typography.Text>
+            )}
+          </Space>
           {slots(SPEC_KINDS, SPEC_SPAN)}
         </Flex>
       </Card>

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Col, Form, Input, Modal, Row, Tooltip } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
+import { fill } from '@/utils/format';
 import { zodRule } from '@/utils/zodRule';
 import { useProduct, useSaveProduct } from '../hooks/useOrders';
 import { useProductFormImports } from '../hooks/useProductFormImports';
@@ -10,6 +11,7 @@ import {
   productDescriptionSchema,
   toFieldPath,
 } from '../utils/productValidation';
+import { productCodeExists } from '../utils/productCodeCheck';
 import type { ProductImportSelection } from '../utils/productExcelImports';
 import { ProductExcelImports } from './ProductExcelImports';
 import { ProductImagesFields } from './ProductImagesFields';
@@ -17,7 +19,7 @@ import type { NamePath } from 'antd/es/form/interface';
 import type { ProductListItem, SaveProductPayload } from '../types';
 
 const MODAL_WIDTH = 820;
-const BODY_MAX_HEIGHT = 'calc(100vh - 240px)';
+const BODY_MAX_HEIGHT = 'calc(100vh - 170px)';
 
 type ProductFormModalProps = {
   open: boolean;
@@ -44,6 +46,10 @@ type ProductFormModalProps = {
    * form được gắn, nên nơi dùng gắn form riêng mỗi lần mở.
    */
   initialImports?: ProductImportSelection;
+  /** Có initialImports: mở popup kiểm tra ngay (mặc định). Tắt khi mở lại mã hàng đã khai trên đơn để xem / sửa. */
+  autoReviewImports?: boolean;
+  /** Tiêu đề thay cho "Thêm mới" (vd mở lại mã hàng khai trên đơn). */
+  title?: string;
 };
 
 /** UC10: thêm / sửa mã hàng. Mã khóa khi đã dùng trong đơn. Ảnh mẫu chọn từ máy, lưu khóa file trong SampleImageUrl (DEV-KH-08-1). */
@@ -57,6 +63,8 @@ export function ProductFormModal({
   onStage,
   initialValues,
   initialImports,
+  autoReviewImports = true,
+  title,
 }: ProductFormModalProps) {
   const [form] = Form.useForm<SaveProductPayload>();
   const save = useSaveProduct();
@@ -134,7 +142,10 @@ export function ProductFormModal({
   return (
     <Modal
       open={open}
-      title={product ? `${MESSAGES.common.edit} ${product.productCode}` : MESSAGES.common.create}
+      title={
+        title ??
+        (product ? `${MESSAGES.common.edit} ${product.productCode}` : MESSAGES.common.create)
+      }
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
       width={MODAL_WIDTH}
@@ -149,31 +160,56 @@ export function ProductFormModal({
       }}
       destroyOnHidden
       // Thân modal tự cuộn để nút Lưu luôn hiện, kể cả khi khai nhiều màu.
-      styles={{ body: { maxHeight: BODY_MAX_HEIGHT, overflowY: 'auto', overflowX: 'hidden' } }}
+      styles={{
+        body: {
+          maxHeight: BODY_MAX_HEIGHT,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          // Chừa lề dưới để khung Nhập từ Excel không bị cắt sát mép vùng cuộn.
+          paddingBottom: 4,
+        },
+      }}
     >
       {detail.error && <QueryError error={detail.error} onRetry={() => void detail.refetch()} />}
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={busy}>
         <Row gutter={16}>
-          <Col xs={24}>
+          <Col xs={24} md={9}>
             <Tooltip title={locked ? MESSAGES.orders.codeLockedHint : undefined}>
               <Form.Item
                 name="productCode"
                 label={MESSAGES.orders.productCode}
                 required
-                rules={[zodRule(productCodeSchema)]}
+                rules={[
+                  zodRule(productCodeSchema),
+                  // Thêm mới: báo ngay mã đã có trong hệ thống (lúc rời ô và khi bấm Lưu), không đợi máy chủ từ chối.
+                  {
+                    validator: async (_, value: unknown) => {
+                      const code = typeof value === 'string' ? value.trim() : '';
+                      if (product !== null || !code || !productCodeSchema.safeParse(code).success)
+                        return;
+                      if (await productCodeExists(code))
+                        throw new Error(
+                          fill(MESSAGES.orders.productCodeExists, code.toUpperCase()),
+                        );
+                    },
+                    validateTrigger: ['onBlur'],
+                  },
+                ]}
               >
                 <Input disabled={locked} />
               </Form.Item>
             </Tooltip>
           </Col>
+          <Col xs={24} md={15}>
+            <Form.Item
+              name="description"
+              label={MESSAGES.orders.description}
+              rules={[zodRule(productDescriptionSchema)]}
+            >
+              <Input.TextArea autoSize={{ minRows: 1, maxRows: 4 }} />
+            </Form.Item>
+          </Col>
         </Row>
-        <Form.Item
-          name="description"
-          label={MESSAGES.orders.description}
-          rules={[zodRule(productDescriptionSchema)]}
-        >
-          <Input.TextArea autoSize={{ minRows: 1, maxRows: 4 }} />
-        </Form.Item>
         <ProductImagesFields />
       </Form>
       {allowImports && (
@@ -183,7 +219,7 @@ export function ProductFormModal({
           required={excel.required}
           showMissing={excel.showMissing}
           onProductRow={excel.fillFromRow}
-          autoReview={initialImports !== undefined && product === null}
+          autoReview={autoReviewImports && initialImports !== undefined && product === null}
           value={excel.imports}
           onChange={excel.setImports}
           disabled={busy}

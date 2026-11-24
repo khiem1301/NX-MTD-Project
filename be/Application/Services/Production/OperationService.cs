@@ -279,13 +279,47 @@ public sealed class OperationService : IOperationService
     private const string RateNone = "None";
     private const string RateSkipped = "Skipped";
 
+    /// <summary>
+    /// DEV-ALL-179: kiểm từng ô của dòng như bộ đọc file (dòng sửa trên màn hình không đi qua bộ đọc): tên, bậc, TGCT, TIỀN, nhóm.
+    /// Dòng đọc từ file đã qua các kiểm tra này nên không bị báo lại.
+    /// </summary>
+    private static string? EditedRowProblem(OperationExcelRowDto raw, OperationExcelSheetDto sheet)
+    {
+        if (string.IsNullOrWhiteSpace(raw.Name)) return Messages.Required("tên công đoạn");
+        if (raw.Name.Trim().Length > 200) return "Tên công đoạn dài quá 200 ký tự.";
+        if (raw.SkillLevel is { } skill && (skill < OperationLimits.MinSkillLevel || skill > OperationLimits.MaxSkillLevel))
+            return "Bậc phải là số nguyên từ 1 đến 9.";
+        if (raw.StandardTimeSec is { } time)
+        {
+            if (time < 0) return "TGCT không được âm.";
+            if (decimal.Round(time, 2) != time) return "TGCT tối đa 2 số lẻ.";
+            if (time > OperationLimits.MaxStandardTimeSec) return $"TGCT không được vượt quá {OperationLimits.MaxStandardTimeSec}.";
+        }
+        if (raw.Rate is { } rate)
+        {
+            if (rate < 0) return "TIỀN không được âm.";
+            if (decimal.Round(rate, 2) != rate) return "TIỀN tối đa 2 số lẻ.";
+            if (rate > PieceRateLimits.MaxRate) return string.Format(Messages.PieceRateTooHigh, PieceRateLimits.MaxRate);
+        }
+        if (sheet.HasGroupColumn && raw.GroupName is { Length: > OperationLimits.MaxGroupNameLength })
+            return $"Nhóm công đoạn dài quá {OperationLimits.MaxGroupNameLength} ký tự.";
+        return null;
+    }
+
     /// <summary>Mã công đoạn sinh từ số thứ tự trong file: STT 7 → "OP07". Nhập lại cùng file thì khớp đúng công đoạn cũ.</summary>
     private static string CodeFor(int stt) => $"OP{stt:00}";
 
     public async Task<Result<OperationImportPreviewDto>> PreviewImportAsync(
-        int productId, Stream stream, string? sheetName, DateOnly? effectiveDate, CancellationToken ct, bool replace = false)
+        int productId, Stream stream, string? sheetName, DateOnly? effectiveDate, CancellationToken ct, bool replace = false) =>
+        ToPreview(await BuildImportPlanAsync(productId, stream, sheetName, effectiveDate, ct, replace));
+
+    /// <summary>DEV-ALL-179: xem trước từ bảng đã đọc và sửa trên màn hình (không đọc lại file), không ghi gì.</summary>
+    public async Task<Result<OperationImportPreviewDto>> PreviewImportAsync(
+        int productId, OperationExcelSheetDto sheet, DateOnly? effectiveDate, CancellationToken ct, bool replace = false) =>
+        ToPreview(await BuildImportPlanAsync(productId, sheet, effectiveDate, ct, replace));
+
+    private static Result<OperationImportPreviewDto> ToPreview(Result<ImportPlan> plan)
     {
-        var plan = await BuildImportPlanAsync(productId, stream, sheetName, effectiveDate, ct, replace);
         if (!plan.IsSuccess) return Fail.As<OperationImportPreviewDto>(plan);
 
         var p = plan.Data!;
@@ -302,13 +336,26 @@ public sealed class OperationService : IOperationService
             p.Rows.Count(r => r.Preview.Warning is not null)));
     }
 
-    public async Task<Result<OperationImportResultDto>> ImportAsync(
+    public Task<Result<OperationImportResultDto>> ImportAsync(
         int productId, Stream stream, string? sheetName, int? finalStt, DateOnly? effectiveDate, bool submitRates,
-        CancellationToken ct, bool replace = false)
+        CancellationToken ct, bool replace = false) =>
+        ImportCoreAsync(productId, finalStt, effectiveDate, submitRates, ct,
+            rateEffective => BuildImportPlanAsync(productId, stream, sheetName, rateEffective, ct, replace));
+
+    /// <summary>DEV-ALL-179: nhập từ bảng đã đọc và sửa trên màn hình.</summary>
+    public Task<Result<OperationImportResultDto>> ImportAsync(
+        int productId, OperationExcelSheetDto sheet, int? finalStt, DateOnly? effectiveDate, bool submitRates,
+        CancellationToken ct, bool replace = false) =>
+        ImportCoreAsync(productId, finalStt, effectiveDate, submitRates, ct,
+            rateEffective => BuildImportPlanAsync(productId, sheet, rateEffective, ct, replace));
+
+    private async Task<Result<OperationImportResultDto>> ImportCoreAsync(
+        int productId, int? finalStt, DateOnly? effectiveDate, bool submitRates, CancellationToken ct,
+        Func<DateOnly?, Task<Result<ImportPlan>>> buildPlan)
     {
         // submitRates mà không chọn ngày → dùng hôm nay (đơn giá chờ duyệt phải có EffectiveDate).
         var rateEffective = effectiveDate ?? (submitRates ? _clock.Today : (DateOnly?)null);
-        var plan = await BuildImportPlanAsync(productId, stream, sheetName, rateEffective, ct, replace);
+        var plan = await buildPlan(rateEffective);
         if (!plan.IsSuccess) return Fail.As<OperationImportResultDto>(plan);
 
         if (plan.Data!.Rows.Count(r => r.Raw.IsFinal) > 1)
@@ -550,6 +597,22 @@ public sealed class OperationService : IOperationService
             return Result<ImportPlan>.Failure(ErrorCodes.OperationImportSheetNotFound, Messages.OperationImportSheetNotFound,
                 ResultKind.Validation);
 
+        return await BuildImportPlanAsync(productId, sheet, sheets.Select(s => s.SheetName).ToList(), effectiveDate, ct, replace);
+    }
+
+    /// <summary>DEV-ALL-179: lập kế hoạch từ một sheet đã đọc và sửa trên màn hình (chỉ kiểm mã hàng, không đọc file).</summary>
+    private async Task<Result<ImportPlan>> BuildImportPlanAsync(
+        int productId, OperationExcelSheetDto sheet, DateOnly? effectiveDate, CancellationToken ct, bool replace = false)
+    {
+        var product = await CheckProductAsync(productId, ct);
+        if (product is not null) return Fail.As<ImportPlan>(product);
+        return await BuildImportPlanAsync(productId, sheet, [sheet.SheetName], effectiveDate, ct, replace);
+    }
+
+    private async Task<Result<ImportPlan>> BuildImportPlanAsync(
+        int productId, OperationExcelSheetDto sheet, IReadOnlyList<string> sheetNames, DateOnly? effectiveDate, CancellationToken ct,
+        bool replace)
+    {
         var existingOps = await Operations.Where(o => o.ProductId == productId).ToListAsync(ct);
         var byCode = existingOps.ToDictionary(o => o.OperationCode, StringComparer.OrdinalIgnoreCase);
         var ratesByOperation = (await _uow.Repository<PieceRate>().Query().Where(r => r.Operation.ProductId == productId)
@@ -573,7 +636,7 @@ public sealed class OperationService : IOperationService
                 else removals.Add(o);
             }
         }
-        return Result<ImportPlan>.Success(new ImportPlan(sheet, sheets.Select(s => s.SheetName).ToList(), hasFinal, rows, refs, removals, blocked));
+        return Result<ImportPlan>.Success(new ImportPlan(sheet, sheetNames, hasFinal, rows, refs, removals, blocked));
     }
 
     /// <summary>Thành phần, nhóm công đoạn và liên kết công đoạn ↔ chi tiết của mã hàng (DEV-ALL-116), có theo dõi để sửa được.</summary>
@@ -626,6 +689,7 @@ public sealed class OperationService : IOperationService
                 error = Messages.OperationImportSttOutOfRange;
             if (error is null && duplicateStt.Contains(raw.Stt)) error = $"Trùng STT {raw.Stt} trong file.";
             if (error is null && manyFinals && raw.IsFinal) error = Messages.OperationImportManyFinals;
+            error ??= EditedRowProblem(raw, sheet);
             var (componentIds, componentNames, componentWarning) = ResolveComponents(raw, sheet, refs);
             var group = sheet.HasGroupColumn ? raw.GroupName : null;
 

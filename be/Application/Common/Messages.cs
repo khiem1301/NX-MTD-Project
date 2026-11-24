@@ -406,10 +406,16 @@ public static class Messages
     public const string SpecImportComponentUnknown = "Chi tiết \"{0}\" chưa có ở mã hàng (thêm ở bảng Thành phần).";
     public const string SpecImportComponentNotPanel = "Chi tiết \"{0}\" là phụ liệu (TRIM); nhóm bìa chỉ gồm chi tiết cắt (PANEL).";
     public const string SpecImportMaterialUnknown = "Mã NVL \"{0}\" không có trong danh mục NVL đang dùng.";
+    public const string SpecImportMaterialDiscontinued = "Mã NVL \"{0}\" đã ngừng sử dụng.";
+    public const string SpecImportMaterialCodeTooLong = "Mã NVL tối đa 30 ký tự.";
+    public const string SpecImportMaterialNameTooLong = "Tên NVL tối đa 200 ký tự.";
+    public const string SpecImportMaterialUnitTooLong = "Đơn vị tối đa 20 ký tự.";
+    public const string SpecImportTypeInvalid = "Loại phải là PANEL (vải cắt) hoặc TRIM (phụ liệu).";
     public const string SpecImportMarkerNoRange = "Nhóm bìa từ 1 đến {0}.";
     public const string SpecImportGroupUnknown = "Nhóm bìa {0} chưa khai ở mã hàng (bảng Nhóm bìa).";
     public const string SpecImportNoSizeOfOrder = "Bìa không có size nào của đơn.";
     public const string SpecImportSizesIgnored = "Cột size {0} không có trong đơn nên bị bỏ qua.";
+    public const string SpecImportOtherProductRow = "Mã hàng \"{0}\" không phải mã hàng đang nhập ({1}) nên không nhập được. Đổi mã hàng hoặc xóa dòng này.";
     public const string SpecImportOtherProductRows = "{0} dòng bìa của mã hàng khác bị bỏ qua.";
     public const string SpecImportMarkersSkipped = "Chưa chọn đơn hàng nên bảng Bìa của đơn bị bỏ qua.";
     public const string SpecImportMarkerCheckLater = "Bìa của đơn sẽ được kiểm lại đầy đủ (size theo màu, vải của nhóm) khi bấm Nhập, sau khi lưu định mức.";
@@ -430,12 +436,16 @@ public static class Messages
     public const string SpecImportPartMissing = "File không có bảng {0}. Kiểm tra tên cột trên dòng tiêu đề (dùng file mẫu).";
 
     // DEV-ALL-120: tạo mã hàng hàng loạt từ Excel
+    public const string ProductImportSingleOnly = "Chỉ nhập một mã hàng mỗi lần. Xóa dòng này (mã hàng khác tạo ở lần nhập riêng).";
     public const string ProductImportExists = "Mã hàng đã có, bỏ qua.";
 
     // DEV-ALL-118: nhập dòng hàng của đơn từ Excel
     public const string OrderImportProductUnknown = "Mã hàng \"{0}\" không có trong danh mục.";
     public const string OrderImportProductInactive = "Mã hàng \"{0}\" đã ngừng sản xuất.";
     public const string OrderImportColorTooLong = "Màu tối đa 50 ký tự.";
+    public const string OrderImportSizeInvalid = "Size không được trống và tối đa 10 ký tự.";
+    public const string OrderImportQtyInvalid = "Số lượng mỗi size phải là số nguyên dương.";
+    public const string OrderImportSizeDuplicate = "Một size xuất hiện hai lần trong dòng.";
     public const string OrderImportPriceInvalid = "Đơn giá CMT từ 0 đến 100.000.000, tối đa 2 số lẻ.";
     public const string OrderImportNoQty = "Dòng chưa có số lượng size nào.";
     public const string OrderImportQtyTooLarge = "Số lượng mỗi size tối đa 1.000.000.";
