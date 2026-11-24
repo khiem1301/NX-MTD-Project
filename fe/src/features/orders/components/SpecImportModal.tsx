@@ -1,13 +1,12 @@
 import { Alert, Modal, Select, Space, Spin, Upload } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
-import { ReplaceImportOption } from '@/components/common/ReplaceImportOption';
 import { MESSAGES } from '@/constants/messages';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { fill, formatDate } from '@/utils/format';
 import { useProductOrders } from '../hooks/useSpecImport';
 import { useSpecImportModal, type SpecImportSource } from '../hooks/useSpecImportModal';
-import { SpecImportPreviewTabs } from './SpecImportPreviewTabs';
+import { ExcelReviewModal } from './ExcelReviewModal';
 import { HintTip } from '@/components/common/HintTip';
 
 const text = MESSAGES.orders.specImport;
@@ -49,8 +48,8 @@ function OrderPicker({
 }
 
 /**
- * DEV-ALL-115: nhập Excel định mức mã hàng (thành phần, định mức NVL, nhóm bìa) và bìa của đơn trong một hộp thoại. Chọn file là
- * xem trước ngay (kiểm từng dòng + mọi kiểm tra của nút Lưu trên bản đã gộp); bấm Nhập thì lưu cả định mức và bìa một lần.
+ * DEV-ALL-115/175: nhập Excel định mức mã hàng (thành phần, định mức NVL, nhóm bìa) và bìa của đơn. Chọn file là mở popup kiểm tra
+ * (như form mã hàng): sửa từng ô, máy chủ kiểm lại sau mỗi lần sửa; Xác nhận thì lưu cả định mức và bìa một lần.
  * Chỉ gắn khi đang mở nên trạng thái tự reset mỗi lần mở.
  */
 export function SpecImportModal({ source, onClose }: SpecImportModalProps) {
@@ -65,15 +64,12 @@ export function SpecImportModal({ source, onClose }: SpecImportModalProps) {
       open
       width={MODAL_WIDTH.xl}
       title={title}
-      okText={text.confirm}
-      cancelText={MESSAGES.common.cancel}
-      okButtonProps={{ disabled: !m.canImport, loading: m.doImport.isPending }}
-      onOk={m.handleConfirm}
+      footer={null}
       onCancel={onClose}
       destroyOnHidden
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <HintTip text={text.hint} />
+        <HintTip text={source.scope === 'manager' ? text.markersHint : text.hint} />
         <Space wrap size={24}>
           {source.scope === 'admin' ? (
             <Space>
@@ -102,22 +98,15 @@ export function SpecImportModal({ source, onClose }: SpecImportModalProps) {
           <ImportTemplateLink kind="spec" productId={m.productId} orderId={m.orderId} />
         </Space>
 
-        <ReplaceImportOption
-          checked={m.replace}
-          onChange={m.setReplace}
-          disabled={m.preview.isPending || m.doImport.isPending}
-          removed={m.data?.removedNames}
-        />
-
         <Upload.Dragger
           maxCount={1}
           accept=".xlsx"
-          disabled={m.preview.isPending}
+          disabled={m.parsing || m.importing}
+          showUploadList={false}
           beforeUpload={(file) => {
             m.chooseFile(file);
             return false;
           }}
-          onRemove={() => m.chooseFile(null)}
         >
           <p className="ant-upload-drag-icon">
             <InboxOutlined />
@@ -126,10 +115,22 @@ export function SpecImportModal({ source, onClose }: SpecImportModalProps) {
           <p className="ant-upload-hint">{text.chooseFileHint}</p>
         </Upload.Dragger>
 
-        {m.preview.isPending && <Spin />}
-        {m.preview.error && <Alert type="error" showIcon message={m.preview.error.message} />}
-        {m.data && m.file && <SpecImportPreviewTabs data={m.data} />}
+        {(m.parsing || m.importing) && <Spin />}
+        {m.parseError && <Alert type="error" showIcon message={m.parseError} />}
       </Space>
+      {m.reviewing && m.productId !== undefined && (
+        <ExcelReviewModal
+          fileName={m.reviewing.fileName}
+          bundle={m.reviewing.bundle}
+          productId={m.productId}
+          orderId={m.orderId ?? null}
+          only={m.reviewTables}
+          allowReplace
+          scope={m.scope}
+          onConfirm={(bundle, materials, replace) => void m.confirm(bundle, materials, replace)}
+          onCancel={m.closeReview}
+        />
+      )}
     </Modal>
   );
 }

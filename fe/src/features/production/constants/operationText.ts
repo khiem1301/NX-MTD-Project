@@ -61,6 +61,10 @@ export const OPERATIONS_TEXT = {
     chooseFile: 'Bấm hoặc kéo file .xlsx vào đây',
     chooseFileHint:
       'Đọc cột STT, BƯỚC CÔNG VIỆC, BẬC, TGCT, THIẾT BỊ, TIỀN; thêm tùy chọn NHÓM CÔNG ĐOẠN, CHI TIẾT (cách nhau dấu ;), CUỐI (đánh x). Dòng tiêu đề nhóm, chỗ trống và "Dự phòng" được bỏ qua.',
+    editHint: 'Sửa trực tiếp trong bảng; máy chủ kiểm lại sau mỗi lần sửa. Chưa lưu gì.',
+    checking: 'Đang kiểm tra...',
+    resetEdits: 'Bỏ các chỗ đã sửa',
+    addRow: 'Thêm dòng',
     productInFile: 'Mã hàng ghi trong file',
     productCheck: 'Đối chiếu với mã hàng bạn đang chọn trước khi nhập.',
     componentWarning:

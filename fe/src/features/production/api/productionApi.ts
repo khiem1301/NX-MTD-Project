@@ -18,6 +18,7 @@ import type {
   OperationGroup,
   OperationRole,
   SetOperationsGroupPayload,
+  OperationExcelSheetBody,
   OperationImportParams,
   OperationImportPreview,
   OperationImportResult,
@@ -71,6 +72,17 @@ export const productionApi = {
   ) => post<OperationImportPreview>(P.operationImportPreview(role), asFormData(file), params),
   importOperations: (role: OperationRole, file: File, params: OperationImportParams) =>
     post<OperationImportResult>(P.operationImport(role), asFormData(file), params),
+  /** Xem trước từ bảng đã sửa trên popup (không đọc lại file, không ghi). */
+  previewOperationImportData: (
+    role: OperationRole,
+    body: OperationExcelSheetBody,
+    params: Pick<OperationImportParams, 'productId' | 'effectiveDate' | 'replace'>,
+  ) => post<OperationImportPreview>(P.operationImportPreviewData(role), body, params),
+  importOperationsData: (
+    role: OperationRole,
+    body: OperationExcelSheetBody,
+    params: OperationImportParams,
+  ) => post<OperationImportResult>(P.operationImportData(role), body, params),
   createOperation: (role: OperationRole, body: SaveOperationPayload) =>
     post<number>(P.operations(role), body),
   updateOperation: (role: OperationRole, id: number, body: SaveOperationPayload) =>

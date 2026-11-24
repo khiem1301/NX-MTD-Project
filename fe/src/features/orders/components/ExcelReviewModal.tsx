@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { Alert, Button, Checkbox, Flex, Modal, Space, Typography, message } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+import { DatabaseOutlined, ReloadOutlined } from '@ant-design/icons';
 import { ReplaceImportOption } from '@/components/common/ReplaceImportOption';
 import { MESSAGES } from '@/constants/messages';
+import { useApiMutation } from '@/hooks/useApiMutation';
 import { useMaterialOptions } from '@/hooks/useLookups';
+import { materialApi } from '@/services/materialApi';
 import { fill } from '@/utils/format';
 import type { SaveMaterialPayload } from '@/types/material';
 import { useExcelReview } from '../hooks/useExcelReview';
+import { useExistingData, useReviewDbOptions } from '../hooks/useExistingData';
+import type { ReviewScope } from '../api/orderApi';
 import type { ExcelBundle } from '../types';
 import { REVIEW_TABLES, incompleteMaterials, type ReviewTable } from '../utils/excelReview';
 import { ExcelReviewTabs } from './ExcelReviewTabs';
@@ -41,6 +45,8 @@ type ExcelReviewModalProps = {
   /** DEV-ALL-155: form sửa mã hàng — hiện ô thay thế và giữ trạng thái khi xem lại. */
   allowReplace?: boolean;
   initialReplace?: boolean;
+  /** Quản đốc gọi API riêng và không được thêm NVL mới vào danh mục (mặc định Admin). */
+  scope?: ReviewScope;
   /** newMaterials: NVL chưa có mà admin chọn thêm vào danh mục khi lưu (rỗng = không thêm). */
   onConfirm: (bundle: ExcelBundle, newMaterials: SaveMaterialPayload[], replace: boolean) => void;
   onCancel: () => void;
@@ -59,17 +65,48 @@ export function ExcelReviewModal({
   only,
   allowReplace = false,
   initialReplace = false,
+  scope = 'admin',
   onConfirm,
   onCancel,
 }: ExcelReviewModalProps) {
-  const tables = presentTables(bundle).filter((t) => !only || only.includes(t));
-  const missing = REVIEW_TABLES.filter(
-    (t) => !presentTables(bundle).includes(t) && (!only || only.includes(t)),
-  );
+  // Bảng nạp từ hệ thống (nút "Nạp dữ liệu đang có") cũng hiện thành tab dù file không có bảng đó.
+  const [loadedTables, setLoadedTables] = useState<ReviewTable[]>([]);
+  const shown = (t: ReviewTable) => presentTables(bundle).includes(t) || loadedTables.includes(t);
+  const tables = REVIEW_TABLES.filter((t) => shown(t) && (!only || only.includes(t)));
+  const missing = REVIEW_TABLES.filter((t) => !shown(t) && (!only || only.includes(t)));
   const [replace, setReplace] = useState(initialReplace);
-  const review = useExcelReview(bundle, productId, tables, orderId, allowReplace && replace);
+  const review = useExcelReview(bundle, productId, tables, orderId, allowReplace && replace, scope);
   const { draft, counts, newMaterials } = review;
   const [active, setActive] = useState<ReviewTable | undefined>(tables[0]);
+  const dbOptions = useReviewDbOptions(productId, scope);
+  // Mở lại NVL ngừng sử dụng ngay trên dòng lỗi (chỉ Admin), rồi kiểm lại.
+  const reopen = useApiMutation((code: string) => materialApi.reopen('admin', code), {
+    invalidate: [['lookups'], ['warehouse']],
+  });
+  const handleReopen = (code: string) =>
+    reopen.mutate(code, {
+      onSuccess: () => {
+        void message.success(fill(text.reopenedMaterial, code));
+        review.recheck();
+      },
+    });
+  const existing = useExistingData({
+    productId,
+    orderId,
+    scope,
+    tables: REVIEW_TABLES.filter((t) => !only || only.includes(t)),
+  });
+  const handleLoadExisting = async () => {
+    const data = await existing.load();
+    if (!data) return;
+    const loaded = review.loadExisting(
+      data,
+      REVIEW_TABLES.filter((t) => !only || only.includes(t)),
+    );
+    setLoadedTables((prev) => [...new Set([...prev, ...loaded])]);
+    setActive((a) => a ?? loaded[0]);
+    void message.success(text.loadedExisting);
+  };
   const [onlyErrors, setOnlyErrors] = useState(false);
   const materials = useMaterialOptions();
   const materialOptions = (materials.data ?? []).map((m) => ({
@@ -78,18 +115,31 @@ export function ExcelReviewModal({
   }));
   // review.data: kết quả kiểm gần nhất, không mất trong lúc đang kiểm lại.
   const crossErrors = review.data?.spec.crossErrors ?? [];
-  const removedNames = allowReplace && replace ? (review.data?.spec.removedNames ?? []) : [];
+  const removedNames =
+    allowReplace && replace
+      ? [...(review.data?.spec.removedNames ?? []), ...(review.data?.orderMaterials?.removed ?? [])]
+      : [];
   const done = (materialsToAdd: SaveMaterialPayload[]) =>
     onConfirm(draft, materialsToAdd, allowReplace && replace);
 
   /** Xác nhận: NVL chưa có trong danh mục được thêm luôn khi Lưu, không hỏi lại. */
   const handleConfirm = () => {
+    if (review.check.isError) {
+      void message.error(review.check.error.message);
+      return;
+    }
     if (counts.error > 0) {
       setOnlyErrors(true);
       void message.error(fill(text.blockedByErrors, counts.error));
       return;
     }
     if (newMaterials.length === 0) return done([]);
+    if (scope !== 'admin') {
+      void message.error(
+        fill(text.managerNewMaterial, newMaterials.map((m) => m.materialCode).join(', ')),
+      );
+      return;
+    }
     const incomplete = incompleteMaterials(newMaterials);
     if (incomplete.length > 0) {
       void message.error(
@@ -141,6 +191,10 @@ export function ExcelReviewModal({
             removed={removedNames}
           />
         )}
+        {review.check.error && (
+          // Lỗi cả lần kiểm (vd mã hàng không có trong đơn, đơn đã đóng): các dòng chưa kiểm được nên không Xác nhận được.
+          <Alert type="error" showIcon message={review.check.error.message} />
+        )}
         {crossErrors.length > 0 && (
           <Alert
             type="error"
@@ -163,9 +217,21 @@ export function ExcelReviewModal({
             {missing.length > 0 &&
               fill(text.notInFile, missing.map((t) => text.tabs[t]).join(', '))}
           </Typography.Text>
-          <Checkbox checked={onlyErrors} onChange={(e) => setOnlyErrors(e.target.checked)}>
-            {text.onlyErrors}
-          </Checkbox>
+          <Space size={16} wrap>
+            {existing.available && (
+              <Button
+                size="small"
+                icon={<DatabaseOutlined />}
+                loading={existing.loading}
+                onClick={() => void handleLoadExisting()}
+              >
+                {text.loadExisting}
+              </Button>
+            )}
+            <Checkbox checked={onlyErrors} onChange={(e) => setOnlyErrors(e.target.checked)}>
+              {text.onlyErrors}
+            </Checkbox>
+          </Space>
         </Flex>
         <ExcelReviewTabs
           review={review}
@@ -175,6 +241,9 @@ export function ExcelReviewModal({
           onlyErrors={onlyErrors}
           creating={productId === null}
           materialOptions={materialOptions}
+          dbOptions={dbOptions}
+          reopenMaterial={scope === 'admin' ? handleReopen : undefined}
+          reopeningCode={reopen.isPending ? reopen.variables : undefined}
         />
       </Space>
     </Modal>

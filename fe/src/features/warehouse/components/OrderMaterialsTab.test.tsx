@@ -10,6 +10,7 @@ jest.mock('../hooks/useOrderMaterials', () => ({
   useOrderMaterials: () => ({ data: [{ orderMaterialId: 1 }] }),
   useDeleteOrderMaterial: () => ({ mutate: jest.fn() }),
 }));
+jest.mock('./OrderMaterialImportModal', () => ({ OrderMaterialImportModal: () => null }));
 jest.mock('./OrderMaterialFormModal', () => ({ OrderMaterialFormModal: () => null }));
 jest.mock('./OrderMaterialExternalModal', () => ({
   OrderMaterialExternalModal: () => <span>hộp thêm NVL ngoài</span>,

@@ -10,4 +10,6 @@ public interface IMaterialService
     Task<Result<MaterialDto>> CreateAsync(CreateMaterialDto dto, CancellationToken ct);
     Task<Result<MaterialDto>> UpdateAsync(int materialId, UpdateMaterialDto dto, CancellationToken ct);
     Task<Result> ChangeStatusAsync(int materialId, ChangeMaterialStatusDto dto, CancellationToken ct);
+    /// <summary>DEV-ALL-181: mở lại NVL ngừng sử dụng theo mã NVL; đang dùng rồi thì không làm gì.</summary>
+    Task<Result> ReopenByCodeAsync(string materialCode, CancellationToken ct);
 }

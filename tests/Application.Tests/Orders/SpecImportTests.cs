@@ -292,12 +292,12 @@ public class SpecImportTests : ProductionTestBase
 
         var preview = (await Sut().PreviewAsync(ProductId, OrderId, stream, default)).Data!;
 
-        preview.OrderMarkers.Select(m => m.Action).Should().Equal("Unchanged", "Error", "Error");
+        preview.OrderMarkers.Select(m => m.Action).Should().Equal("Unchanged", "Error", "Error", "Error");
         preview.OrderMarkers[0].Ratios.Select(r => r.SizeCode).Should().Equal("S", "M");
         preview.OrderMarkers[1].Error.Should().Contain("3,5");
         preview.OrderMarkers[2].Error.Should().Be(string.Format(Messages.SpecImportGroupUnknown, 9));
         preview.Notes.Should().Contain(string.Format(Messages.SpecImportSizesIgnored, "XL"));
-        preview.Notes.Should().Contain(string.Format(Messages.SpecImportOtherProductRows, 1));
+        preview.OrderMarkers.Last().Error.Should().Contain("không phải mã hàng đang nhập");
     }
 
     [Fact]

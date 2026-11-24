@@ -14,4 +14,6 @@ public interface IExcelOrderLinesParser
 public interface IOrderImportService
 {
     Task<Result<OrderImportPreviewDto>> PreviewAsync(Stream stream, CancellationToken ct);
+    /// <summary>DEV-ALL-178: kiểm lại các dòng đã đọc và sửa trên màn hình (không đọc lại file), không ghi gì.</summary>
+    Task<Result<OrderImportPreviewDto>> PreviewAsync(OrderImportExcelDto excel, CancellationToken ct);
 }

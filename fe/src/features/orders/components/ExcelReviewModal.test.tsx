@@ -5,6 +5,13 @@ import { excelBundleApi } from '../api/orderApi';
 import type { ExcelBundle, ExcelBundleCheck } from '../types';
 
 jest.mock('../api/orderApi', () => ({ excelBundleApi: { check: jest.fn() } }));
+// Nạp dữ liệu đang có gọi API thật: tắt trong test này.
+jest.mock('../hooks/useExistingData', () => ({
+  useExistingData: () => ({ load: jest.fn(), loading: false, available: false }),
+  useReviewDbOptions: () => ({ components: [], colors: [] }),
+}));
+// Mở lại NVL ngừng sử dụng gọi API thật: tắt trong test này.
+jest.mock('@/services/materialApi', () => ({ materialApi: { reopen: jest.fn() } }));
 jest.mock('@/hooks/useLookups', () => ({
   useMaterialOptions: () => ({ data: [], isLoading: false }),
 }));

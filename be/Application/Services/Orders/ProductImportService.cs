@@ -47,8 +47,9 @@ public sealed class ProductImportService : IProductImportService
         var validator = new SaveProductDtoValidator();
         var seen = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var rows = new Plan();
-        foreach (var row in excel)
+        for (var index = 0; index < excel.Count; index++)
         {
+            var row = excel[index];
             var error = validator.Validate(new SaveProductDto(row.ProductCode, null, row.Description))
                 .Errors.Select(e => e.ErrorMessage).FirstOrDefault();
             if (error is null && seen.TryGetValue(row.ProductCode, out var first))
@@ -57,6 +58,8 @@ public sealed class ProductImportService : IProductImportService
                 rows.Duplicates++;
             }
             else if (error is null) seen[row.ProductCode] = row.RowNumber;
+            // Mỗi lần nhập chỉ một mã hàng (mã đang tạo ở form): dòng thứ hai trở đi báo lỗi để người dùng thấy và xóa, không bỏ qua âm thầm.
+            if (index >= 1 && error is null) error = Messages.ProductImportSingleOnly;
 
             var action = error is not null ? ActionError : existing.Contains(row.ProductCode) ? ActionExists : ActionNew;
             rows.Add(new ProductImportRowDto(row.RowNumber, action,

@@ -2,6 +2,7 @@ import { Badge, Space, Tabs, theme } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { EXCEL_COMPONENT_TYPE } from '../constants';
 import type { useExcelReview } from '../hooks/useExcelReview';
+import type { ReviewDbOptions } from '../hooks/useExistingData';
 import { rowsOf, type ReviewTable, type RowOf } from '../utils/excelReview';
 import {
   componentColumns,
@@ -24,6 +25,11 @@ type ExcelReviewTabsProps = {
   onlyErrors: boolean;
   creating: boolean;
   materialOptions: { value: string; label: string }[];
+  /** Chi tiết / màu đang có ở mã hàng trong hệ thống: gợi ý chọn ở các ô, cộng với những gì trong bảng. */
+  dbOptions?: ReviewDbOptions;
+  /** Mở lại NVL ngừng sử dụng (chỉ Admin); không truyền thì dòng lỗi này không có nút. */
+  reopenMaterial?: (code: string) => void;
+  reopeningCode?: string;
 };
 
 /** DEV-ALL-122: các tab của popup kiểm tra Excel, mỗi sheet một bảng sửa được; nhãn tab hiện số dòng lỗi (đỏ) hoặc số dòng. */
@@ -35,20 +41,28 @@ export function ExcelReviewTabs({
   onlyErrors,
   creating,
   materialOptions,
+  dbOptions,
+  reopenMaterial,
+  reopeningCode,
 }: ExcelReviewTabsProps) {
   const { token } = theme.useToken();
   const { draft } = review;
   const components = draft.spec.components;
-  const componentNames = components.map((c) => c.name);
-  const panelNames = components
-    .filter((c) => c.componentType === EXCEL_COMPONENT_TYPE.PANEL)
-    .map((c) => c.name);
+  const componentNames = [
+    ...components.map((c) => c.name),
+    ...(dbOptions?.components ?? []).map((c) => c.name),
+  ];
+  const panelNames = [
+    ...components.filter((c) => c.componentType === EXCEL_COMPONENT_TYPE.PANEL).map((c) => c.name),
+    ...(dbOptions?.components ?? []).filter((c) => c.panel).map((c) => c.name),
+  ];
   // Bìa của đơn chỉ hiện size của đơn (máy chủ trả sau lần kiểm đầu); chưa có đơn / chưa kiểm thì tạm hiện size trong file.
   const orderSizes = review.data?.spec.orderSizes; // kết quả kiểm gần nhất
   const markerSizes = orderSizes && orderSizes.length > 0 ? orderSizes : draft.spec.sizeColumns;
   const colors = [
     ...draft.spec.norms.map((n) => n.color),
     ...draft.spec.markerGroups.flatMap((g) => g.colors),
+    ...(dbOptions?.colors ?? []),
   ];
 
   const ctx = <T extends ReviewTable>(table: T): ReviewColumnsCtx<RowOf<T>> => ({
@@ -56,6 +70,13 @@ export function ExcelReviewTabs({
     remove: (rowNumber) => review.removeRow(table, rowNumber),
     status: review.status[table],
     creating,
+    ...(table === 'norms' || table === 'orderMaterials'
+      ? {
+          materialCodeOf: (r: RowOf<T>) => (r as { materialCode: string }).materialCode,
+          reopenMaterial,
+          reopeningCode,
+        }
+      : {}),
   });
   const common = {
     onlyErrors,
@@ -72,6 +93,8 @@ export function ExcelReviewTabs({
         return (
           <ExcelReviewTable
             {...props}
+            // Mỗi lần nhập chỉ một mã hàng (mã đang tạo ở form).
+            addDisabled={draft.products.length >= 1}
             rows={draft.products}
             columns={productColumns(ctx(table))}
             stateOf={common.stateOf(table)}

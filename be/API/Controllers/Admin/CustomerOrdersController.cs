@@ -24,6 +24,11 @@ public sealed class CustomerOrdersController : AdminBaseController
         return this.ToResponse(await _import.PreviewAsync(stream, ct));
     }
 
+    /// <summary>DEV-ALL-178: kiểm lại dòng hàng đã sửa trên popup nhập Excel (body JSON). Không ghi gì.</summary>
+    [HttpPost("import/preview-data")]
+    public async Task<IActionResult> PreviewImportData([FromBody] OrderImportExcelDto excel, CancellationToken ct) =>
+        this.ToResponse(await _import.PreviewAsync(excel, ct));
+
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] OrderQuery query, CancellationToken ct) =>
         this.ToResponse(await _orders.ListAsync(query, ct));

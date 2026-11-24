@@ -5,8 +5,8 @@ using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.Application.Services;
 
-/// <summary>NVL tra theo mã khi nhập định mức (chỉ NVL đang dùng).</summary>
-public sealed record SpecImportMaterial(int MaterialId, string MaterialCode, string MaterialName, string Unit, string Color);
+/// <summary>NVL tra theo mã khi nhập định mức (chỉ NVL đang dùng). IsFabric: NVL loại vải; Discontinued: NVL đã ngừng dùng (có trong danh mục nhưng không nhập được); mã NVL chưa có trong danh mục coi như vải.</summary>
+public sealed record SpecImportMaterial(int MaterialId, string MaterialCode, string MaterialName, string Unit, string Color, bool IsFabric = true, bool Discontinued = false);
 
 /// <summary>
 /// Dữ liệu cũ đã được dùng ở bảng khác (chế độ thay thế không được xóa hay sửa): tên thành phần (hoa) có định mức đã dùng, cặp
@@ -42,6 +42,7 @@ public sealed class SpecImportBuilder
     public const string ColorOnlySize = "?";
     private const int MaxNameLength = 100;
     private const int MaxNoteLength = 200;
+    private const int MaxColorLength = 50;
     private const short MaxPieces = 99;
 
     private readonly ProductSpecDto _spec;
@@ -136,17 +137,20 @@ public sealed class SpecImportBuilder
         foreach (var row in rows)
         {
             var key = Upper(row.Name);
+            var type = row.ComponentType is null ? null : CodeText.ToCode(row.ComponentType);
             var error = row.ParseError
+                        ?? (string.IsNullOrWhiteSpace(row.Name) ? Messages.Required("tên chi tiết") : null)
                         ?? (row.Name.Length > MaxNameLength ? Messages.SpecImportNameTooLong : null)
+                        ?? (type is not (ComponentTypes.Panel or ComponentTypes.Trim) ? Messages.SpecImportTypeInvalid : null)
                         ?? (row.PiecesPerGarment is null or < 1 or > MaxPieces ? Messages.SpecImportPiecesRange : null)
                         ?? Duplicate(seen, key, row.RowNumber);
             _components.TryGetValue(key, out var existing);
             var action = error is not null ? ActionError
                 : existing is null ? ActionNew
-                : CodeText.ToCode(existing.ComponentType) == row.ComponentType && existing.PiecesPerGarment == row.PiecesPerGarment
+                : CodeText.ToCode(existing.ComponentType) == type && existing.PiecesPerGarment == row.PiecesPerGarment
                     ? ActionUnchanged : ActionUpdate;
             if (error is null)
-                _validComponents[key] = (existing?.ComponentName ?? row.Name, row.ComponentType!, row.PiecesPerGarment!.Value);
+                _validComponents[key] = (existing?.ComponentName ?? row.Name, type!, row.PiecesPerGarment!.Value);
             result.Add(new SpecImportComponentRowDto(row.RowNumber, action, error, row.Name, row.ComponentType, row.PiecesPerGarment));
         }
         return result;
@@ -162,6 +166,15 @@ public sealed class SpecImportBuilder
 
     // ---------- Định mức NVL ----------
 
+    /// <summary>Mã NVL sai định dạng / quá dài (mã đúng định dạng mà chưa có trong danh mục thì là NVL mới, không phải lỗi). null = mã dùng được.</summary>
+    public static string? MaterialCodeProblem(string? code)
+    {
+        var c = code?.Trim() ?? string.Empty;
+        if (c.Length == 0) return null;
+        if (c.Length > MaterialLimits.MaxCodeLength) return Messages.SpecImportMaterialCodeTooLong;
+        return System.Text.RegularExpressions.Regex.IsMatch(c, @"^[A-Za-z0-9._-]+$") ? null : Messages.MaterialCodeFormat;
+    }
+
     private List<SpecImportNormRowDto> BuildNorms(IReadOnlyList<SpecNormExcelRow> rows)
     {
         var seen = new Dictionary<string, int>();
@@ -172,13 +185,31 @@ public sealed class SpecImportBuilder
             var component = ComponentOf(row.ComponentName);
             var material = _materials.GetValueOrDefault(row.MaterialCode);
             var error = row.ParseError
+                        ?? (row.Color.Trim().Length > MaxColorLength ? Messages.OrderImportColorTooLong : null)
                         ?? (color is null ? string.Format(Messages.SpecImportColorUnknown, row.Color) : null)
                         ?? (component is null ? string.Format(Messages.SpecImportComponentUnknown, row.ComponentName) : null)
-                        ?? (material is null ? string.Format(Messages.SpecImportMaterialUnknown, row.MaterialCode) : null)
+                        ?? (material is { Discontinued: true } ? string.Format(Messages.SpecImportMaterialDiscontinued, row.MaterialCode) : null)
+                        ?? (material is null ? MaterialCodeProblem(row.MaterialCode) ?? string.Format(Messages.SpecImportMaterialUnknown, row.MaterialCode) : null)
                         ?? (row.SpecNote is { Length: > MaxNoteLength } ? Messages.SpecImportNoteTooLong : null)
                         ?? Duplicate(seen, $"{Upper(row.Color)}|{Upper(row.ComponentName)}|{row.MaterialCode}", row.RowNumber);
             checkedRows.Add((row, error, color ?? row.Color, component?.Name ?? row.ComponentName, material));
             if (error is null) _validNorms.Add(new SaveProductNormDto(component!.Value.Name, color!, material!.MaterialId, row.SpecNote));
+        }
+
+        // Mỗi chi tiết cắt (PANEL) chỉ một vải ở một màu: lỗi này kiểm ngay trên từng dòng nên thấy được cả khi mã hàng / màu / NVL chưa tạo.
+        var manyFabrics = checkedRows.Where(c => c.Error is null && c.Material is { IsFabric: true } && ComponentOf(c.Row.ComponentName) is { Type: ComponentTypes.Panel })
+            .GroupBy(c => $"{Upper(c.Row.Color)}|{Upper(c.Row.ComponentName)}")
+            .Where(g => g.Select(c => c.Row.MaterialCode.ToUpperInvariant()).Distinct().Count() > 1)
+            .Select(g => g.Key).ToHashSet();
+        if (manyFabrics.Count > 0)
+        {
+            for (var i = 0; i < checkedRows.Count; i++)
+            {
+                var c = checkedRows[i];
+                if (c.Error is not null || !manyFabrics.Contains($"{Upper(c.Row.Color)}|{Upper(c.Row.ComponentName)}") || c.Material is not { IsFabric: true }) continue;
+                checkedRows[i] = c with { Error = string.Format(Messages.ProductSpecPanelManyFabrics, c.Component, c.Color) };
+            }
+            _validNorms.RemoveAll(n => manyFabrics.Contains($"{Upper(n.Color)}|{Upper(n.ComponentName)}"));
         }
 
         return checkedRows.Select(c => new SpecImportNormRowDto(c.Row.RowNumber,
@@ -212,11 +243,16 @@ public sealed class SpecImportBuilder
             var unknownColors = row.Colors.Where(c => !_colors.ContainsKey(Upper(c))).ToList();
             var knownColors = row.Colors.Where(c => _colors.ContainsKey(Upper(c))).ToList();
             var error = row.ParseError
-                        ?? (row.MarkerNo > SaveProductSpecDtoValidator.MaxMarkerNo
+                        ?? (row.MarkerNo is null ? Messages.Required("nhóm bìa") : null)
+                        ?? (row.MarkerNo is < 1 or > SaveProductSpecDtoValidator.MaxMarkerNo
                             ? string.Format(Messages.SpecImportMarkerNoRange, SaveProductSpecDtoValidator.MaxMarkerNo) : null)
+                        ?? (row.ComponentNames.Count == 0 ? Messages.Required("chi tiết trên nhóm") : null)
+                        ?? (row.Colors.Count == 0 ? Messages.Required("màu áo dùng nhóm") : null)
+                        ?? (row.Colors.Any(c => c.Trim().Length > MaxColorLength) ? Messages.OrderImportColorTooLong : null)
                         ?? GroupComponentProblem(row.ComponentNames)
                         ?? (knownColors.Count == 0 && unknownColors.Count > 0
                             ? string.Format(Messages.SpecImportColorUnknown, unknownColors[0]) : null)
+                        ?? GroupManyFabricsProblem(row.MarkerNo, row.ComponentNames, knownColors)
                         ?? Duplicate(seen, row.MarkerNo?.ToString() ?? string.Empty, row.RowNumber);
             if (error is null && unknownColors.Count > 0)
                 _notes.Add(string.Format(Messages.SpecImportGroupColorsSkipped, row.MarkerNo, string.Join(", ", unknownColors)));
@@ -227,6 +263,33 @@ public sealed class SpecImportBuilder
                 : ActionError, error, row.MarkerNo, components, colors));
         }
         return result;
+    }
+
+    /// <summary>
+    /// DEV-ALL-89: một bìa chỉ trải trên một vải. Ở mỗi màu của nhóm, các chi tiết trên nhóm phải cùng một vải (theo định mức trong file,
+    /// cặp màu + chi tiết không có trong file thì theo định mức đang có). Kiểm ngay trên dòng để thấy cả khi mã hàng / màu / NVL chưa tạo.
+    /// </summary>
+    private string? GroupManyFabricsProblem(int? markerNo, IReadOnlyList<string> componentNames, IReadOnlyList<string> colors)
+    {
+        if (markerNo is null) return null;
+        var fabricIds = _materials.Values.Where(m => m.IsFabric).Select(m => m.MaterialId).ToHashSet();
+        foreach (var color in colors)
+        {
+            var ids = new HashSet<int>();
+            foreach (var name in componentNames)
+            {
+                var pair = $"{Upper(color)}|{Upper(name)}";
+                if (_fileNormKeys.Contains(pair))
+                    ids.UnionWith(_validNorms.Where(n => Same(n.Color, color) && Same(n.ComponentName, name) && fabricIds.Contains(n.MaterialId))
+                        .Select(n => n.MaterialId));
+                else
+                    ids.UnionWith(_spec.Norms.Where(n => Same(n.Color, color) && Same(n.ComponentName, name)
+                                                         && string.Equals(n.MaterialType, MaterialTypes.Fabric, StringComparison.OrdinalIgnoreCase))
+                        .Select(n => n.MaterialId));
+            }
+            if (ids.Count > 1) return string.Format(Messages.ProductSpecMarkerManyFabrics, markerNo, _colors.GetValueOrDefault(Upper(color)) ?? color);
+        }
+        return null;
     }
 
     private string? GroupComponentProblem(IReadOnlyList<string> names)
@@ -317,12 +380,14 @@ public sealed class SpecImportBuilder
 
         var seen = new Dictionary<string, int>();
         var result = new List<SpecImportOrderMarkerRowDto>();
-        var otherProduct = 0;
         foreach (var row in workbook.OrderMarkers)
         {
             if (row.ProductCode is not null && !Same(row.ProductCode, _productCode))
             {
-                otherProduct++;
+                // Dòng của mã hàng khác hiện lỗi từng dòng (không bỏ qua âm thầm) để người dùng thấy và đổi mã hàng hoặc xóa dòng.
+                result.Add(new SpecImportOrderMarkerRowDto(row.RowNumber, ActionError,
+                    string.Format(Messages.SpecImportOtherProductRow, row.ProductCode.Trim(), _productCode), row.MarkerNo,
+                    row.MarkerCode.ToUpperInvariant(), row.LengthM, row.WidthM, CodeText.ToPascal(row.Status), row.Ratios));
                 continue;
             }
             var ratios = row.Ratios.Where(r => sizes.Contains(Upper(r.SizeCode))).ToList();
@@ -340,7 +405,6 @@ public sealed class SpecImportBuilder
             result.Add(new SpecImportOrderMarkerRowDto(row.RowNumber, action, error, row.MarkerNo, row.MarkerCode.ToUpperInvariant(),
                 row.LengthM, row.WidthM, CodeText.ToPascal(row.Status), ratios));
         }
-        if (otherProduct > 0) _notes.Add(string.Format(Messages.SpecImportOtherProductRows, otherProduct));
         return result;
     }
 

@@ -160,6 +160,14 @@
 | DEV-ALL-118 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
 | DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
 | DEV-ALL-120 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
+| DEV-ALL-181 | 25/11/2026 | AI theo yêu cầu của người dùng | UC10, UC09, `ExcelReviewStatusCell`, `MaterialService`, `Admin/MaterialsController` | Popup kiểm tra Excel: dòng lỗi vì NVL ngừng sử dụng (Định mức NVL, NVL của đơn) có nút "Mở lại NVL" (Admin), mở lại xong tự kiểm lại; API `POST admin/materials/reopen` | Mở |
+| DEV-ALL-180 | 25/11/2026 | AI theo yêu cầu của người dùng | UC10, `ProductImportService`, popup kiểm tra Excel | Sheet Mã hàng của file chung chỉ nhận một mã hàng mỗi lần: dòng thứ hai trở đi báo lỗi từng dòng, nút Thêm dòng ở tab Mã hàng khóa khi đã có một dòng (bỏ nhập nhiều mã hàng cùng một file) | Mở |
+| DEV-ALL-179 | 25/11/2026 | AI theo yêu cầu của người dùng | UC25, `OperationImportModal`, `OperationService`, `OperationsController` | Đợt 3: nhập công đoạn từ Excel cho sửa từng ô ở bảng xem trước (STT, tên, bậc, TGCT, thiết bị, nhóm, chi tiết, TIỀN, thêm / xóa dòng); máy chủ kiểm lại sau mỗi lần sửa (API `import/preview-data`, `import-data`) | Mở |
+| DEV-ALL-178 | 25/11/2026 | AI theo yêu cầu của người dùng | UC09, `OrderImportModal`, `OrderImportService`, `CustomerOrdersController` | Đợt 2: nhập dòng hàng của đơn từ Excel mở popup kiểm tra sửa từng ô (mã hàng, màu, đơn giá CMT, số lượng từng size, thêm / xóa dòng, thêm cột size); máy chủ kiểm lại sau mỗi lần sửa (API `import/preview-data`) | Mở |
+| DEV-ALL-177 | 25/11/2026 | AI theo yêu cầu của người dùng | UC09, UC10, `OrderForm`, `ProductFormModal` | Form đơn hàng / form mã hàng: tạo mã hàng mới báo ngay nếu mã đã có trong hệ thống (lúc rời ô và khi Lưu); khối mã hàng của đơn cảnh báo màu chưa có định mức NVL (màu mới thêm hoặc mã hàng chưa khai định mức); mã hàng mới khai trên đơn (chưa lưu) có nút xem / sửa lại (mã, mô tả, ảnh, file Excel) | Mở |
+| DEV-ALL-176 | 25/11/2026 | AI theo yêu cầu của người dùng | UC10, UC09, `SpecImportModal`, `OrderMaterialImportModal`, `OrderMarkersController`, `OrderMaterialsController` | Đợt 1: nhập Excel Định mức + bìa của đơn và NVL của đơn mở popup kiểm tra sửa từng ô (như form mã hàng) thay vì chỉ xem trước; Quản đốc có API đọc / kiểm / nhập-từ-bảng-đã-sửa riêng; nhập NVL của đơn từ dòng đã sửa hỗ trợ thay thế | Mở |
+| DEV-ALL-175 | 24/11/2026 | AI theo yêu cầu của người dùng | UC10, `SpecImportBuilder` | Nhập Excel định mức: dòng Định mức NVL báo lỗi ngay khi một chi tiết cắt (PANEL) ở một màu có từ hai vải trở lên, kể cả khi mã hàng / màu / NVL chưa tạo (trước đây chỉ báo khi bấm Lưu và mã hàng đã đủ màu, NVL); dòng Nhóm bìa báo lỗi khi các chi tiết trên nhóm dùng vải khác nhau ở một màu | Mở |
+| DEV-ALL-174 | 24/11/2026 | AI theo yêu cầu của người dùng | UC10, form mã hàng, `ProductExcelImports` | Form Thêm mới / Sửa mã hàng: bỏ nút chọn file riêng ở ba mục Thành phần, Định mức NVL, Nhóm bìa (chỉ nhập bằng 1 file chung); ba ô thành thẻ trạng thái chỉ đọc | Mở |
 | DEV-ALL-173 | 24/11/2026 | AI theo yêu cầu của người dùng | UC35, Sổ xe và nhiên liệu, `VehicleService.CompleteTripAsync` | Kết thúc chuyến: nhập tiền xăng thì bắt buộc có ít nhất một ảnh hóa đơn xăng (FuelReceipt); ảnh tải ngay trong popup, thiếu thì BE trả lỗi ở ô tiền xăng và không lưu | Mở |
 | DEV-ALL-172 | 24/11/2026 | AI theo yêu cầu của người dùng | UC11, GBR-10, GBR-17, popup Tính hòa vốn | Tháng đã khóa sổ vẫn tính hòa vốn được (không chặn như GBR-10), popup chỉ cảnh báo; vì duyệt lương tự khóa tháng nên chặn sẽ làm hòa vốn không bao giờ tính được | Mở |
 | DEV-ALL-171 | 24/11/2026 | AI theo yêu cầu của người dùng | UC11, GBR-17, `BreakEvenResult`, `FinanceService`, màn Hòa vốn | Mỗi lần tính hòa vốn chạy cả hai cách chia định phí (sản lượng, giờ công) và so sánh cạnh nhau; bỏ ô chọn cách; tỉ lệ giờ công chuẩn hóa về 100%; popup Tính có kiểm dữ liệu đầu vào (API `break-even/inputs`); bấm mã hàng xem chi tiết; `UQ_BER` thêm `AllocationBasis` (patch `2026-11-24_break_even_both_bases.sql`) | Mở |
@@ -3393,4 +3401,94 @@
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3: bảng loại đơn từ (12 thành 13), UC của Cơ điện (thêm xử lý đơn Sửa máy), phân quyền đơn từ
   - [ ] `NX-MTD_AI_Context.md` mục 4.8 (bảng ai tạo / ai xử lý đơn từ)
+- **Trạng thái:** Mở
+
+### DEV-ALL-174 · Form mã hàng: chỉ nhập Excel bằng file chung, ba mục thành thẻ trạng thái
+
+- **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10, UC09; FE `ProductExcelImports`, `MESSAGES.orders.productExcel.noData`
+- **Tài liệu gốc ghi:** DEV-ALL-121 / 122 / 145: khung "Nhập từ Excel" của form mã hàng cho chọn 1 file chung hoặc file riêng từng mục (Thành phần, Định mức NVL, Nhóm bìa).
+- **Code đang làm:** form Thêm mới / Sửa mã hàng (cả khi mở từ form đơn hàng) chỉ còn nút "Chọn 1 file chung cho tất cả". Ba mục là thẻ trạng thái chỉ đọc (số dòng đã đọc từ file chung, nút bỏ dữ liệu của mục, viền đỏ khi bắt buộc mà thiếu), không còn nút chọn file riêng. Màn Định mức mã hàng, tab Bìa cắt, NVL của đơn, công đoạn giữ nguyên.
+- **Lý do:** người dùng yêu cầu bỏ chọn file riêng và làm khung gọn đẹp hơn.
+- **Ảnh hưởng người khác:** Khiêm (mã hàng, đơn hàng).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC10 (nhập định mức qua 1 file chung ở form mã hàng)
+- **Trạng thái:** Mở
+
+### DEV-ALL-175 · Định mức NVL: báo lỗi từng dòng khi chi tiết cắt có hai vải ở một màu
+
+- **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10; BE `SpecImportBuilder.BuildNorms`, `SpecImportMaterial.IsFabric`
+- **Tài liệu gốc ghi:** DEV-ALL-86: mỗi chi tiết PANEL chỉ một vải ở một màu (kiểm ở `ProductSpecService` khi lưu).
+- **Code đang làm:** bước kiểm của import chỉ chạy kiểm này ở nút Lưu khi mã hàng đã có và đủ màu, NVL nên popup không báo. Nay kiểm thêm theo từng dòng trong bảng Định mức NVL: mọi dòng vải của cặp (màu, chi tiết PANEL) có hai mã vải khác nhau đều báo lỗi "Chi tiết cắt ... màu ... khai hơn một vải"; NVL chưa có trong danh mục coi như vải. Bảng Nhóm bìa: dòng nhóm có các chi tiết dùng vải khác nhau ở một màu báo lỗi "Nhóm bìa N, màu X: các chi tiết dùng vải khác nhau..." (cặp màu + chi tiết không có trong file thì theo định mức đang có). Bổ sung kiểm từng ô của popup Excel (trước đây bỏ sót khi mã hàng / màu / NVL chưa tạo hoặc khi sửa ô trên popup): Thành phần (tên trống, loại ngoài PANEL / TRIM), Định mức (màu > 50 ký tự, mã NVL sai ký tự hoặc > 30 ký tự, NVL ngừng dùng không còn bị coi là NVL mới), Nhóm bìa (số nhóm < 1, thiếu số nhóm, thiếu chi tiết / màu, màu > 50 ký tự), NVL của đơn (mã sai ký tự / quá dài, tên NVL > 200, đơn vị > 20 khi NVL mới, NVL ngừng dùng).
+- **Lý do:** người dùng yêu cầu báo lỗi ở phần Định mức NVL.
+- **Ảnh hưởng người khác:** Khiêm (mã hàng).
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-ALL-176 · Nhập Excel Định mức + bìa của đơn, NVL của đơn: sửa từng ô trước khi nhập (đợt 1)
+
+- **Ngày / Người / Task / PR:** 25/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10, UC09; FE `SpecImportModal`, `useSpecImportModal`, `OrderMaterialImportModal`, `ExcelReviewModal` (thêm `scope`); BE `Manager/OrderMarkersController` (`excel/parse`, `excel/check`, `{orderId}/products/{productId}/import-data`), `Manager/OrderMaterialsController` (`import-data`), `IOrderMaterialService` (replace cho dòng đã sửa)
+- **Tài liệu gốc ghi:** DEV-ALL-115 / 119: chọn file là xem trước (chỉ đọc), bấm Nhập thì lưu.
+- **Code đang làm:** chọn file mở popup kiểm tra như form mã hàng: sửa / thêm / xóa dòng, máy chủ kiểm lại sau mỗi lần sửa, Xác nhận thì nhập bảng đã sửa. Quản đốc dùng API manager (không được thêm NVL mới vào danh mục, báo nhờ Admin). Còn lại chỉ xem trước: Dòng hàng của đơn, Công đoạn (đợt 2, 3). Popup có nút "Nạp dữ liệu đang có": thêm vào bảng sửa các dòng đang có trong hệ thống (thành phần, định mức, nhóm bìa của mã hàng — chỉ Admin đọc được; bìa và NVL của đơn khi có đơn) để sửa trực tiếp mà không cần bật "Thay thế"; dòng trùng khóa với file thì giữ dòng của file. Xóa dòng đã nạp chỉ xóa khỏi DB khi bật "Thay thế". Mỗi nơi nhập chỉ đụng dữ liệu của mình: popup chỉ gửi kiểm / nhập các bảng đang nhập (`restrictBundle`), tab Bìa cắt chỉ nhập bìa của đơn (API Quản đốc `import-data` chỉ nhận `markers`, từ chối nếu thiếu), NVL của đơn chỉ gửi dòng NVL; dòng bìa của mã hàng khác báo lỗi từng dòng (trước đây bỏ qua âm thầm). Khi định mức đổi cùng lúc với bìa của đơn, bước xem trước kiểm sẵn size của bìa theo màu của nhóm (cùng thông báo lúc Nhập).
+- **Lý do:** người dùng yêu cầu mọi phần nhập Excel đều sửa được ở chế độ xem trước.
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng, kho).
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-ALL-177 · Form đơn: báo mã hàng đã tồn tại và màu chưa có định mức
+
+- **Ngày / Người / Task / PR:** 25/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC09, UC10; FE `ProductFormModal` (kiểm mã trùng), `NormColorWarning` (cảnh báo màu), `useOrderForm` (`stagedNormColors`), `productCodeCheck`, `orderNorms`
+- **Tài liệu gốc ghi:** DEV-ALL-151: mã hàng tạo ở form đơn chỉ kiểm trùng với mã đã khai trên đơn; trùng với mã trong hệ thống chỉ báo khi lưu đơn (máy chủ từ chối).
+- **Code đang làm:** ô mã hàng của form Thêm mới kiểm mã đã có trong hệ thống (kể cả ngừng sản xuất) khi rời ô và khi Lưu, báo ở ô mã. Khối mã hàng của đơn hiện cảnh báo (không chặn Lưu) khi có màu chưa có định mức NVL: mã có sẵn thì so với định mức trong hệ thống, mã khai trên form thì so với định mức trong file Excel đã chọn.
+- **Thêm:** khối mã hàng của đơn có nút bút chì khi mã là mã mới khai trên form (Id âm): mở lại form mã hàng đã điền sẵn (mã, mô tả, ảnh, file Excel đã chọn), Lưu thì cập nhật bản chờ ghi (`updateStagedProduct`), vẫn ghi cùng đơn khi Lưu đơn; đổi sang mã đã có trên đơn thì từ chối.
+- **Lý do:** người dùng yêu cầu kiểm mã tồn tại và thông báo khi màu mới chưa có định mức.
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng, mã hàng).
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-ALL-178 · Nhập dòng hàng của đơn: sửa từng ô trước khi áp dụng (đợt 2)
+
+- **Ngày / Người / Task / PR:** 25/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC09; FE `OrderImportModal`, `OrderImportReviewModal`, `useOrderImportDraft`; BE `OrderImportService.PreviewAsync(OrderImportExcelDto)`, `CustomerOrdersController` (`POST import/preview-data`)
+- **Tài liệu gốc ghi:** DEV-ALL-118: chọn file là xem trước (chỉ đọc), Áp dụng điền vào form.
+- **Code đang làm:** chọn file mở popup kiểm tra có bảng sửa được; máy chủ kiểm lại bản sửa (mã hàng, màu, đơn giá, số lượng từng size, trùng dòng; thêm kiểm: mã / màu trống, size trống hoặc quá 10 ký tự, số lượng không nguyên dương, size lặp). Áp dụng vẫn chỉ điền form, người dùng Lưu như tạo tay.
+- **Lý do:** người dùng yêu cầu mọi phần nhập Excel đều sửa được ở chế độ xem trước.
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng).
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-ALL-179 · Nhập công đoạn: sửa từng ô trước khi nhập (đợt 3)
+
+- **Ngày / Người / Task / PR:** 25/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC25; FE `OperationImportModal`, `useOperationImport`, `operationImportEditColumns`, `operationImportDraft`; BE `OperationService` (`PreviewImportAsync` / `ImportAsync` từ `OperationExcelSheetDto`, `EditedRowProblem`), `OperationsController` (`POST import/preview-data`, `POST import-data`)
+- **Tài liệu gốc ghi:** DEV-ALL-116 / KI-01: chọn file là xem trước (chỉ đọc), bấm Nhập thì lưu từ file.
+- **Code đang làm:** bảng xem trước sửa được từng ô; máy chủ kiểm lại bản sửa (thêm kiểm từng ô như bộ đọc file: tên trống / quá 200, bậc 1–9, TGCT không âm / tối đa 2 số lẻ / không quá giới hạn, TIỀN tương tự, nhóm quá dài; trùng STT, nhiều công đoạn cuối vẫn tính ở kế hoạch). Chưa sửa gì thì nhập thẳng từ file như trước; đã sửa thì nhập từ bảng đã sửa (cùng quy tắc, một giao dịch). Lỗi ô lúc đọc file giữ đến khi sửa dòng đó.
+- **Lý do:** người dùng yêu cầu mọi phần nhập Excel đều sửa được ở chế độ xem trước.
+- **Ảnh hưởng người khác:** Khiêm (công đoạn, đơn giá).
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-ALL-180 · Sheet Mã hàng của file chung chỉ nhận một mã
+
+- **Ngày / Người / Task / PR:** 25/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10; BE `ProductImportService.PlanRowsAsync`, `Messages.ProductImportSingleOnly`; FE `ExcelReviewTabs` / `ExcelReviewTable` (`addDisabled`)
+- **Tài liệu gốc ghi:** DEV-ALL-120 / 122: sheet Mã hàng có thể có nhiều dòng (form chỉ lấy dòng đầu, các dòng còn lại không dùng, mã đã có bỏ qua).
+- **Code đang làm:** một file chỉ nhập một mã hàng (mã đang tạo ở form). Dòng thứ hai trở đi (kể cả mã hợp lệ hoặc mã đã có) báo lỗi "Chỉ nhập một mã hàng mỗi lần. Xóa dòng này...", nút Xác nhận khóa đến khi xóa; nút Thêm dòng ở tab Mã hàng khóa khi đã có một dòng. Nhập dòng hàng của đơn (nhiều mã hàng) giữ nguyên.
+- **Lý do:** người dùng yêu cầu bỏ nhập nhiều mã hàng cùng một file Excel.
+- **Ảnh hưởng người khác:** Khiêm (mã hàng).
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-ALL-181 · Nhập Excel: mở lại NVL ngừng sử dụng ngay trên dòng lỗi
+
+- **Ngày / Người / Task / PR:** 25/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10, UC09; FE `ExcelReviewStatusCell`, `excelReviewColumns`, `ExcelReviewTabs`, `ExcelReviewModal`, `materialApi.reopen`; BE `MaterialService.ReopenByCodeAsync`, `Admin/MaterialsController` (`POST reopen`)
+- **Tài liệu gốc ghi:** NVL ngừng sử dụng không dùng được ở định mức, NVL của đơn; muốn dùng lại phải vào danh mục NVL đổi trạng thái.
+- **Code đang làm:** dòng nhập Excel báo lỗi "NVL đã ngừng sử dụng" có nút "Mở lại NVL" ở cột Kết quả. Bấm thì mở lại NVL theo mã (chỉ Admin; Quản đốc không thấy nút), danh mục làm mới, popup kiểm lại ngay. Không ghi nhật ký riêng (cùng cách với đổi trạng thái NVL ở danh mục).
+- **Lý do:** người dùng yêu cầu có thao tác mở lại NVL khi nhập Excel gặp NVL ngừng sử dụng.
+- **Ảnh hưởng người khác:** Khiêm (kho, mã hàng).
+- **Cần sửa trong tài liệu:** không.
 - **Trạng thái:** Mở

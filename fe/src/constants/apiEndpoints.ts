@@ -98,6 +98,8 @@ export const API = {
     nextCode: v1('admin/customer-orders/next-code'),
     /** DEV-ALL-118: xem trước dòng hàng của đơn từ Excel (không ghi gì). */
     importPreview: v1('admin/customer-orders/import/preview'),
+    /** Kiểm lại dòng hàng đã sửa trên popup nhập Excel (body JSON, không ghi gì). */
+    importPreviewData: v1('admin/customer-orders/import/preview-data'),
     byId: (id: number) => v1(`admin/customer-orders/${id}`),
     cancel: (id: number) => v1(`admin/customer-orders/${id}/cancel`),
     stop: (id: number) => v1(`admin/customer-orders/${id}/stop`),
@@ -116,6 +118,12 @@ export const API = {
       v1(`manager/order-markers/${orderId}/products/${productId}/import/preview`),
     import: (orderId: number, productId: number) =>
       v1(`manager/order-markers/${orderId}/products/${productId}/import`),
+    /** Popup kiểm tra Excel (sửa ô trước khi nhập) cho Quản đốc: đọc file, kiểm lại, nhập từ bảng đã sửa. */
+    productSpec: (productId: number) => v1(`manager/order-markers/product-spec/${productId}`),
+    excelParse: v1('manager/order-markers/excel/parse'),
+    excelCheck: v1('manager/order-markers/excel/check'),
+    importData: (orderId: number, productId: number) =>
+      v1(`manager/order-markers/${orderId}/products/${productId}/import-data`),
   },
   /** Tra cứu cho luồng khác: không có đơn giá (D26). */
   orderLookups: {
@@ -277,6 +285,10 @@ export const API = {
     operationImportPreview: (role: 'accountant' | 'admin') =>
       v1(`${role}/operations/import/preview`),
     operationImport: (role: 'accountant' | 'admin') => v1(`${role}/operations/import`),
+    /** Xem trước / nhập từ bảng công đoạn đã sửa trên popup (body JSON). */
+    operationImportPreviewData: (role: 'accountant' | 'admin') =>
+      v1(`${role}/operations/import/preview-data`),
+    operationImportData: (role: 'accountant' | 'admin') => v1(`${role}/operations/import-data`),
     operation: (role: 'accountant' | 'admin', id: number) => v1(`${role}/operations/${id}`),
     operationDiscontinue: (role: 'accountant' | 'admin', id: number) =>
       v1(`${role}/operations/${id}/discontinue`),

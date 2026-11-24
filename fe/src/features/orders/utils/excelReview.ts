@@ -60,6 +60,31 @@ const SETTERS: { [K in ReviewTable]: (b: ExcelBundle, rows: RowsOf[K]) => ExcelB
   orderMaterials: (b, rows) => ({ ...b, orderMaterials: rows }),
 };
 
+/**
+ * Chỉ giữ các bảng đang nhập (bảng khác coi như không có trong file: cờ Has… tắt, không dòng). Dùng khi gửi kiểm và nhập để mỗi nơi
+ * nhập Excel chỉ đụng dữ liệu của mình (vd nhập Bìa cắt không kiểm, không ghi định mức / NVL của đơn dù file có các sheet đó).
+ */
+export const restrictBundle = (bundle: ExcelBundle, tables: readonly ReviewTable[]): ExcelBundle => {
+  const keep = (t: ReviewTable) => tables.includes(t);
+  return {
+    hasProducts: bundle.hasProducts && keep('products'),
+    products: keep('products') ? bundle.products : [],
+    spec: {
+      hasComponents: bundle.spec.hasComponents && keep('components'),
+      components: keep('components') ? bundle.spec.components : [],
+      hasNorms: bundle.spec.hasNorms && keep('norms'),
+      norms: keep('norms') ? bundle.spec.norms : [],
+      hasMarkerGroups: bundle.spec.hasMarkerGroups && keep('groups'),
+      markerGroups: keep('groups') ? bundle.spec.markerGroups : [],
+      hasOrderMarkers: bundle.spec.hasOrderMarkers && keep('markers'),
+      orderMarkers: keep('markers') ? bundle.spec.orderMarkers : [],
+      sizeColumns: bundle.spec.sizeColumns,
+    },
+    hasOrderMaterials: bundle.hasOrderMaterials && keep('orderMaterials'),
+    orderMaterials: keep('orderMaterials') ? bundle.orderMaterials : [],
+  };
+};
+
 /** Dòng trống khi bấm Thêm dòng. */
 const BLANK: { [K in ReviewTable]: (rowNumber: number) => RowOf<K> } = {
   products: (rowNumber) => ({ rowNumber, productCode: '', description: null }),

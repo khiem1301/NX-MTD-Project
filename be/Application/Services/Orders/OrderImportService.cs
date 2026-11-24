@@ -17,6 +17,7 @@ public sealed class OrderImportService : IOrderImportService
     private const int MaxColorLength = 50;
     private const decimal MaxCmtPrice = 100_000_000m;
     private const int MaxQty = 1_000_000;
+    private const int MaxSizeLength = 10;
 
     private readonly IUnitOfWork _uow;
     private readonly IExcelOrderLinesParser _parser;
@@ -44,6 +45,21 @@ public sealed class OrderImportService : IOrderImportService
                 ResultKind.Validation);
         }
 
+        return await PreviewAsync(excel, ct);
+    }
+
+    /// <summary>
+    /// Kiểm các dòng đã đọc (hoặc đã sửa trên màn hình, DEV-ALL-178): mã hàng, màu, đơn giá, số lượng từng size, trùng dòng. Không ghi gì.
+    /// </summary>
+    public async Task<Result<OrderImportPreviewDto>> PreviewAsync(OrderImportExcelDto input, CancellationToken ct)
+    {
+        // Dòng sửa trên màn hình có thể còn khoảng trắng thừa: chuẩn hóa trước khi đối chiếu.
+        var excel = new OrderImportExcelDto(input.SizeColumns, input.Rows.Select(r => r with
+        {
+            ProductCode = (r.ProductCode ?? string.Empty).Trim(),
+            Color = (r.Color ?? string.Empty).Trim(),
+            Quantities = (r.Quantities ?? []).Select(q => q with { SizeCode = (q.SizeCode ?? string.Empty).Trim().ToUpperInvariant() }).ToList(),
+        }).ToList());
         var codes = excel.Rows.Select(r => r.ProductCode).Where(c => c.Length > 0).Distinct().ToList();
         var products = (await _uow.Repository<Product>().Query().AsNoTracking().Where(p => codes.Contains(p.ProductCode))
                 .Select(p => new { p.ProductId, p.ProductCode, p.Status }).ToListAsync(ct))
@@ -60,9 +76,14 @@ public sealed class OrderImportService : IOrderImportService
             var inactive = product is not null && product.Status != RecordStatus.Active;
             // Mã chưa có vẫn kiểm số lượng, giá, trùng màu. Chỉ khi phần đó ổn mới báo thiếu mã (form đơn nhận dòng sau khi khai mã).
             var error = row.ParseError
+                        ?? (row.ProductCode.Length == 0 ? Messages.Required("mã hàng") : null)
+                        ?? (row.Color.Length == 0 ? Messages.Required("màu") : null)
                         ?? (row.Color.Length > MaxColorLength ? Messages.OrderImportColorTooLong : null)
                         ?? (row.CmtUnitPrice is null ? Messages.OrderImportPriceInvalid : PriceProblem(row.CmtUnitPrice.Value))
                         ?? (row.Quantities.Count == 0 ? Messages.OrderImportNoQty : null)
+                        ?? (row.Quantities.Any(q => q.SizeCode.Length == 0 || q.SizeCode.Length > MaxSizeLength) ? Messages.OrderImportSizeInvalid : null)
+                        ?? (row.Quantities.Any(q => q.Qty < 1) ? Messages.OrderImportQtyInvalid : null)
+                        ?? (row.Quantities.GroupBy(q => q.SizeCode).Any(g => g.Count() > 1) ? Messages.OrderImportSizeDuplicate : null)
                         ?? (row.Quantities.Any(q => q.Qty > MaxQty) ? Messages.OrderImportQtyTooLarge : null)
                         ?? (priceOf.TryGetValue(row.ProductCode, out var first) && first != row.CmtUnitPrice
                             ? string.Format(Messages.OrderImportPriceMismatch, row.ProductCode) : null);

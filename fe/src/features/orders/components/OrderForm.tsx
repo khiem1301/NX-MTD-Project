@@ -1,3 +1,4 @@
+import { Fragment, useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
 import { Alert, Button, Form, Space } from 'antd';
 import { PageCard } from '@/components/common/PageCard';
@@ -5,11 +6,13 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { UnsavedChangesModal } from '@/components/common/UnsavedChangesModal';
 import { MESSAGES } from '@/constants/messages';
 import { ORDER_STATUS_TAG } from '@/constants/orderStatus';
+import { fill } from '@/utils/format';
 import { ROUTES } from '@/constants/routes';
 import { newBlock } from '../utils/orderGrid';
 import { useOrderForm, type HeaderValues } from '../hooks/useOrderForm';
 import { CustomerFormModal } from './CustomerFormModal';
 import { OrderHeaderFields } from './OrderHeaderFields';
+import { NormColorWarning } from './NormColorWarning';
 import { ProductBlockEditor } from './ProductBlockEditor';
 import { OrderImportButton } from './OrderImportButton';
 import { OrderExcelImports } from './OrderExcelImports';
@@ -53,10 +56,16 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
     setProductBlock,
     stageProduct,
     stagedProducts,
+    stagedNormColors,
     stageOntoBlock,
+    stagedOfBlock,
+    updateStagedProduct,
     unstageProduct,
     orderImports,
   } = useOrderForm({ orderId, detail, copyFrom });
+  // Khối đang mở lại mã hàng mới khai (chưa lưu) để xem / sửa.
+  const [editStagedBlock, setEditStagedBlock] = useState<string>();
+  const editingStaged = editStagedBlock === undefined ? undefined : stagedOfBlock(editStagedBlock);
   const saving = create.isPending || update.isPending;
   const goBack = () => navigate(isEdit ? ROUTES.orderDetail(orderId as number) : ROUTES.orders);
   const saveError =
@@ -114,19 +123,28 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
           <OrderExcelImports orderId={orderId} imports={orderImports} disabled={saving} />
         )}
         {blocks.map((block, index) => (
-          <ProductBlockEditor
-            key={block.key}
-            block={block}
-            locked={locked}
-            productLabels={labels}
-            errors={blockErrors[block.key]}
-            usedProductIds={blocks
-              .filter((b) => b.key !== block.key && b.productId !== null)
-              .map((b) => b.productId as number)}
-            onChange={(next) => changeBlocks(blocks.map((b, i) => (i === index ? next : b)))}
-            onRemove={() => changeBlocks(blocks.filter((_b, i) => i !== index))}
-            onCreateProduct={() => setProductBlock(block.key)}
-          />
+          <Fragment key={block.key}>
+            <ProductBlockEditor
+              block={block}
+              locked={locked}
+              productLabels={labels}
+              errors={blockErrors[block.key]}
+              usedProductIds={blocks
+                .filter((b) => b.key !== block.key && b.productId !== null)
+                .map((b) => b.productId as number)}
+              onChange={(next) => changeBlocks(blocks.map((b, i) => (i === index ? next : b)))}
+              onRemove={() => changeBlocks(blocks.filter((_b, i) => i !== index))}
+              onCreateProduct={() => setProductBlock(block.key)}
+              onEditStagedProduct={() => setEditStagedBlock(block.key)}
+            />
+            <NormColorWarning
+              block={block}
+              productLabel={block.productId === null ? undefined : labels[block.productId]}
+              stagedNormColors={
+                block.productId === null ? undefined : stagedNormColors[block.productId]
+              }
+            />
+          </Fragment>
         ))}
         {editable && (
           <Space.Compact block>
@@ -177,6 +195,23 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
             setDirty(true);
           }}
         />
+        {editingStaged && (
+          // Gắn riêng mỗi lần mở: form đọc dữ liệu đã khai (mã, mô tả, ảnh, file Excel) lúc gắn.
+          <ProductFormModal
+            key={editingStaged.tempId}
+            open
+            product={null}
+            allowImports
+            title={fill(MESSAGES.orders.editStagedTitle, editingStaged.body.productCode)}
+            initialValues={editingStaged.body}
+            initialImports={editingStaged.selection}
+            autoReviewImports={false}
+            onStage={(body, selection) =>
+              editStagedBlock !== undefined && updateStagedProduct(editStagedBlock, body, selection)
+            }
+            onClose={() => setEditStagedBlock(undefined)}
+          />
+        )}
         <ProductFormModal
           open={productBlock !== undefined}
           product={null}

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ProductExcelImports } from './ProductExcelImports';
@@ -76,14 +76,11 @@ describe('ProductExcelImports', () => {
     expect(onProductRow).toHaveBeenCalledWith(parsed.products[0]);
   });
 
-  it('Chọn file của một mục: popup chỉ có bảng của mục đó', async () => {
-    const onChange = jest.fn();
+  it('Chỉ có một ô chọn file (file chung), ba mục chỉ hiện trạng thái', () => {
     const { container } = render(
-      wrap(<ProductExcelImports deferred value={{}} onChange={onChange} />),
+      wrap(<ProductExcelImports deferred value={{}} onChange={jest.fn()} />),
     );
-    const inputs = container.querySelectorAll('input[type="file"]');
-    fireEvent.change(inputs[1] as Element, { target: { files: [new File(['x'], 'tp.xlsx')] } });
-
-    await waitFor(() => expect(screen.getByText('popup:components')).toBeTruthy());
+    expect(container.querySelectorAll('input[type="file"]')).toHaveLength(1);
+    expect(screen.getAllByText('Chưa có dữ liệu')).toHaveLength(3);
   });
 });

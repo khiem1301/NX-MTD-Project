@@ -85,9 +85,9 @@ public sealed class ExcelBundleService : IExcelBundleService
         {
             if (dto.OrderId is { } orderId)
             {
-                var m = await _orderMaterialService.PreviewImportAsync(orderId, bundle.OrderMaterials, ct);
+                var m = await _orderMaterialService.PreviewImportAsync(orderId, bundle.OrderMaterials, ct, dto.Replace);
                 if (!m.IsSuccess) return Fail.As<ExcelBundleCheckResultDto>(m);
-                orderMaterials = MarkNewMaterials(m.Data!, catalog);
+                orderMaterials = MarkNewMaterials(m.Data!, catalog, bundle.OrderMaterials);
             }
             else orderMaterials = await CheckOrderMaterialsWithoutOrderAsync(bundle.OrderMaterials, catalog, ct);
         }
@@ -96,22 +96,33 @@ public sealed class ExcelBundleService : IExcelBundleService
             MissingMaterials(bundle, spec.Data!, orderMaterials)));
     }
 
-    /// <summary>Mã NVL đang dùng trong danh mục (không phân biệt hoa thường).</summary>
+    /// <summary>Mã NVL có trong danh mục, kể cả đã ngừng dùng (không phân biệt hoa thường).</summary>
     private async Task<HashSet<string>> CatalogAsync(IEnumerable<string> codes, CancellationToken ct)
     {
         var wanted = codes.Where(c => c.Length > 0).Distinct().ToList();
         var rows = await _uow.Repository<Material>().Query().AsNoTracking()
-            .Where(m => wanted.Contains(m.MaterialCode) && m.Status == MaterialStatuses.Active).Select(m => m.MaterialCode).ToListAsync(ct);
+            .Where(m => wanted.Contains(m.MaterialCode)).Select(m => m.MaterialCode).ToListAsync(ct);
         return rows.ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
-    /// <summary>Có đơn: dòng lỗi chỉ vì mã NVL chưa có trong danh mục thì đổi thành cảnh báo NewMaterial.</summary>
-    private static OrderMaterialImportPreviewDto MarkNewMaterials(OrderMaterialImportPreviewDto preview, HashSet<string> catalog)
+    /// <summary>NVL mới sẽ được tạo từ dòng này: tên / đơn vị gợi ý không được vượt giới hạn của danh mục NVL.</summary>
+    private static string? NewMaterialInfoProblem(OrderMaterialExcelRow row) =>
+        row.MaterialName?.Trim().Length > MaterialLimits.MaxNameLength ? Messages.SpecImportMaterialNameTooLong
+        : row.Unit?.Trim().Length > 20 ? Messages.SpecImportMaterialUnitTooLong
+        : null;
+
+    /// <summary>Có đơn: dòng lỗi chỉ vì mã NVL chưa có trong danh mục thì đổi thành cảnh báo NewMaterial (mã sai định dạng, tên / đơn vị quá dài vẫn là lỗi).</summary>
+    private static OrderMaterialImportPreviewDto MarkNewMaterials(OrderMaterialImportPreviewDto preview, HashSet<string> catalog,
+        IReadOnlyList<OrderMaterialExcelRow> fileRows)
     {
-        var rows = preview.Rows.Select(r => r.Action == ActionError && r.MaterialName is null && r.MaterialCode.Length > 0
-                                            && !catalog.Contains(r.MaterialCode)
-            ? r with { Action = SpecImportBuilder.ActionNewMaterial, Error = string.Format(Messages.MaterialNotInCatalog, r.MaterialCode) }
-            : r).ToList();
+        var rows = preview.Rows.Select(r =>
+        {
+            if (r.Action != ActionError || r.MaterialName is not null || r.MaterialCode.Length == 0 || catalog.Contains(r.MaterialCode)) return r;
+            var fileRow = fileRows.FirstOrDefault(f => f.RowNumber == r.RowNumber);
+            var problem = SpecImportBuilder.MaterialCodeProblem(r.MaterialCode) ?? (fileRow is null ? null : NewMaterialInfoProblem(fileRow));
+            return problem is not null ? r with { Error = problem }
+                : r with { Action = SpecImportBuilder.ActionNewMaterial, Error = string.Format(Messages.MaterialNotInCatalog, r.MaterialCode) };
+        }).ToList();
         var errors = rows.Count(r => r.Action == ActionError);
         return preview with { Rows = rows, ValidCount = rows.Count - errors, ErrorCount = errors - preview.DuplicateCount };
     }
@@ -164,11 +175,14 @@ public sealed class ExcelBundleService : IExcelBundleService
             else if (row.ParseError is null) seen[row.MaterialCode] = row.RowNumber;
 
             // NVL chưa có trong danh mục: kiểm số lượng như NVL có thật (Id tạm 1), dòng hợp lệ thì là cảnh báo NewMaterial.
-            var isNew = material is null && row.MaterialCode.Length > 0 && !catalog.Contains(row.MaterialCode);
+            var codeProblem = material is null ? SpecImportBuilder.MaterialCodeProblem(row.MaterialCode) : null;
+            var isNew = material is null && row.MaterialCode.Length > 0 && !catalog.Contains(row.MaterialCode) && codeProblem is null;
             var input = new CreateOrderMaterialLineDto(material?.MaterialId ?? (isNew ? 1 : 0), row.RequiredQty ?? 0, row.CustomerQty ?? 0,
                 row.Note);
             var error = row.ParseError ?? duplicate
-                        ?? (material is null && !isNew ? string.Format(WarehouseMessages.OrderMaterialImportUnknown, row.MaterialCode) : null)
+                        ?? codeProblem
+                        ?? (material is null && !isNew ? (catalog.Contains(row.MaterialCode) ? WarehouseMessages.MaterialInactive : string.Format(WarehouseMessages.OrderMaterialImportUnknown, row.MaterialCode)) : null)
+                        ?? (isNew ? NewMaterialInfoProblem(row) : null)
                         ?? validator.Validate(input).Errors.Select(e => e.ErrorMessage).FirstOrDefault();
             var action = error is not null ? ActionError : isNew ? SpecImportBuilder.ActionNewMaterial : SpecImportBuilder.ActionPending;
             var note = error ?? (isNew ? string.Format(Messages.MaterialNotInCatalog, row.MaterialCode) : Messages.OrderMaterialPendingOrder);

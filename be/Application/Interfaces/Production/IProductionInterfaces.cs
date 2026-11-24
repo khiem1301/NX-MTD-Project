@@ -18,6 +18,12 @@ public interface IOperationService
 
     /// <summary>Nhập công đoạn từ Excel theo mã công đoạn (OP + STT): thêm mới hoặc cập nhật, không xóa công đoạn nào. <paramref name="finalStt"/> đánh dấu công đoạn cuối.</summary>
     Task<Result<OperationImportResultDto>> ImportAsync(int productId, Stream stream, string? sheetName, int? finalStt, DateOnly? effectiveDate, bool submitRates, CancellationToken ct, bool replace = false);
+
+    /// <summary>DEV-ALL-179: như xem trước ở trên nhưng từ bảng đã đọc file và sửa trên màn hình (popup kiểm tra Excel); không đọc lại file.</summary>
+    Task<Result<OperationImportPreviewDto>> PreviewImportAsync(int productId, OperationExcelSheetDto sheet, DateOnly? effectiveDate, CancellationToken ct, bool replace = false);
+
+    /// <summary>DEV-ALL-179: nhập từ bảng đã sửa trên màn hình, một giao dịch như nhập từ file.</summary>
+    Task<Result<OperationImportResultDto>> ImportAsync(int productId, OperationExcelSheetDto sheet, int? finalStt, DateOnly? effectiveDate, bool submitRates, CancellationToken ct, bool replace = false);
 }
 
 /// <summary>KI-01 (UC25, UC26): đơn giá công đoạn DRAFT → PENDING_APPROVAL → APPROVED / REJECTED (Admin duyệt).</summary>

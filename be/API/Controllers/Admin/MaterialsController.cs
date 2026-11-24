@@ -28,6 +28,11 @@ public sealed class MaterialsController : AdminBaseController
     public async Task<IActionResult> Update(int id, [FromBody] UpdateMaterialDto dto, CancellationToken ct) =>
         this.ToResponse(await _materials.UpdateAsync(id, dto, ct));
 
+    /// <summary>DEV-ALL-181: mở lại NVL ngừng sử dụng theo mã, dùng từ popup nhập Excel (chỉ biết mã NVL).</summary>
+    [HttpPost("reopen")]
+    public async Task<IActionResult> Reopen([FromBody] ReopenMaterialDto dto, CancellationToken ct) =>
+        this.ToResponse(await _materials.ReopenByCodeAsync(dto.MaterialCode, ct));
+
     [HttpPatch("{id:int}/status")]
     public async Task<IActionResult> ChangeStatus(int id, [FromBody] ChangeMaterialStatusDto dto, CancellationToken ct) =>
         this.ToResponse(await _materials.ChangeStatusAsync(id, dto, ct));

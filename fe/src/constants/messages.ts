@@ -380,6 +380,12 @@ export const MESSAGES = {
     createProduct: 'Tạo mã hàng mới',
     stagedWithOrder: 'Mã hàng {0} sẽ được lưu khi lưu đơn.',
     stagedDuplicate: 'Mã hàng {0} đã có trên đơn này.',
+    stagedUpdated: 'Đã cập nhật mã hàng {0}; ghi cùng đơn khi Lưu đơn.',
+    viewStagedProduct: 'Xem / sửa mã hàng mới (chưa lưu)',
+    editStagedTitle: 'Sửa mã hàng mới {0} (chưa lưu, ghi cùng đơn)',
+    colorWithoutNorm:
+      'Màu {0} chưa có định mức NVL ở mã hàng {1}. Hãy khai định mức cho màu này (màn Mã hàng → Định mức, hoặc Nhập từ Excel); chưa có thì đơn không tính được NVL cần cho màu đó.',
+    productCodeExists: 'Mã hàng {0} đã tồn tại. Chọn mã hàng này trong danh sách thay vì tạo mới.',
     removeProductBlock: 'Bỏ mã hàng khỏi đơn',
     lockedEditHint: 'Đơn đã vào sản xuất: không đổi mã đơn, khách, ngày nhận, màu, size đã khai.',
     needLine: 'Vui lòng nhập ít nhất một dòng màu × size.', // MSG01
@@ -493,6 +499,7 @@ export const MESSAGES = {
       choose: 'Chọn file',
       change: 'Đổi file',
       noFile: 'Chưa chọn file',
+      noData: 'Chưa có dữ liệu',
       specGroup: 'Định mức mã hàng',
       specGroupNote: 'Định mức NVL, Nhóm bìa cần màu đã có (tạo khi lập đơn)',
       chosenCount: 'Đã chọn {0} file',
@@ -566,6 +573,13 @@ export const MESSAGES = {
       missingHint:
         'Khi Xác nhận, các NVL này tự được thêm vào danh mục. Điền Tên (vải cần thêm Khổ).',
       missingInfoRequired: 'Điền Tên NVL (và Khổ với vải) cho: {0}.',
+      reopenMaterial: 'Mở lại NVL',
+      reopenedMaterial: 'Đã mở lại NVL {0}; đang kiểm tra lại.',
+      loadExisting: 'Nạp dữ liệu đang có',
+      loadExistingTip: 'Thêm vào bảng các dòng đang có trong hệ thống để sửa trực tiếp (dòng trùng khóa với file thì giữ dòng của file).',
+      loadedExisting: 'Đã nạp dữ liệu đang có vào bảng; sửa rồi Xác nhận để lưu.',
+      managerNewMaterial:
+        'NVL chưa có trong danh mục: {0}. Chỉ Admin được thêm NVL mới, hãy nhờ Admin thêm trước rồi nhập lại.',
       materialColumns: {
         code: 'Mã NVL',
         name: 'Tên NVL',
@@ -629,6 +643,11 @@ export const MESSAGES = {
       title: 'Nhập dòng hàng từ Excel',
       hint: 'Cột: Mã hàng, Màu, Đơn giá CMT, mỗi size một cột (trống = không đặt). Áp dụng để điền vào form (màu trùng: ghi đè số lượng), xem lại rồi Lưu.',
       apply: 'Áp dụng vào form',
+      reviewTitle: 'Kiểm tra dòng hàng từ Excel — {0}',
+      reviewHint:
+        'Sửa trực tiếp trong bảng (mã hàng, màu, đơn giá CMT, số lượng từng size), thêm / xóa dòng, thêm cột size. Máy chủ kiểm lại sau mỗi lần sửa; chỉ các dòng hợp lệ được điền vào form. Chưa lưu gì.',
+      checking: 'Đang kiểm tra...',
+      addSize: 'Thêm cột size',
       unknownProducts:
         'File có mã hàng chưa có trong hệ thống. Bấm Tạo mã hàng: form điền sẵn từ sheet Mã hàng. Lưu form chỉ giữ mã trên đơn; mã hàng được ghi khi bấm Lưu đơn. Dòng chỉ thiếu mã hàng được nhận ngay.',
       createProduct: 'Tạo mã hàng {0}',
@@ -646,11 +665,28 @@ export const MESSAGES = {
       },
     },
     /** DEV-ALL-115: nhập Excel định mức mã hàng + bìa của đơn. */
+    /** Thông báo sau khi nhập Excel và lưu thành công (chỉ nêu các mục vừa nhập). */
+    importDone: {
+      savedPrefix: 'Đã lưu:',
+      savedMaterialsPrefix: 'Đã lưu NVL của đơn:',
+      components: '{0} thành phần',
+      norms: '{0} dòng định mức',
+      groups: '{0} nhóm bìa',
+      markers: '{0} bìa của đơn',
+      materialsAdded: 'thêm {0}',
+      materialsUpdated: 'cập nhật {0}',
+      removed: 'Đã xóa {0} dòng cũ không có trong bảng',
+      newMaterials: 'Đã thêm {0} NVL mới vào danh mục',
+      nothingChanged: 'Không có thay đổi nào so với dữ liệu đang có.',
+    },
     specImport: {
       button: 'Nhập từ Excel',
       template: 'Tải file mẫu',
       title: 'Nhập từ Excel: {0}',
-      hint: 'File gồm 4 bảng: Thành phần, Định mức NVL, Nhóm bìa, Bìa của đơn (thiếu bảng nào bỏ qua bảng đó). Ghi đè dòng cùng khóa, giữ dòng khác. Chọn file là xem trước, chưa lưu.',
+      nothingToImport: 'File không có bảng nào để nhập ở đây.',
+      markersHint:
+        'Chỉ lấy bảng Bìa của đơn trong file (các bảng định mức khác bị bỏ qua). Nhóm bìa phải đã khai ở mã hàng. Chọn file là mở bảng kiểm tra để sửa từng ô, chưa lưu.',
+      hint: 'File gồm 4 bảng: Thành phần, Định mức NVL, Nhóm bìa, Bìa của đơn (thiếu bảng nào bỏ qua bảng đó). Ghi đè dòng cùng khóa, giữ dòng khác. Chọn file là mở bảng kiểm tra để sửa từng ô, chưa lưu.',
       chooseFile: 'Bấm hoặc kéo file Excel (.xlsx) vào đây',
       chooseFileHint: 'Dùng file mẫu để đúng tên cột.',
       order: 'Đơn nhận bìa của đơn',

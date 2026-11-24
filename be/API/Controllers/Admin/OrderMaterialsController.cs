@@ -83,6 +83,6 @@ public sealed class OrderMaterialsController : AdminBaseController
     /// <summary>DEV-ALL-122: nhập NVL của đơn từ dòng đã sửa trên popup (body JSON), lưu một lần.</summary>
     [HttpPost("import-data")]
     public async Task<IActionResult> ImportData([FromBody] IReadOnlyList<OrderMaterialExcelRow> rows, [FromQuery] int orderId,
-        CancellationToken ct) =>
-        this.ToResponse(await _orderMaterials.ImportAsync(orderId, rows, ct));
+        CancellationToken ct, [FromQuery] bool replace = false) =>
+        this.ToResponse(await _orderMaterials.ImportAsync(orderId, rows, ct, replace));
 }

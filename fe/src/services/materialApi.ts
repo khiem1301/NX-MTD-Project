@@ -11,4 +11,10 @@ export const materialApi = {
   create: async (role: RolePath, body: SaveMaterialPayload): Promise<void> => {
     await apiClient.post<ApiResponse<unknown>>(API.warehouse.materials(role), body);
   },
+  /** DEV-ALL-181: mở lại NVL ngừng sử dụng theo mã (popup nhập Excel); chỉ Admin. */
+  reopen: async (role: RolePath, materialCode: string): Promise<void> => {
+    await apiClient.post<ApiResponse<unknown>>(`${API.warehouse.materials(role)}/reopen`, {
+      materialCode,
+    });
+  },
 };
