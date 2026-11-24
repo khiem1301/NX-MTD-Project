@@ -118,7 +118,7 @@ public sealed class AttendanceService : IAttendanceService
         await _uow.SaveChangesAsync();
 
         _logger.LogWarning(
-            "Đã báo Admin: chưa đồng bộ được chấm công hơn {Threshold} phút (lần cuối: {LastSucceededAt})",
+            "Attendance sync overdue. Đã báo Admin: chưa đồng bộ được chấm công hơn {Threshold} phút (lần cuối: {LastSucceededAt})",
             health.Data.AlertThresholdMinutes, health.Data.LastSucceededAt);
     }
 

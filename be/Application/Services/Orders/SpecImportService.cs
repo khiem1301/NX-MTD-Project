@@ -45,13 +45,19 @@ public sealed partial class SpecImportService : ISpecImportService
 
     /// <summary>DEV-ALL-122: xem trước từ bảng đã đọc file và sửa trên màn hình (popup kiểm tra Excel).</summary>
     public Task<Result<SpecImportPreviewDto>> PreviewAsync(int productId, int? orderId, SpecWorkbookDto workbook, CancellationToken ct,
-        IReadOnlyCollection<string>? parts = null, bool replace = false) =>
-        PreviewCoreAsync(productId, orderId, () => workbook, parts, ct, replace);
+        IReadOnlyCollection<string>? parts = null, bool replace = false)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+        return PreviewCoreAsync(productId, orderId, () => workbook, parts, ct, replace);
+    }
 
     /// <summary>DEV-ALL-122: nhập từ bảng đã đọc file và sửa trên màn hình.</summary>
     public Task<Result<SpecImportResultDto>> ImportAsync(int productId, int? orderId, SpecWorkbookDto workbook, CancellationToken ct,
-        IReadOnlyCollection<string>? parts = null, bool replace = false) =>
-        ImportCoreAsync(productId, orderId, () => workbook, parts, ct, replace);
+        IReadOnlyCollection<string>? parts = null, bool replace = false)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+        return ImportCoreAsync(productId, orderId, () => workbook, parts, ct, replace);
+    }
 
     private async Task<Result<SpecImportPreviewDto>> PreviewCoreAsync(int productId, int? orderId, Func<SpecWorkbookDto> read,
         IReadOnlyCollection<string>? parts, CancellationToken ct, bool replace = false)
@@ -195,7 +201,8 @@ public sealed partial class SpecImportService : ISpecImportService
         return new SpecImportUsage(
             usedNorms.Select(n => n.ComponentName.Trim().ToUpperInvariant()).ToHashSet(),
             usedNorms.Select(n => $"{n.Color.Trim().ToUpperInvariant()}|{n.ComponentName.Trim().ToUpperInvariant()}").ToHashSet(),
-            groups.ToHashSet());
+            groups.ToHashSet(),
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase));
     }
 
     /// <summary>Mã hàng phải có; nếu chọn đơn thì đơn phải có mã hàng này và còn đang chạy (giống điều kiện lưu bìa).</summary>

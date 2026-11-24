@@ -79,6 +79,9 @@ public interface IAccountAdminService
 public interface ITeamService
 {
     Task<Result<IReadOnlyList<TeamListItemDto>>> ListAsync(bool includeDiscontinued, CancellationToken ct);
+
+    /// <summary><paramref name="type"/> null hoặc rỗng: mọi loại. Cutting / Sewing / Office (hoặc mã CUTTING / SEWING / OFFICE).</summary>
+    Task<Result<IReadOnlyList<TeamListItemDto>>> ListAsync(bool includeDiscontinued, string? type, CancellationToken ct);
     Task<Result<TeamDetailDto>> GetAsync(int teamId, CancellationToken ct);
     Task<Result<int>> CreateAsync(SaveTeamDto dto, CancellationToken ct);
     Task<Result> UpdateAsync(int teamId, SaveTeamDto dto, CancellationToken ct);
@@ -88,6 +91,9 @@ public interface ITeamService
     Task<Result> AppointAsync(int teamId, AppointDto dto, CancellationToken ct);
     Task<Result> DismissAsync(int teamId, DismissDto dto, CancellationToken ct);
     Task<Result<IReadOnlyList<EmployeeLookupDto>>> CandidatesAsync(CancellationToken ct);
+
+    /// <summary>Ứng viên chưa có tổ, trong phạm vi một tổ. Tổ không tồn tại → NotFound.</summary>
+    Task<Result<IReadOnlyList<EmployeeLookupDto>>> CandidatesAsync(int teamId, CancellationToken ct);
     Task<Result> AddMembersAsync(int teamId, TeamMembersDto dto, CancellationToken ct);
     Task<Result> RemoveMembersAsync(int teamId, TeamMembersDto dto, CancellationToken ct);
 }

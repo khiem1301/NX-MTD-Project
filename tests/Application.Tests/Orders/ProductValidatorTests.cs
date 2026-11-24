@@ -173,7 +173,8 @@ public class ProductValidatorTests
     [Fact]
     public void OversizedMarkerList_ReportsOneMessage()
     {
-        var groups = Enumerable.Range(0, 4001).Select(_ => new SaveProductMarkerComponentDto(0, "")).ToList();
+        var over = SaveProductSpecDtoValidator.MaxMarkerRows + 1;
+        var groups = Enumerable.Range(0, over).Select(_ => new SaveProductMarkerComponentDto(0, "")).ToList();
 
         new SaveProductSpecDtoValidator().Validate(Spec() with { MarkerComponents = groups }).Errors.Select(e => e.ErrorMessage)
             .Should().Equal("Danh sách chi tiết của nhóm bìa quá dài.");

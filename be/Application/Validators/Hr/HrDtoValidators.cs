@@ -56,6 +56,7 @@ public sealed class CreateEmployeeDtoValidator : AbstractValidator<CreateEmploye
         RuleFor(x => x.PayType).Must(HrRules.PayTypes.Contains).WithMessage("Kiểu lương không hợp lệ.");
         RuleFor(x => x.AttendanceCode).InclusiveBetween(1, 99_999_999).When(x => x.AttendanceCode is not null);
         RuleFor(x => x.TeamId).NotNull().When(x => HrRules.NeedsTeam(x.Role)).WithMessage(Messages.Required("tổ"));
+        RuleFor(x => x.Email).MustBeEmail().When(x => !string.IsNullOrWhiteSpace(x.Email));
     }
 }
 

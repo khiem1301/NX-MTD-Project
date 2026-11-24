@@ -8,4 +8,7 @@ public interface IAccountRepository : IGenericRepository<Account>
     Task<Account?> GetByUsernameAsync(string username, CancellationToken ct);
     Task<Account?> GetWithEmployeeAsync(int accountId, CancellationToken ct);
     Task<bool> UsernameExistsAsync(string username, CancellationToken ct);
+
+    /// <summary>Email (không phân biệt hoa thường) đã gắn với một tài khoản.</summary>
+    Task<bool> EmailExistsAsync(string email, CancellationToken ct);
 }

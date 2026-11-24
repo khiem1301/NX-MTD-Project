@@ -57,7 +57,7 @@ public sealed record EmployeeDetailDto
 /// <param name="Role">PascalCase: chỉ role văn phòng (Admin, Manager, Accountant, WarehouseKeeper, QaQc, Electrician).</param>
 /// <param name="PayType">PascalCase: PieceRate, Daily, Monthly.</param>
 public sealed record CreateEmployeeDto(string EmployeeCode, string FullName, string? Gender, DateOnly? DateOfBirth, string? Phone,
-    string Role, int? TeamId, string PayType, DateOnly StartDate, int? AttendanceCode);
+    string Role, int? TeamId, string PayType, DateOnly StartDate, int? AttendanceCode, string? Email = null);
 
 /// <summary>Tạo công nhân từ snapshot RJ (mã chấm công + họ tên). Vai trò mặc định Worker; tổ trưởng/phó bổ nhiệm sau.</summary>
 public sealed record ImportEmployeeFromRjDto(

@@ -13,12 +13,27 @@ public sealed partial class HomeDashboardService
     {
         var receipts = await _uow.Repository<MaterialReceipt>().Query().AsNoTracking()
             .CountAsync(r => r.Status == ReceiptStatuses.Pending, ct);
-        var inbox = await _requests.ListInboxAsync(
-            new RequestQuery { Page = 1, PageSize = LatestCount, Status = CodeText.ToPascal(RequestStatuses.PendingApproval) }, ct);
-        var requests = inbox.IsSuccess ? inbox.Data! : new PagedResult<RequestListItemDto>([], 1, LatestCount, 0);
+        var requests = await InboxAsync(ct);
         var absent = await _uow.Repository<VwTeamActingLeader>().Query().AsNoTracking()
             .Where(t => t.IsActingLeader == true).Select(t => t.TeamCode).Distinct().OrderBy(c => c).ToListAsync(ct);
         return Result<ManagerHomeDto>.Success(new ManagerHomeDto(
             receipts, requests.TotalItems, absent, await OpenOrdersAsync(ct), requests.Items));
     }
+
+    /// <summary>Hộp đơn từ chờ duyệt. Lỗi thì danh sách rỗng, các khối khác của trang chủ vẫn hiện.</summary>
+    private async Task<PagedResult<RequestListItemDto>> InboxAsync(CancellationToken ct)
+    {
+        try
+        {
+            var inbox = await _requests.ListInboxAsync(
+                new RequestQuery { Page = 1, PageSize = LatestCount, Status = CodeText.ToPascal(RequestStatuses.PendingApproval) }, ct);
+            return inbox.IsSuccess ? inbox.Data! : EmptyInbox();
+        }
+        catch (Exception)
+        {
+            return EmptyInbox();
+        }
+    }
+
+    private static PagedResult<RequestListItemDto> EmptyInbox() => new([], 1, LatestCount, 0);
 }

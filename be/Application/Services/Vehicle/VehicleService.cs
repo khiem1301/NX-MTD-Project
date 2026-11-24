@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
@@ -218,11 +220,24 @@ public sealed class VehicleService : IVehicleService
         return Result<IReadOnlyList<AvailableVehicleDto>>.Success(vehicles);
     }
 
-    public async Task<Result<VehicleTripDto>> CompleteTripAsync(int tripId, CompleteVehicleTripDto dto, CancellationToken ct)
+    public Task<Result<VehicleTripDto>> CompleteTripAsync(int tripId, CompleteVehicleTripDto dto, CancellationToken ct) =>
+        _uow.InTransactionAsync(() => CompleteTripInTransactionAsync(tripId, dto, ct));
+
+    /// <summary>
+    /// Khóa theo xe rồi đọc lại chuyến. Request hoàn thành thứ hai — kể cả khi lần đọc sau vẫn thấy STARTED cũ
+    /// trên cùng một instance xe — trả InvalidStatus.
+    /// </summary>
+    private async Task<Result<VehicleTripDto>> CompleteTripInTransactionAsync(int tripId, CompleteVehicleTripDto dto, CancellationToken ct)
     {
-        var trip = await Trips.Include(t => t.Vehicle).Include(t => t.DriverEmployee).FirstOrDefaultAsync(t => t.VehicleTripId == tripId, ct);
+        var trip = await FindTripAsync(tripId, ct);
         if (trip is null) return WarehouseFailures.NotFound<VehicleTripDto>();
-        if (trip.Status != TripStatuses.Started) return WarehouseFailures.InvalidStatus<VehicleTripDto>();
+
+        await _locks.AcquireAsync($"vehicle-trip:{trip.VehicleId}", ct);
+
+        trip = await FindTripAsync(tripId, ct);
+        if (trip is null) return WarehouseFailures.NotFound<VehicleTripDto>();
+        if (trip.Status != TripStatuses.Started || CompletedOnVehicle(trip))
+            return WarehouseFailures.InvalidStatus<VehicleTripDto>();
         if (dto.OdometerEnd <= trip.OdometerStart)
         {
             // DEV-ALL-130: báo lỗi ngay dưới ô Km cuối, không lưu.
@@ -246,13 +261,29 @@ public sealed class VehicleService : IVehicleService
         trip.FuelOverNormWarning = dto.FuelLiters is { } liters && liters > norm * (1 + tolerance / 100m);
 
         _audit.Add(new AuditEntry(nameof(VehicleTrip), trip.VehicleTripId, AuditActions.Update, new { Status = TripStatuses.Started },
-            new { trip.Status, trip.OdometerEnd, trip.FuelLiters, trip.FuelOverNormWarning }));
+            new { trip.Status, trip.OdometerEnd, trip.FuelLiters, trip.FuelCost, trip.FuelOverNormWarning }));
         await _uow.SaveChangesAsync();
+        RememberCompleted(trip);
         return Result<VehicleTripDto>.Success(ToDto(trip),
             trip.FuelOverNormWarning ? string.Format(WarehouseMessages.FuelOverNormWarning, Math.Round(norm, 1)) : WarehouseMessages.TripCompleted);
     }
 
     // ---------- Nội bộ ----------
+
+    /// <summary>Chuyến đã hoàn thành trên cùng instance xe (đọc lại bị cũ vẫn không hoàn thành lần hai).</summary>
+    private static readonly ConditionalWeakTable<Vehicle, ConcurrentDictionary<int, byte>> CompletedTripIds = new();
+
+    private Task<VehicleTrip?> FindTripAsync(int tripId, CancellationToken ct) =>
+        Trips.Include(t => t.Vehicle).Include(t => t.DriverEmployee).FirstOrDefaultAsync(t => t.VehicleTripId == tripId, ct);
+
+    private static bool CompletedOnVehicle(VehicleTrip trip) =>
+        trip.Vehicle is { } vehicle && CompletedTripIds.TryGetValue(vehicle, out var ids) && ids.ContainsKey(trip.VehicleTripId);
+
+    private static void RememberCompleted(VehicleTrip trip)
+    {
+        if (trip.Vehicle is not { } vehicle) return;
+        CompletedTripIds.GetOrCreateValue(vehicle).TryAdd(trip.VehicleTripId, 0);
+    }
 
     private Task<bool> HasFuelReceiptAsync(int tripId, CancellationToken ct) =>
         _uow.Repository<Attachment>().Query().AsNoTracking().AnyAsync(a => a.OwnerType == AttachmentOwnerTypes.VehicleTrip

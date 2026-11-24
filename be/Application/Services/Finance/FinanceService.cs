@@ -41,6 +41,7 @@ public sealed class FinanceService : IFinanceService
 
     public async Task<Result<PagedResult<RevenueSummaryDto>>> GetRevenueAsync(RevenueQuery query, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(query);
         if (!string.IsNullOrWhiteSpace(query.PeriodMonth) && !IsValidMonth(query.PeriodMonth))
             return Result<PagedResult<RevenueSummaryDto>>.Failure(ErrorCodes.RevenuePeriodMonthInvalid,
                 Messages.RevenuePeriodMonthInvalid, ResultKind.Validation);
@@ -126,7 +127,11 @@ public sealed class FinanceService : IFinanceService
         await SaveResultsAsync(period, dto.PeriodMonth, entities, calculatedAt, ct);
 
         var items = entities.Select(e => ToDto(e, dto.PeriodMonth, products, warnings, totalFixedCost)).ToList();
-        var atRisk = items.Where(i => i.AtRiskWarning is not null).Select(i => i.AtRiskWarning!).Distinct().ToList();
+        // Một mã hàng có 2 basis → 2 câu MSG26 khác %; cảnh báo tính theo mã, không theo cả câu.
+        var atRisk = items.Where(i => i.AtRiskWarning is not null)
+            .GroupBy(i => i.ProductId)
+            .Select(g => g.First().AtRiskWarning!)
+            .ToList();
 
         _logger.LogInformation("Tính hòa vốn tháng {PeriodMonth}: {Count} mã hàng × 2 cách, {AtRisk} cảnh báo",
             dto.PeriodMonth, items.Count / AllocationBasis.All.Length, atRisk.Count);
@@ -190,7 +195,13 @@ public sealed class FinanceService : IFinanceService
 
         var payrollApproved = await _repo.IsPayrollApprovedAsync(period.PeriodId, ct);
         var hasMonthlyCost = await _repo.HasMonthlyCostAsync(period.PeriodId, ct);
-        return payrollApproved && hasMonthlyCost ? period : null;
+        if (!payrollApproved) return null;
+        if (hasMonthlyCost) return period;
+
+        // GetBreakEvenInputsAsync coi "đã nhập chi phí" là costs.Count > 0. Flag và danh sách lệch nhau
+        // thì tin danh sách, để CanCalculate không true trong khi Calculate trả BreakEvenNotReady.
+        var costs = await _repo.GetMonthlyCostsAsync(period.PeriodId, ct);
+        return costs.Count > 0 ? period : null;
     }
 
     /// <summary>
@@ -219,6 +230,7 @@ public sealed class FinanceService : IFinanceService
         var totalFinishedQty = byProduct.Values.Sum(v => v.FinishedQty);
         var outputShare = productIds.ToDictionary(
             id => id, id => totalFinishedQty > 0 ? (decimal)byProduct[id].FinishedQty / totalFinishedQty : 0m);
+        AllocateCommonVariable(variableByProduct, costs, productIds, products, outputShare);
 
         var labourShare = LabourShares(productIds, await ComputeLaborHoursByProductAsync(period, ct), outputShare);
         var calculatedAt = await NextCalculatedAtAsync(period.PeriodId, ct);
@@ -344,6 +356,17 @@ public sealed class FinanceService : IFinanceService
             rows = rows.Where(r => r.CalculatedAt == latest).ToList();
         }
 
+        // Product nav null (orphan) — bỏ qua, không NRE trong ToDto. Hết dòng thì NotFound.
+        rows = rows.Where(r => r.Product is not null).ToList();
+        if (rows.Count == 0)
+            return Result<BreakEvenListResultDto>.Failure(ErrorCodes.BreakEvenNotFound,
+                Messages.BreakEvenNotFound, ResultKind.NotFound);
+
+        rows = rows
+            .OrderBy(r => r.Product.ProductCode, StringComparer.Ordinal)
+            .ThenBy(r => r.AllocationBasis, StringComparer.Ordinal)
+            .ToList();
+
         // Tỉ lệ chia định phí của mỗi dòng = định phí của dòng / tổng định phí cùng lần tính, cùng cách chia.
         var fixedByRun = rows.GroupBy(r => (r.CalculatedAt, r.AllocationBasis))
             .ToDictionary(g => g.Key, g => g.Sum(r => r.AllocatedFixedCost));
@@ -366,7 +389,29 @@ public sealed class FinanceService : IFinanceService
 
     // ---------- Dùng chung ----------
 
-    private static bool IsValidMonth(string periodMonth) => PeriodMonthPattern.IsMatch(periodMonth);
+    private static bool IsValidMonth(string? periodMonth) =>
+        !string.IsNullOrWhiteSpace(periodMonth) && PeriodMonthPattern.IsMatch(periodMonth);
+
+    /// <summary>Biến phí chung (không ProductId) chia theo sản lượng; phần lẻ dồn vào mã cuối để không bỏ sót.</summary>
+    private static void AllocateCommonVariable(
+        Dictionary<int, decimal> variableByProduct, IReadOnlyList<MonthlyCost> costs, IReadOnlyList<int> productIds,
+        IReadOnlyDictionary<int, string> products, IReadOnlyDictionary<int, decimal> outputShare)
+    {
+        var common = costs.Where(c => c.CostType == MonthlyCostType.Variable && !c.ProductId.HasValue).Sum(c => c.Amount);
+        if (common == 0 || productIds.Count == 0) return;
+
+        var ordered = productIds.OrderBy(id => ProductCodeOf(products, id)).ToList();
+        decimal running = 0;
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            var id = ordered[i];
+            var portion = i == ordered.Count - 1
+                ? common - running
+                : Math.Round(common * outputShare[id], 2, MidpointRounding.AwayFromZero);
+            running += portion;
+            variableByProduct[id] = variableByProduct.GetValueOrDefault(id) + portion;
+        }
+    }
 
     private static string ProductCodeOf(
         IReadOnlyDictionary<int, string> products, int productId) =>
@@ -417,15 +462,16 @@ public sealed class FinanceService : IFinanceService
     /// <summary>Dùng khi đọc lại từ DB (Product đã Include sẵn) — không cần dictionary tra cứu riêng.</summary>
     private static BreakEvenResultDto ToDto(BreakEvenResult r, string periodMonth, decimal totalFixedCost)
     {
+        var productCode = r.Product?.ProductCode ?? "";
         string? warning = null;
         if (r.IsAtRisk)
         {
             warning = r.PercentReached.HasValue
-                ? string.Format(Messages.BreakEvenAtRiskWarning, r.Product.ProductCode, r.PercentReached.Value)
-                : string.Format(Messages.BreakEvenAtRiskWarningNoBreakEven, r.Product.ProductCode);
+                ? string.Format(Messages.BreakEvenAtRiskWarning, productCode, r.PercentReached.Value)
+                : string.Format(Messages.BreakEvenAtRiskWarningNoBreakEven, productCode);
         }
 
-        return new BreakEvenResultDto(r.BreakEvenResultId, r.PeriodId, periodMonth, r.ProductId, r.Product.ProductCode, CodeText.ToPascal(r.AllocationBasis), r.FinishedQty, r.CmtUnitPrice, r.Revenue,
+        return new BreakEvenResultDto(r.BreakEvenResultId, r.PeriodId, periodMonth, r.ProductId, productCode, CodeText.ToPascal(r.AllocationBasis), r.FinishedQty, r.CmtUnitPrice, r.Revenue,
             r.VariableCost, r.AllocatedFixedCost, r.BreakEvenQty, r.PercentReached, r.SurplusValue, r.IsAtRisk,
             r.CalculatedAt, warning, SharePct(r.AllocatedFixedCost, totalFixedCost));
     }

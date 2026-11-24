@@ -14,15 +14,29 @@ public sealed partial class HomeDashboardService
     {
         var (month, _) = Months();
         var today = _clock.Today;
-        var timesheet = await _attendance.GetSummaryAsync(
-            new TimesheetQuery(new DateOnly(today.Year, today.Month, 1), today, null, null, null, null), TimesheetScope.All, ct);
+        var missingPunch = await MissingPunchAsync(today, ct);
         var (missing, rejected) = await PieceRateGapsAsync(ct);
         var (notSet, orders) = await OrdersNotSetAsync(ct);
         var (unpaid, purchases) = await PurchasesUnpaidAsync(ct);
         var (costEntered, payroll) = await MonthStatusAsync(month, ct);
         return Result<AccountantHomeDto>.Success(new AccountantHomeDto(
-            timesheet.IsSuccess ? timesheet.Data!.MissingPunchCount : 0, missing, rejected, unpaid, notSet, costEntered, payroll,
+            missingPunch, missing, rejected, unpaid, notSet, costEntered, payroll,
             orders, purchases));
+    }
+
+    /// <summary>Số người thiếu chấm công. Lỗi bảng công thì 0.</summary>
+    private async Task<int> MissingPunchAsync(DateOnly today, CancellationToken ct)
+    {
+        try
+        {
+            var timesheet = await _attendance.GetSummaryAsync(
+                new TimesheetQuery(new DateOnly(today.Year, today.Month, 1), today, null, null, null, null), TimesheetScope.All, ct);
+            return timesheet.IsSuccess ? timesheet.Data!.MissingPunchCount : 0;
+        }
+        catch (Exception)
+        {
+            return 0;
+        }
     }
 
     /// <summary>Số mã hàng có công đoạn chưa có đơn giá (chưa gửi / chưa duyệt) và số mã hàng có đơn giá bị trả lại.</summary>
