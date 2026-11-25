@@ -16,6 +16,13 @@ export const useKpiTargets = (filter: KpiTargetFilter) =>
     queryFn: () => kpiApi.getTargets(filter),
   });
 
+/** Tổ trưởng / tổ phó may xem chỉ tiêu KPI được giao cho tổ của mình. */
+export const useTeamKpiTargets = (filter: KpiTargetFilter) =>
+  useQuery({
+    queryKey: [...KPI_KEY, 'team-targets', filter],
+    queryFn: () => kpiApi.getTeamTargets(filter),
+  });
+
 /** Chỉ tiêu tối đa lập được theo số lượng đơn đặt; chỉ gọi khi đã chọn đơn và mã hàng. */
 /** Tổ may được chia mã hàng của đơn: chỉ các tổ này mới đặt được chỉ tiêu (DEV-ALL-49). */
 export const useAllottedTeams = (orderId: number | null, productId: number | null) =>

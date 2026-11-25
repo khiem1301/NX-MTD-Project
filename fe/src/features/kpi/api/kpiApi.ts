@@ -25,6 +25,10 @@ export const kpiApi = {
     get<{ teamId: number; teamCode: string }[]>(API.kpi.allottedTeams, { orderId, productId }),
   getTargets: (filter: KpiTargetFilter) => get<Paginated<KpiTarget>>(API.kpi.targets, filter),
 
+  /** Tổ trưởng / tổ phó may: danh sách chỉ tiêu KPI của tổ mình (tổ lấy từ token). */
+  getTeamTargets: (filter: KpiTargetFilter) =>
+    get<Paginated<KpiTarget>>(API.kpi.teamTargets, filter),
+
   getTargetById: (kpiTargetId: number) => get<KpiTarget>(`${API.kpi.targets}/${kpiTargetId}`),
 
   getDailyResults: (kpiTargetId: number) =>
