@@ -52,6 +52,11 @@ export const PAYROLL_TEXT = {
 
   periodMonth: 'Tháng',
   export: 'Xuất dữ liệu tính lương',
+  importTitle: 'Nhập bảng lương từ Excel',
+  importHint:
+    'Chọn file là xem trước ngay theo nhân viên. Bảng lương do xưởng tính sẵn nên không sửa ô tại đây: dòng lỗi thì sửa file rồi chọn lại.',
+  onlyProblems: 'Chỉ hiện dòng lỗi, trùng hoặc có cảnh báo',
+  openImport: 'Nhập từ Excel',
   chooseFile: 'Chọn file Excel',
   preview: 'Xem trước',
   confirmImportTitle: 'Nhập bảng lương?',

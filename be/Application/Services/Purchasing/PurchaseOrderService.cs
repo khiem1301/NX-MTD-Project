@@ -67,7 +67,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Color : l.Material!.Color,
                     l.OrderedQty, l.UnitPrice, l.Amount, 0m, l.NotReplenishedQty)).ToList(),
-                p.ExpectedDeliveryCount, 0))
+                p.ExpectedDeliveryCount, 0, false, null, null))
             .FirstOrDefaultAsync(ct);
         if (dto is null) return WarehouseFailures.NotFound<PurchaseOrderDto>();
 
@@ -81,8 +81,16 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         // Số lần đơn mua đã giao (dùng chung cả đơn) = số phiếu thường đã xác nhận (DEV-ALL-95).
         var deliveries = await _uow.Repository<VwPurchaseOrderDelivery>().Query().AsNoTracking()
             .Where(v => v.PurchaseOrderId == purchaseOrderId).Select(v => v.ReceivedCount).FirstOrDefaultAsync(ct);
+        var header = await PurchaseOrders.AsNoTracking().Where(p => p.PurchaseOrderId == purchaseOrderId)
+            .Select(p => new { p.OrderDate, p.PaymentStatus }).FirstAsync(ct);
+        var hasReceipt = await _uow.Repository<MaterialReceiptLine>().Query().AsNoTracking()
+            .AnyAsync(l => l.PurchaseOrderLineId != null && lineIds.Contains(l.PurchaseOrderLineId.Value), ct);
+        var dates = await _schedule.GetAsync(DeliveryOwner.PurchaseOrder, purchaseOrderId, ct);
         return Result<PurchaseOrderDto>.Success(dto with
         {
+            OrderDate = header.OrderDate,
+            ExpectedDeliveryDates = dates,
+            CanEdit = IsEditable(dto.GoodsStatus, header.PaymentStatus, dto.CreatedAt, hasReceipt, _clock.Now),
             ReceivedCount = deliveries,
             Lines = dto.Lines.Select(l => l with { ReceivedQty = received.GetValueOrDefault(l.PurchaseOrderLineId) }).ToList(),
         });
@@ -122,6 +130,67 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
 
         var created = await _uow.InTransactionAsync(() => AddOrderAsync(dto, lines, orderMaterials, ct));
         return await GetByIdAsync(created.Data, ct);
+    }
+
+    /// <summary>DEV-ALL-186: sửa được khi đơn vừa đặt (chưa nhận / chưa thanh toán / chưa có phiếu nhập) và còn trong 24 giờ kể từ lúc tạo.</summary>
+    public static bool IsEditable(string goodsStatus, string paymentStatus, DateTime createdAt, bool hasReceipt, DateTime now) =>
+        goodsStatus == PurchaseGoodsStatuses.Ordered && paymentStatus == PurchaseOrderStatuses.Unpaid && !hasReceipt
+        && now - createdAt <= TimeSpan.FromHours(PurchasePaymentRules.EditWindowHours);
+
+    public async Task<Result<PurchaseOrderDto>> UpdateAsync(int purchaseOrderId, UpdatePurchaseOrderDto dto, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        var po = await PurchaseOrders.Include(p => p.PurchaseOrderLines).FirstOrDefaultAsync(p => p.PurchaseOrderId == purchaseOrderId, ct);
+        if (po is null) return WarehouseFailures.NotFound<PurchaseOrderDto>();
+        if (po.GoodsStatus != PurchaseGoodsStatuses.Ordered)
+            return Result<PurchaseOrderDto>.Failure(ErrorCodes.PurchaseOrderInvalidStatus, Messages.PurchaseOrderInvalidStatus);
+        if (_clock.Now - po.CreatedAt > TimeSpan.FromHours(PurchasePaymentRules.EditWindowHours))
+            return Result<PurchaseOrderDto>.Failure(ErrorCodes.PaymentEditExpired, Messages.PurchaseOrderEditExpired);
+        var lineIds = po.PurchaseOrderLines.Select(l => l.PurchaseOrderLineId).ToList();
+        var hasReceipt = await _uow.Repository<MaterialReceiptLine>().Query().AsNoTracking()
+            .AnyAsync(l => l.PurchaseOrderLineId != null && lineIds.Contains(l.PurchaseOrderLineId.Value), ct);
+        if (po.PaymentStatus != PurchaseOrderStatuses.Unpaid || hasReceipt)
+            return Result<PurchaseOrderDto>.Failure(ErrorCodes.PurchaseOrderInvalidStatus, Messages.PurchaseOrderEditLocked);
+
+        static Result<PurchaseOrderDto> Invalid(string code, string message) => Result<PurchaseOrderDto>.Failure(code, message, ResultKind.Validation);
+        var reason = string.IsNullOrWhiteSpace(dto.Reason) ? null : dto.Reason.Trim();
+        if (reason is null) return Invalid(ErrorCodes.PaymentInvalid, Messages.PurchaseOrderEditReasonRequired);
+        var sent = dto.Lines.Select(l => l.PurchaseOrderLineId).ToList();
+        if (sent.Count != lineIds.Count || sent.Distinct().Count() != sent.Count || sent.Any(id => !lineIds.Contains(id)))
+            return Invalid(ErrorCodes.PurchaseOrderLinesMismatch, Messages.PurchaseOrderLinesMismatch);
+        if (dto.Lines.Any(l => l.UnitPrice <= 0)) return Invalid(ErrorCodes.PurchaseOrderPriceRequired, Messages.PurchaseOrderPriceRequired);
+        if (dto.Lines.Any(l => l.OrderedQty <= 0)) return Invalid(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.QtyMustBePositive);
+        if (dto.OrderDate > _clock.Today) return Invalid(ErrorCodes.PurchaseOrderDateInvalid, Messages.PurchaseOrderOrderDateFuture);
+        if (dto.ExpectedDeliveryCount < 1) return Invalid(ErrorCodes.PurchaseOrderDateInvalid, Messages.PurchaseOrderDeliveryCountInvalid);
+        var dateError = await PurchaseDeliveryDate.CheckAsync(_uow, _clock, dto.ExpectedDeliveryDates, dto.OrderDate, po.OrderId, ct);
+        if (dateError is not null) return Invalid(ErrorCodes.PurchaseOrderDateInvalid, dateError);
+
+        var before = new { po.SupplierId, po.OrderDate, po.ExpectedDeliveryCount, po.Note,
+            Lines = po.PurchaseOrderLines.OrderBy(l => l.PurchaseOrderLineId).Select(l => new { l.PurchaseOrderLineId, l.OrderedQty, l.UnitPrice }).ToList() };
+        foreach (var line in po.PurchaseOrderLines)
+        {
+            var input = dto.Lines.Single(l => l.PurchaseOrderLineId == line.PurchaseOrderLineId);
+            line.OrderedQty = input.OrderedQty;
+            line.UnitPrice = input.UnitPrice;
+        }
+        po.OrderDate = dto.OrderDate;   // nhà cung cấp giữ nguyên sau khi tạo (DEV-ALL-189)
+        po.ExpectedDeliveryCount = dto.ExpectedDeliveryCount;
+        (po.ExpectedDeliveryDate, po.ExpectedDeliveryDateTo) = DeliveryScheduleStore.Summary(dto.ExpectedDeliveryDates ?? []);
+        po.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
+
+        var saved = await _uow.InTransactionAsync(async () =>
+        {
+            await _schedule.ReplaceAsync(DeliveryOwner.PurchaseOrder, po.PurchaseOrderId, dto.ExpectedDeliveryDates ?? [], ct);
+            _audit.Add(new AuditEntry(nameof(PurchaseOrder), po.PurchaseOrderId, AuditActions.Update, before,
+                new { po.SupplierId, po.OrderDate, po.ExpectedDeliveryCount, po.Note,
+                    Lines = po.PurchaseOrderLines.OrderBy(l => l.PurchaseOrderLineId).Select(l => new { l.PurchaseOrderLineId, l.OrderedQty, l.UnitPrice }).ToList() }, reason));
+            await _notifier.NotifyRoleAsync(RoleCodes.Accountant, new NotificationMessage(NotificationSources.Warehouse,
+                Messages.NotifyPoPlacedTitle, $"Đơn mua {po.PoCode} đã được sửa trong 24 giờ: {reason}",
+                string.Format(PaymentLink, po.PurchaseOrderId), nameof(PurchaseOrder), po.PurchaseOrderId), ct);
+            await _uow.SaveChangesAsync();
+            return Result.Success(Messages.PurchaseOrderUpdated);
+        });
+        return saved.IsSuccess ? await GetByIdAsync(purchaseOrderId, ct) : WarehouseFailures.From<PurchaseOrderDto>(saved);
     }
 
     private sealed record NewLine(int MaterialId, decimal OrderedQty, decimal UnitPrice);

@@ -30,6 +30,7 @@ public class PurchaseFlowServiceTests
     private readonly List<Supplier> _suppliers = new();
     private readonly List<VwPurchaseOrderDelivery> _deliveries = new();
     private readonly List<DeliveryScheduleDate> _schedule = new();
+    private readonly List<Attachment> _attachments = new();
 
     public PurchaseFlowServiceTests()
     {
@@ -49,6 +50,9 @@ public class PurchaseFlowServiceTests
         var paymentRepo = Substitute.For<IGenericRepository<PurchasePayment>>();
         paymentRepo.Query().Returns(_ => _pos.SelectMany(p => p.PurchasePayments).AsTestAsyncQueryable());
         _uow.Repository<PurchasePayment>().Returns(paymentRepo);
+        var attachmentRepo = Substitute.For<IGenericRepository<Attachment>>();
+        attachmentRepo.Query().Returns(_ => _attachments.AsTestAsyncQueryable());
+        _uow.Repository<Attachment>().Returns(attachmentRepo);
     }
 
     private PurchaseOrderFlowService Flow() => new(_uow, _orders, _audit, _notifier, _user, _clock);
@@ -76,7 +80,20 @@ public class PurchaseFlowServiceTests
         };
         _pos.Add(po);
         _poRepo.GetByIdAsync(id).Returns(po);
+        AddProof(id, Now);
         return po;
+    }
+
+    /// <summary>Ảnh chứng từ thanh toán của đơn mua, tải lên lúc <paramref name="at"/>.</summary>
+    private Attachment AddProof(int purchaseOrderId, DateTime at, bool current = true)
+    {
+        var proof = new Attachment
+        {
+            AttachmentId = _attachments.Count + 1, OwnerType = AttachmentOwnerTypes.PurchaseOrder, OwnerId = purchaseOrderId,
+            Purpose = AttachmentPurposes.PaymentProof, FileUrl = "x", IsCurrent = current, UploadedAt = at,
+        };
+        _attachments.Add(proof);
+        return proof;
     }
 
     private Supplier Supplier(int id = 3, string status = RecordStatus.Active, string name = "Công ty Chỉ Việt")
@@ -394,7 +411,10 @@ public class PurchaseFlowServiceTests
         var po = Po(PurchaseGoodsStatuses.ClosedShort);
         po.PurchaseOrderLines.Single(l => l.PurchaseOrderLineId == 12).NotReplenishedQty = 50;   // giá trị thực tế còn 1.000.000
 
-        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 1_000_000) with { ActualAmount = 1_000_000 }, default);
+        po.ActualAmount = 1_000_000;
+        po.ActualAmountSetAt = Now;   // giá trị thực tế đã nhập ở nút riêng
+
+        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 1_000_000), default);
 
         result.IsSuccess.Should().BeTrue();
         po.PaymentStatus.Should().Be(PurchasePaymentStatuses.Paid);
@@ -406,7 +426,10 @@ public class PurchaseFlowServiceTests
     {
         var po = Po(PurchaseGoodsStatuses.ClosedShort);
 
-        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 800_000) with { ActualAmount = 1_200_000 }, default);
+        po.ActualAmount = 1_200_000;
+        po.ActualAmountSetAt = Now;
+
+        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 800_000), default);
 
         result.IsSuccess.Should().BeTrue();
         po.PaymentStatus.Should().Be(PurchasePaymentStatuses.PartiallyPaid);
@@ -414,18 +437,144 @@ public class PurchaseFlowServiceTests
     }
 
     [Theory]
-    [InlineData(null, 500_000, "tổng giá trị thực tế của đơn")]      // thiếu thực tế
-    [InlineData(2_000_000, 500_000, "lớn hơn tổng giá trị đơn")]       // thực tế vượt tổng đơn (1.500.000)
+    [InlineData(null, 500_000, "giá trị thực tế của đơn")]             // chưa nhập giá trị thực tế
     [InlineData(900_000, 1_000_000, "lớn hơn tổng giá trị thực tế")]   // trả vượt thực tế
     public async Task ConfirmPayment_ClosedShort_InvalidActual_ReturnsValidation(int? actual, int paid, string message)
     {
         var po = Po(PurchaseGoodsStatuses.ClosedShort);
+        po.ActualAmount = actual;
+        po.ActualAmountSetAt = actual is null ? null : Now;
 
-        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: paid) with { ActualAmount = actual }, default);
+        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: paid), default);
 
         result.ErrorCode.Should().Be(ErrorCodes.PaymentInvalid);
         result.Message.Should().Contain(message);
         po.PaymentStatus.Should().Be(PurchaseOrderStatuses.Unpaid);
+    }
+
+    // DEV-ALL-189: mỗi lần thanh toán phải có ảnh chứng từ mới.
+
+    [Fact]
+    public async Task ConfirmPayment_WithoutAnyProofPhoto_IsRejected()
+    {
+        var po = Po(PurchaseGoodsStatuses.Ordered);
+        _attachments.Clear();
+
+        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 500_000), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.PaymentInvalid);
+        result.Message.Should().Be(Messages.PaymentProofRequired);
+        po.PurchasePayments.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_RemovedPhotoDoesNotCount()
+    {
+        Po(PurchaseGoodsStatuses.Ordered);
+        _attachments.Clear();
+        AddProof(5, Now, current: false);
+
+        (await Flow().ConfirmPaymentAsync(5, Pay(amount: 500_000), default)).Message.Should().Be(Messages.PaymentProofRequired);
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_SecondPaymentNeedsAPhotoUploadedAfterTheFirst()
+    {
+        var po = Po(PurchaseGoodsStatuses.Ordered);
+        (await Flow().ConfirmPaymentAsync(5, Pay(amount: 500_000), default)).IsSuccess.Should().BeTrue();
+        po.PurchasePayments.Single().CreatedAt = Now;   // lần 1 lúc Now; ảnh cũ tải lên cùng lúc hoặc trước đó
+
+        var blocked = await Flow().ConfirmPaymentAsync(5, Pay(amount: 500_000), default);
+        blocked.Message.Should().Be(Messages.PaymentProofRequired);
+
+        AddProof(5, Now.AddMinutes(5));   // ảnh mới cho lần 2
+        (await Flow().ConfirmPaymentAsync(5, Pay(amount: 500_000), default)).IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Proof_photo_limit_leaves_room_for_one_photo_per_payment() =>
+        (await Access().MaxFilesAsync(default)).Should().BeGreaterThanOrEqualTo(10);
+
+    // DEV-ALL-185: giá trị thực tế nhập ở nút riêng, một lần, sửa trong 24 giờ kể từ lần đầu.
+
+    private static SetActualAmountDto Actual(decimal amount, string? reason = null) => new(amount, reason, RowVer);
+
+    [Fact]
+    public async Task SetActualAmount_FirstEntry_StoresAmountAndStampsTimeWithoutReason()
+    {
+        var po = Po(PurchaseGoodsStatuses.ClosedShort);
+
+        var result = await Flow().SetActualAmountAsync(5, Actual(1_200_000), default);
+
+        result.IsSuccess.Should().BeTrue();
+        po.ActualAmount.Should().Be(1_200_000);
+        po.ActualAmountSetAt.Should().Be(Now);
+    }
+
+    [Fact]
+    public async Task SetActualAmount_EditWithin24Hours_NeedsReasonAndKeepsFirstEntryTime()
+    {
+        var po = Po(PurchaseGoodsStatuses.ClosedShort);
+        po.ActualAmount = 1_200_000;
+        po.ActualAmountSetAt = Now.AddHours(-23);
+
+        (await Flow().SetActualAmountAsync(5, Actual(1_100_000), default)).ErrorCode.Should().Be(ErrorCodes.PaymentInvalid);
+        var result = await Flow().SetActualAmountAsync(5, Actual(1_100_000, "Đếm lại hàng"), default);
+
+        result.IsSuccess.Should().BeTrue();
+        po.ActualAmount.Should().Be(1_100_000);
+        po.ActualAmountSetAt.Should().Be(Now.AddHours(-23));
+    }
+
+    [Fact]
+    public async Task SetActualAmount_After24HoursFromFirstEntry_IsLocked()
+    {
+        var po = Po(PurchaseGoodsStatuses.ClosedShort);
+        po.ActualAmount = 1_200_000;
+        po.ActualAmountSetAt = Now.AddHours(-25);
+
+        var result = await Flow().SetActualAmountAsync(5, Actual(1_100_000, "Sửa muộn"), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.PaymentEditExpired);
+        po.ActualAmount.Should().Be(1_200_000);
+    }
+
+    [Theory]
+    [InlineData(0, "lớn hơn 0")]
+    [InlineData(2_000_000, "lớn hơn tổng giá trị đơn")]   // tổng đơn 1.500.000
+    public async Task SetActualAmount_OutOfRange_ReturnsValidation(int amount, string message)
+    {
+        var po = Po(PurchaseGoodsStatuses.ClosedShort);
+
+        var result = await Flow().SetActualAmountAsync(5, Actual(amount), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.PaymentInvalid);
+        result.Message.Should().Contain(message);
+        po.ActualAmount.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SetActualAmount_BelowAlreadyPaid_IsRejected_AndOnlyClosedShortOrdersAllowIt()
+    {
+        var po = Po(PurchaseGoodsStatuses.ClosedShort, PurchasePaymentStatuses.PartiallyPaid);
+        po.PurchasePayments.Add(new PurchasePayment { PurchasePaymentId = 1, Amount = 900_000, PaymentDate = Today, PaymentMethod = "CASH", CreatedAt = Now });
+
+        (await Flow().SetActualAmountAsync(5, Actual(800_000), default)).Message.Should().Contain("nhỏ hơn số đã thanh toán");
+
+        Po(PurchaseGoodsStatuses.Ordered, id: 6);
+        (await Flow().SetActualAmountAsync(6, Actual(1_000_000), default)).ErrorCode.Should().Be(ErrorCodes.PurchaseOrderInvalidStatus);
+    }
+
+    [Fact]
+    public async Task SetActualAmount_RaisingToAlreadyPaid_MakesTheOrderPaid()
+    {
+        var po = Po(PurchaseGoodsStatuses.ClosedShort, PurchasePaymentStatuses.PartiallyPaid);
+        po.PurchasePayments.Add(new PurchasePayment { PurchasePaymentId = 1, Amount = 900_000, PaymentDate = Today, PaymentMethod = "CASH", CreatedAt = Now });
+
+        var result = await Flow().SetActualAmountAsync(5, Actual(900_000), default);
+
+        result.IsSuccess.Should().BeTrue();
+        po.PaymentStatus.Should().Be(PurchasePaymentStatuses.Paid);
     }
 
     [Fact]
@@ -433,7 +582,7 @@ public class PurchaseFlowServiceTests
     {
         var po = Po(PurchaseGoodsStatuses.Ordered);
 
-        await Flow().ConfirmPaymentAsync(5, Pay(amount: 1_500_000) with { ActualAmount = 100 }, default);
+        await Flow().ConfirmPaymentAsync(5, Pay(amount: 1_500_000), default);
 
         po.PaymentStatus.Should().Be(PurchasePaymentStatuses.Paid);
         po.ActualAmount.Should().BeNull();

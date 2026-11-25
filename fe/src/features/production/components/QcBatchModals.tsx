@@ -3,7 +3,6 @@ import { Form, Modal, Select, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
-import { useTeamLookup } from '@/hooks/useHrLookups';
 import { useOrderLineLookup } from '@/hooks/useOrderLookups';
 import { fill, formatQty, toApiDate } from '@/utils/format';
 import { currentShiftCode, OUTPUT_MAX_QTY, PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
@@ -20,22 +19,22 @@ type CreateValues = {
   workDate: Dayjs;
   shiftCode: ShiftCode;
   batchTime: Dayjs;
-  sewingTeamId: number;
   orderId: number;
   orderLineId: number;
   finishedQty: number;
 };
 
-/** UC57 — QA/QC thêm đợt kiểm hoàn thiện. Số đạt không được vượt hàng đang có trên chuyền (BE kiểm). */
+/**
+ * UC57 — QA/QC thêm đợt kiểm hoàn thiện. QA/QC thuộc một tổ may nên tổ lấy theo tài khoản (không chọn tổ); số đạt không được
+ * vượt hàng đang có trên chuyền của tổ (BE kiểm).
+ */
 export function QcCreateModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [form] = Form.useForm<CreateValues>();
   const create = useCreateQcBatch();
-  const teams = useTeamLookup();
   const orderId = Form.useWatch('orderId', form) ?? null;
-  const teamId = Form.useWatch('sewingTeamId', form) ?? null;
   const lineId = Form.useWatch('orderLineId', form) ?? null;
   const lines = useOrderLineLookup(orderId);
-  const onLine = useOnLineQty(teamId, lineId);
+  const onLine = useOnLineQty(lineId);
 
   useEffect(() => {
     if (!open) return;
@@ -53,7 +52,6 @@ export function QcCreateModal({ open, onClose }: { open: boolean; onClose: () =>
         workDate: toApiDate(values.workDate),
         shiftCode: values.shiftCode,
         batchTime: `${values.batchTime.format('HH:mm')}:00`,
-        sewingTeamId: values.sewingTeamId,
         orderLineId: values.orderLineId,
         finishedQty: values.finishedQty,
       },
@@ -82,14 +80,6 @@ export function QcCreateModal({ open, onClose }: { open: boolean; onClose: () =>
         </Form.Item>
         <Form.Item name="batchTime" label={text.form.time} rules={required}>
           <AppTimePicker allowClear={false} />
-        </Form.Item>
-        <Form.Item name="sewingTeamId" label={text.form.team} rules={required}>
-          <Select
-            loading={teams.isLoading}
-            options={(teams.data ?? [])
-              .filter((t) => t.teamType === 'Sewing')
-              .map((t) => ({ value: t.teamId, label: t.teamCode }))}
-          />
         </Form.Item>
         <Form.Item name="orderId" label={PRODUCTION_TEXT.selectOrder} rules={required}>
           <OrderSelect width="100%" onChange={() => form.setFieldValue('orderLineId', undefined)} />

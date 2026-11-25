@@ -177,6 +177,9 @@ export type SaveOperationPayload = {
   isFinalStep: boolean;
   groupName?: string | null;
   componentIds?: number[];
+  /** Chỉ khi tạo mới: đơn giá bắt buộc (lưu Nháp) và ngày hiệu lực (mặc định hôm nay). */
+  rate?: number | null;
+  rateEffectiveDate?: string | null;
 };
 
 export type PieceRateStatus = 'Draft' | 'PendingApproval' | 'Approved' | 'Rejected';
@@ -371,7 +374,6 @@ export type CreateQcBatchPayload = {
   workDate: string;
   shiftCode: ShiftCode;
   batchTime: string;
-  sewingTeamId: number;
   orderLineId: number;
   finishedQty: number;
 };

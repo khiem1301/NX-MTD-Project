@@ -207,7 +207,8 @@ export const LABELS = {
   importOrderMaterialsHint:
     'Cột: Mã NVL, Số cần, Khách cấp và Ghi chú (tùy chọn). Phải mua = Số cần − Khách cấp. NVL có rồi thì cập nhật, chưa có thì thêm, không có trong file thì giữ nguyên. Chọn file là mở bảng kiểm tra để sửa từng ô, chưa lưu.',
   importOrderMaterialsConfirm: 'Nhập',
-  importOrderMaterialsNoTable: 'File không có bảng NVL của đơn (cột Mã NVL, Số cần). Hãy dùng file mẫu của hệ thống.',
+  importOrderMaterialsNoTable:
+    'File không có bảng NVL của đơn (cột Mã NVL, Số cần). Hãy dùng file mẫu của hệ thống.',
   importOrderMaterialsConfirmTitle: 'Nhập NVL của đơn?',
   importOrderMaterialsConfirmBody:
     'Các dòng hợp lệ có thay đổi sẽ được lưu một lần (lỗi thì không lưu gì). Tiếp tục?',
@@ -250,6 +251,9 @@ export const LABELS = {
   orderedQty: 'Số mua',
   unitPrice: 'Đơn giá',
   amount: 'Thành tiền',
+  confirmCreateTitle: 'Xác nhận tạo đơn mua?',
+  confirmCreateContent:
+    'Tạo xong là đặt hàng luôn; sửa được trong 24 giờ nếu chưa nhận hàng và chưa thanh toán.',
   purchaseOrderTotal: 'Tổng tiền',
   supplier: 'Nhà cung cấp',
   orderDate: 'Ngày đặt hàng',

@@ -54,7 +54,19 @@ public sealed class MonthlyCostService : IMonthlyCostService
     {
         var failure = ParseInput<MonthlyCostExcelPreviewDto>(stream, periodMonth, out var rawRows);
         if (failure is not null) return failure;
+        return await BuildPreviewAsync(rawRows, periodMonth, ct);
+    }
 
+    public async Task<Result<MonthlyCostExcelPreviewDto>> PreviewRowsAsync(MonthlyCostRowsDto dto, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        var failure = CheckRowsInput<MonthlyCostExcelPreviewDto>(dto);
+        return failure ?? await BuildPreviewAsync(dto.Rows, dto.PeriodMonth, ct);
+    }
+
+    private async Task<Result<MonthlyCostExcelPreviewDto>> BuildPreviewAsync(
+        IReadOnlyList<MonthlyCostExcelRowDto> rawRows, string periodMonth, CancellationToken ct)
+    {
         var products = await LookupProductsAsync(rawRows, ct);
         var (previews, valid, error, duplicate, items) = ValidateRows(rawRows, products);
         var reconciliation = await BuildMealsReconciliationAsync(periodMonth, items, ct);
@@ -68,7 +80,19 @@ public sealed class MonthlyCostService : IMonthlyCostService
     {
         var failure = ParseInput<MonthlyCostImportResultDto>(stream, periodMonth, out var rawRows);
         if (failure is not null) return failure;
+        return await ApplyImportAsync(rawRows, periodMonth, ct);
+    }
 
+    public async Task<Result<MonthlyCostImportResultDto>> ImportRowsAsync(MonthlyCostRowsDto dto, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        var failure = CheckRowsInput<MonthlyCostImportResultDto>(dto);
+        return failure ?? await ApplyImportAsync(dto.Rows, dto.PeriodMonth, ct);
+    }
+
+    private async Task<Result<MonthlyCostImportResultDto>> ApplyImportAsync(
+        IReadOnlyList<MonthlyCostExcelRowDto> rawRows, string periodMonth, CancellationToken ct)
+    {
         var products = await LookupProductsAsync(rawRows, ct);
         var (_, valid, error, duplicate, items) = ValidateRows(rawRows, products);
 
@@ -236,6 +260,16 @@ public sealed class MonthlyCostService : IMonthlyCostService
         return null;
     }
 
+    /// <summary>Bảng gửi từ màn hình: tháng đúng định dạng, không quá số dòng tối đa. Bảng rỗng vẫn kiểm được (người dùng xóa hết dòng).</summary>
+    private static Result<T>? CheckRowsInput<T>(MonthlyCostRowsDto dto)
+    {
+        if (!IsValidMonth(dto.PeriodMonth))
+            return Result<T>.Failure(ErrorCodes.MonthlyCostPeriodMonthInvalid, Messages.MonthlyCostPeriodMonthInvalid, ResultKind.Validation);
+        return dto.Rows.Count > MaxRows
+            ? Result<T>.Failure(ErrorCodes.MonthlyCostExcelInvalid, string.Format(Messages.MonthlyCostTooManyRows, dto.Rows.Count, MaxRows), ResultKind.Validation)
+            : null;
+    }
+
     private async Task<IReadOnlyDictionary<string, int>> LookupProductsAsync(
         IReadOnlyList<MonthlyCostExcelRowDto> rawRows, CancellationToken ct)
     {
@@ -291,6 +325,11 @@ public sealed class MonthlyCostService : IMonthlyCostService
         return (previews, valid, error, duplicate, items);
     }
 
+    private const int MaxRows = 500;
+    private const decimal MaxAmount = 100_000_000_000m;   // 100 tỷ, dưới trần DECIMAL(18,2)
+    private const int MaxQuantity = 1_000_000;
+    private const int NoteMaxLength = 300;                 // MonthlyCost.Note NVARCHAR(300)
+
     private sealed record RowCheck(string? Error, string? Category = null,
         string? CostType = null, int? ProductId = null);
 
@@ -322,6 +361,11 @@ public sealed class MonthlyCostService : IMonthlyCostService
 
         if (row.Amount is null) return new RowCheck("Thiếu số tiền.");
         if (row.Amount < 0) return new RowCheck("Số tiền phải lớn hơn hoặc bằng 0.");
+        if (row.Amount > MaxAmount) return new RowCheck("Số tiền tối đa 100.000.000.000 đ.");
+        if (decimal.Round(row.Amount.Value, 2) != row.Amount) return new RowCheck("Số tiền tối đa 2 số lẻ.");
+        if (row.Quantity is < 0) return new RowCheck("Số lượng không được âm.");
+        if (row.Quantity > MaxQuantity) return new RowCheck("Số lượng tối đa 1.000.000.");
+        if (row.Note is { } note && note.Trim().Length > NoteMaxLength) return new RowCheck($"Ghi chú tối đa {NoteMaxLength} ký tự.");
         return new RowCheck(null, category, costType, productId);
     }
 

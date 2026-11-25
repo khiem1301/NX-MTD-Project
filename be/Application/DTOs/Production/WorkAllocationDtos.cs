@@ -42,6 +42,14 @@ public sealed record ConfirmWorkAllocationBatchDto(IReadOnlyList<ConfirmWorkAllo
 /// <summary>Tổ trưởng xác nhận hộ công nhân (UC54): bắt buộc lý do.</summary>
 public sealed record ConfirmOnBehalfDto(int ConfirmedQty, string? DiscrepancyReason, string OnBehalfReason);
 
+/// <summary>DEV-ALL-182: tổ trưởng xác nhận hộ một lần mọi phiếu đang chờ của một công nhân (xác nhận đủ số trên phiếu).</summary>
+public sealed record ConfirmWorkerOnBehalfDto(string OnBehalfReason);
+
+/// <summary>DEV-ALL-182: một dòng mỗi công nhân của tab phiếu giao / thu hồi: số phiếu, tổng giao / thu hồi (bỏ phiếu bị từ chối) và phần đang chờ công nhân xác nhận.</summary>
+public sealed record WorkerAllocationSummaryDto(
+    int WorkerId, string WorkerCode, string WorkerName, int SlipCount, int HandoverQty, int RetrievalQty,
+    int PendingCount, int PendingHandoverQty, int PendingRetrievalQty);
+
 public sealed record WorkAllocationQuery : PageQuery
 {
     public string? Status { get; init; }

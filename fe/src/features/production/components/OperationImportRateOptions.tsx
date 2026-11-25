@@ -9,54 +9,42 @@ const text = PRODUCTION_TEXT.operations.import;
 
 type OperationImportRateOptionsProps = {
   data: OperationImportPreview;
-  withRates: boolean;
   effectiveDate: Dayjs;
   submitRates: boolean;
-  onWithRatesChange: (checked: boolean) => void;
   onEffectiveDateChange: (date: Dayjs) => void;
   onSubmitRatesChange: (checked: boolean) => void;
 };
 
-/** Tùy chọn nhập đơn giá cùng file: có nhập hay không, ngày hiệu lực và có gửi Admin duyệt luôn không. */
+/**
+ * Đơn giá bắt buộc với mọi công đoạn (DEV-ALL-190): nhập kèm từ cột TIỀN, dòng thiếu hoặc bằng 0 báo lỗi. Chỉ chọn ngày hiệu lực và
+ * có gửi Admin duyệt luôn không. File không có cột TIỀN thì nhập tay ở cột Đơn giá của bảng.
+ */
 export function OperationImportRateOptions({
   data,
-  withRates,
   effectiveDate,
   submitRates,
-  onWithRatesChange,
   onEffectiveDateChange,
   onSubmitRatesChange,
 }: OperationImportRateOptionsProps) {
-  return data.hasRateColumn ? (
+  return (
     <Space direction="vertical" size={8}>
-      <Checkbox
-        checked={withRates}
-        onChange={(e) => {
-          onWithRatesChange(e.target.checked);
-        }}
-      >
-        {text.withRates}
-      </Checkbox>
-      {withRates && (
-        <Space wrap size={24}>
-          <Space>
-            <span>{text.effectiveDate}</span>
-            <AppDatePicker
-              allowClear={false}
-              value={effectiveDate}
-              onChange={(v) => {
-                onEffectiveDateChange(v ?? dayjs());
-              }}
-            />
-          </Space>
-          <Checkbox checked={submitRates} onChange={(e) => onSubmitRatesChange(e.target.checked)}>
-            {text.submitRates}
-          </Checkbox>
+      {!data.hasRateColumn && <Alert type="warning" showIcon message={text.noRateColumn} />}
+      <Space wrap size={24}>
+        <Space>
+          <span>{text.effectiveDate}</span>
+          <AppDatePicker
+            allowClear={false}
+            value={effectiveDate}
+            onChange={(v) => {
+              onEffectiveDateChange(v ?? dayjs());
+            }}
+          />
         </Space>
-      )}
-      {withRates && <HintTip text={text.rateHint} />}
+        <Checkbox checked={submitRates} onChange={(e) => onSubmitRatesChange(e.target.checked)}>
+          {text.submitRates}
+        </Checkbox>
+        <HintTip text={text.rateHint} />
+      </Space>
     </Space>
-  ) : (
-    <Alert type="warning" showIcon message={text.noRateColumn} />
   );
 }

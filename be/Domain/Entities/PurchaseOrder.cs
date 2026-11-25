@@ -42,6 +42,9 @@ public partial class PurchaseOrder
     /// <summary>DEV-ALL-129: tổng giá trị thực tế của đơn Chốt không bù, Kế toán nhập khi xác nhận thanh toán.</summary>
     public decimal? ActualAmount { get; set; }
 
+    /// <summary>DEV-ALL-185: lúc Kế toán nhập giá trị thực tế lần đầu; null = chưa nhập (giá trị tự tính theo số đã nhận không tính là đã nhập). Sửa được trong 24 giờ kể từ lúc này.</summary>
+    public DateTime? ActualAmountSetAt { get; set; }
+
     public string? PaymentMethod { get; set; }
 
     public string? PaymentNote { get; set; }

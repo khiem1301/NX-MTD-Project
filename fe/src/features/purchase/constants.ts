@@ -87,6 +87,9 @@ export const PURCHASE_TEXT = {
     reprice: 'Sửa đơn giá và gửi lại',
     confirmPayment: 'Xác nhận thanh toán',
     returnPayment: 'Trả lại Quản đốc',
+    setActualAmount: 'Nhập giá trị thực tế',
+    editOrder: 'Sửa đơn mua',
+    editActualAmount: 'Sửa giá trị thực tế',
   },
 
   place: {
@@ -130,11 +133,14 @@ export const PURCHASE_TEXT = {
     dateRequired: 'Vui lòng chọn ngày thanh toán.',
     amountRequired: 'Nhập số tiền lớn hơn 0.',
     methodRequired: 'Vui lòng chọn hình thức.',
-    // DEV-ALL-129: đơn Chốt không bù — Kế toán nhập Tổng giá trị thực tế, trạng thái xét theo giá trị này.
-    actualAmount: 'Tổng giá trị thực tế',
-    actualAmountRequired: 'Nhập tổng giá trị thực tế lớn hơn 0.',
-    actualExceedsTotal: 'Tổng giá trị thực tế không được lớn hơn tổng giá trị đơn mua.',
-    actualHint: 'Theo số đã nhận: {0}. Tổng giá trị đơn: {1}.',
+    // DEV-ALL-129 / 185: đơn Chốt không bù — giá trị thực tế nhập riêng ở nút "Nhập giá trị thực tế", trạng thái xét theo giá trị này.
+    actualAmount: 'Giá trị thực tế',
+    proofTitle: 'Ảnh chứng từ lần thanh toán này',
+    proofHint:
+      'Bắt buộc có ít nhất một ảnh chứng từ mới cho mỗi lần thanh toán (tải lên trước khi xác nhận).',
+    proofNew: 'Ảnh mới cho lần này: {0}',
+    proofMissing: 'Chưa có ảnh chứng từ mới cho lần thanh toán này.',
+    actualMissing: 'Đơn Chốt không bù: bấm "Nhập giá trị thực tế" trước khi thanh toán.',
     amountExceedsActual: 'Số tiền thanh toán không được lớn hơn tổng giá trị thực tế.',
     willBePaid: 'Trả đủ tổng giá trị thực tế: đơn sẽ là Đã thanh toán.',
     willBePartial: 'Trả ít hơn tổng giá trị thực tế: đơn sẽ là Thanh toán một phần.',
@@ -142,15 +148,25 @@ export const PURCHASE_TEXT = {
 
   actual: {
     title: 'Nhập giá trị thực tế',
-    hint: 'Dùng khi NCC giao thiếu hoặc đổi giá: tổng thanh toán không vượt số này. Phải có lý do.',
+    hint: 'Nhập một lần. Sau lần nhập đầu tiên chỉ sửa được trong 24 giờ và phải ghi lý do. Tổng thanh toán không vượt số này.',
     amount: 'Giá trị thực tế',
-    computed: 'Giá trị tự tính',
+    suggested: 'Theo số đã nhận: {0}. Tổng giá trị đơn: {1}.',
     paid: 'Đã thanh toán',
-    reason: 'Lý do',
-    amountRequired: 'Nhập giá trị thực tế.',
-    reasonRequired: 'Vui lòng nhập lý do.',
+    reason: 'Lý do sửa',
+    amountRequired: 'Nhập giá trị thực tế lớn hơn 0.',
+    exceedsTotal: 'Giá trị thực tế không được lớn hơn tổng giá trị đơn mua.',
+    reasonRequired: 'Vui lòng nhập lý do sửa.',
     belowPaid: 'Giá trị thực tế không được nhỏ hơn số đã thanh toán.',
-    clear: 'Bỏ giá trị đã nhập (dùng giá trị tự tính)',
+  },
+
+  edit: {
+    title: 'Sửa đơn mua',
+    hint: 'Sửa được trong 24 giờ kể từ lúc tạo, khi chưa nhận hàng và chưa thanh toán. Phải ghi lý do.',
+    reason: 'Lý do sửa',
+    reasonRequired: 'Vui lòng nhập lý do sửa.',
+    supplierLocked: 'Nhà cung cấp không đổi được sau khi tạo đơn mua.',
+    confirmTitle: 'Xác nhận sửa đơn mua?',
+    confirmContent: 'Kiểm tra lại số lượng, đơn giá trước khi lưu.',
   },
 
   cancelTitle: 'Hủy đơn mua',
@@ -162,6 +178,8 @@ export const PURCHASE_TEXT = {
     cancelled: 'Đã hủy đơn mua.',
     repriced: 'Đã cập nhật đơn giá và gửi lại Kế toán.',
     paid: 'Đã ghi nhận lần thanh toán.',
+    actualSaved: 'Đã lưu giá trị thực tế.',
+    edited: 'Đã sửa đơn mua.',
     paymentUpdated: 'Đã sửa lần thanh toán.',
     returned: 'Đã trả lại Quản đốc kèm lý do.',
   },
@@ -206,4 +224,4 @@ export const PAYMENT_STATUS_OPTIONS = toStatusOptions(PAYMENT_STATUS_LABEL);
 export const SUPPLIER_STATUS_OPTIONS = toStatusOptions(SUPPLIER_STATUS_LABEL);
 
 /** Tối đa ảnh chứng từ / đơn mua (khớp PurchaseOrderAttachmentAccess ở BE). */
-export const MAX_PROOF_PHOTOS = 5;
+export const MAX_PROOF_PHOTOS = 20;

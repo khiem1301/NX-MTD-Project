@@ -44,6 +44,15 @@ public sealed class ProductionGuard
         return Result<int>.Failure(ErrorCodes.ProductionForbidden, Messages.ProductionSewingTeamOnly, ResultKind.Forbidden);
     }
 
+    /// <summary>Tổ may của đợt QC / bàn giao thành phẩm: QA/QC thuộc một tổ may nên dùng tổ của mình (không chọn tổ); Quản đốc phải chọn tổ.</summary>
+    public Result<int> ResolveQcTeam(int? requestedTeamId)
+    {
+        if (IsManager) return ResolveSewingTeam(requestedTeamId);
+        return _user.TeamId is { } teamId && _user.TeamTypeCode == TeamTypes.Sewing
+            ? Result<int>.Success(teamId)
+            : Result<int>.Failure(ErrorCodes.ProductionForbidden, Messages.QcSewingTeamRequired, ResultKind.Forbidden);
+    }
+
     /// <summary>Thông báo lỗi nếu ngày làm việc nằm trước ngày nhận đơn (ngoài thời gian gia công); null nếu hợp lệ. Ngày tương lai kiểm riêng.</summary>
     public static string? BeforeOrderStart(DateOnly workDate, DateOnly orderReceivedDate) =>
         workDate < orderReceivedDate

@@ -230,7 +230,7 @@ public sealed class CreateQcBatchDtoValidator : AbstractValidator<CreateQcBatchD
     public CreateQcBatchDtoValidator()
     {
         RuleFor(x => x.ShiftCode).NotEmpty().MaximumLength(10);
-        RuleFor(x => x.SewingTeamId).GreaterThan(0);
+        RuleFor(x => x.SewingTeamId).GreaterThan(0).When(x => x.SewingTeamId is not null).WithMessage("Tổ không hợp lệ.");
         RuleFor(x => x.OrderLineId).GreaterThan(0);
         RuleFor(x => x.FinishedQty).GreaterThan(0).WithMessage(Messages.QcQtyInvalid)
             .LessThanOrEqualTo(QcLimits.MaxQty).WithMessage(Messages.QcQtyMax);

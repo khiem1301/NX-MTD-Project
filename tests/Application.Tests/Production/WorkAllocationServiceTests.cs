@@ -229,6 +229,14 @@ public class WorkAllocationServiceTests
     }
 
     [Fact]
+    public async Task Handover_is_refused_for_a_QaQc_even_though_they_belong_to_the_sewing_team()
+    {
+        _worker.Role = new Role { RoleCode = RoleCodes.QaQc };
+
+        (await Service().CreateAsync(Handover(10), TeamId, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseTeamMismatch);
+    }
+
+    [Fact]
     public async Task Only_a_sewing_team_can_allocate_work()
     {
         _team.TeamType = TeamTypes.Cutting;
@@ -438,6 +446,72 @@ public class WorkAllocationServiceTests
             WorkerId, default)).ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
         (await Service().ConfirmBatchByWorkerAsync(Batch((decided.WorkAllocationId, 60, null)), WorkerId, default))
             .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    // ---------- Phiếu gộp theo công nhân (DEV-ALL-182) ----------
+
+    [Fact]
+    public async Task Worker_summaries_are_one_row_per_worker_with_totals_and_pending_split()
+    {
+        Allocation(PieceMovementTypes.Handover, HandoverStatuses.Confirmed, 100, confirmed: 100);
+        Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
+        Allocation(PieceMovementTypes.Retrieval, HandoverStatuses.Pending, 15);
+        Allocation(PieceMovementTypes.Handover, HandoverStatuses.Rejected, 30);
+        Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 40, worker: 77);
+
+        var result = await Service().GetWorkerSummariesAsync(new WorkAllocationQuery(), TeamId, default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.TotalItems.Should().Be(2);
+        var main = result.Data.Items.Single(r => r.WorkerId == WorkerId);
+        main.SlipCount.Should().Be(4);
+        main.HandoverQty.Should().Be(160);       // 100 + 60, bỏ phiếu bị từ chối
+        main.RetrievalQty.Should().Be(15);
+        main.PendingCount.Should().Be(2);
+        main.PendingHandoverQty.Should().Be(60);
+        main.PendingRetrievalQty.Should().Be(15);
+    }
+
+    [Fact]
+    public async Task Worker_summaries_only_count_the_callers_team_and_honour_filters()
+    {
+        Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
+        Allocation(PieceMovementTypes.Retrieval, HandoverStatuses.Confirmed, 10, confirmed: 10);
+
+        (await Service().GetWorkerSummariesAsync(new WorkAllocationQuery(), 99, default)).Data!.TotalItems.Should().Be(0);
+
+        var pendingOnly = await Service().GetWorkerSummariesAsync(new WorkAllocationQuery { Status = HandoverStatuses.Pending }, TeamId, default);
+        pendingOnly.Data!.Items.Single().SlipCount.Should().Be(1);
+    }
+
+    // ---------- Tổ trưởng xác nhận hộ cả công nhân (DEV-ALL-182) ----------
+
+    [Fact]
+    public async Task Worker_on_behalf_confirms_every_pending_slip_in_full_with_one_reason()
+    {
+        var a = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
+        var b = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 40, operationId: IronOpId);
+        var other = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 30, worker: 77);
+
+        var result = await Service().ConfirmWorkerOnBehalfAsync(WorkerId, new ConfirmWorkerOnBehalfDto(" vắng điện thoại "), TeamId, default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Message.Should().Contain("2 phiếu");
+        new[] { a, b }.Should().OnlyContain(m => m.Status == HandoverStatuses.Confirmed && m.ConfirmMode == ConfirmModes.OnBehalf
+            && m.OnBehalfReason == "vắng điện thoại" && m.ConfirmedQty == m.Quantity);
+        other.Status.Should().Be(HandoverStatuses.Pending);
+        await _uow.Received(1).SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Worker_on_behalf_without_pending_slips_or_of_another_team_is_not_found()
+    {
+        Allocation(PieceMovementTypes.Handover, HandoverStatuses.Confirmed, 60, confirmed: 60);
+        Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
+
+        (await Service().ConfirmWorkerOnBehalfAsync(WorkerId, new ConfirmWorkerOnBehalfDto("x"), 99, default))
+            .ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
         await _uow.DidNotReceive().SaveChangesAsync();
     }
 

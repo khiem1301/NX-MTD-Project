@@ -1,5 +1,6 @@
+import { MoneyInput } from '@/components/common/MoneyInput';
 import { useEffect } from 'react';
-import { Alert, Button, Descriptions, Form, InputNumber, Space } from 'antd';
+import { Alert, Button, Descriptions, Form, Space } from 'antd';
 import { MEAL_TEXT } from '../constants';
 import { useSetMealPrice } from '../hooks/useMeal';
 import type { DailyMealSummary } from '../types';
@@ -50,7 +51,7 @@ export function MealPriceForm({ date, summary }: Props) {
             { type: 'number', min: 0, message: 'Đơn giá phải lớn hơn hoặc bằng 0.' },
           ]}
         >
-          <InputNumber min={0} style={{ width: '100%' }} disabled={!closed} />
+          <MoneyInput style={{ width: '100%' }} disabled={!closed} />
         </Form.Item>
 
         <Button

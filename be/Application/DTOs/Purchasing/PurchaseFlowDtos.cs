@@ -42,7 +42,8 @@ public sealed record PurchaseOrderFlowListItemDto(
 
 /// <summary>Nút nào hiện được ở màn chi tiết: do server tính theo vai trò + trạng thái đơn (FE không tự suy).</summary>
 public sealed record PurchaseOrderPermissionsDto(
-    bool CanPlace, bool CanCancel, bool CanReprice, bool CanConfirmPayment, bool CanReturnPayment);
+    bool CanPlace, bool CanCancel, bool CanReprice, bool CanConfirmPayment, bool CanReturnPayment, bool CanSetActualAmount = false,
+    bool CanEditOrder = false);
 
 /// <summary>Một lần thanh toán đơn mua. <c>CanEdit</c>: Kế toán, trong 24 giờ kể từ lúc nhập (DEV-ALL-136).</summary>
 public sealed record PurchasePaymentDto(
@@ -57,7 +58,7 @@ public sealed record PurchaseOrderFlowDto(
     byte[] RowVer, IReadOnlyList<PurchaseOrderLineDto> Lines, PurchaseOrderPermissionsDto Permissions,
     IReadOnlyList<AuditLogDto> History, DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null,
     IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null, decimal? ActualAmount = null, decimal ReceivedAmount = 0,
-    IReadOnlyList<PurchasePaymentDto>? Payments = null);
+    IReadOnlyList<PurchasePaymentDto>? Payments = null, DateTime? ActualAmountSetAt = null);
 
 /// <summary>Đặt hàng phải gửi đủ mọi dòng của đơn: số lượng và đơn giá chốt lần cuối (sau đó khóa — GBR-18).</summary>
 public sealed record PlacePurchaseLineDto(int PurchaseOrderLineId, decimal OrderedQty, decimal UnitPrice);
@@ -77,12 +78,17 @@ public sealed record RepricePurchaseLineDto(int PurchaseOrderLineId, decimal Uni
 public sealed record RepricePurchaseOrderDto(string? Note, IReadOnlyList<RepricePurchaseLineDto> Lines, byte[] RowVer);
 
 /// <summary>
-/// PaymentMethod nhận PascalCase ("BankTransfer" | "Cash"). Ảnh chứng từ tải lên riêng qua Attachment. ActualAmount (DEV-ALL-129):
-/// tổng giá trị thực tế, bắt buộc với đơn Chốt không bù, bỏ qua với đơn khác.
+/// PaymentMethod nhận PascalCase ("BankTransfer" | "Cash"). Ảnh chứng từ tải lên riêng qua Attachment. Đơn Chốt không bù phải
+/// có giá trị thực tế (nhập riêng, DEV-ALL-185) trước khi thanh toán.
 /// </summary>
 public sealed record ConfirmPaymentDto(
-    DateOnly PaymentDate, decimal PaidAmount, string PaymentMethod, string? PaymentNote, byte[] RowVer,
-    decimal? ActualAmount = null);
+    DateOnly PaymentDate, decimal PaidAmount, string PaymentMethod, string? PaymentNote, byte[] RowVer);
+
+/// <summary>
+/// DEV-ALL-185: giá trị thực tế của đơn Chốt không bù. Nhập một lần; sửa được trong 24 giờ kể từ lần nhập đầu tiên, khi sửa bắt buộc
+/// <c>Reason</c>.
+/// </summary>
+public sealed record SetActualAmountDto(decimal Amount, string? Reason, byte[] RowVer);
 
 /// <summary>Sửa một lần thanh toán: bắt buộc <c>Reason</c>; PaymentMethod PascalCase.</summary>
 public sealed record UpdatePurchasePaymentDto(

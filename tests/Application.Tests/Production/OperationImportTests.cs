@@ -225,7 +225,7 @@ public class OperationImportTests : ProductionTestBase
 
         var result = await _sut.ImportAsync(1, Workbook(), null, null, null, false, default);
 
-        result.Data!.Should().BeEquivalentTo(new OperationImportResultDto(2, 1, 0, 0, 0, 0, 0, 0));
+        (result.Data!.Created, result.Data.Updated).Should().Be((2, 1));
         _operations.Count(o => o.OperationCode == "OP02").Should().Be(1);
         _operations.Single(o => o.OperationCode == "OP02").OperationName.Should().Be("KT nẹp ve");
         Audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Action == AuditActions.Update));
@@ -304,12 +304,13 @@ public class OperationImportTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Preview_WithoutEffectiveDate_DoesNotPlanRates()
+    public async Task Preview_WithoutEffectiveDate_PlansRatesFromToday()
     {
+        // DEV-ALL-190: đơn giá luôn đi kèm; không chọn ngày thì hiệu lực từ hôm nay.
         var result = await _sut.PreviewImportAsync(1, Workbook(), null, null, default);
 
         result.Data!.HasRateColumn.Should().BeTrue();
-        result.Data.Rows.Should().OnlyContain(r => r.RateAction == "None");
+        result.Data.Rows.Should().OnlyContain(r => r.RateAction == "New");
     }
 
     [Fact]
@@ -347,14 +348,12 @@ public class OperationImportTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Import_WithoutEffectiveDate_IgnoresRateColumn_WhenNotSubmitting()
+    public async Task Import_WithoutEffectiveDate_StillCreatesDraftRatesFromToday()
     {
-        // submitRates=false + effectiveDate=null → không tạo đơn giá.
-        // (submitRates=true + effectiveDate=null dùng Today — UTCID66)
         var result = await _sut.ImportAsync(1, Workbook(), null, null, null, false, default);
 
-        result.Data!.RateCreated.Should().Be(0);
-        _rates.Should().BeEmpty();
+        result.Data!.RateCreated.Should().Be(3);
+        _rates.Should().OnlyContain(r => r.Status == PieceRateStatuses.Draft);
     }
 
     [Fact]

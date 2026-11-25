@@ -1,5 +1,6 @@
+import { confirmAmount } from '@/utils/confirmAmount';
 import { useEffect } from 'react';
-import { Form, Input, Modal, Select } from 'antd';
+import { Form, Input, Modal, Select, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { toApiDate } from '@/utils/format';
@@ -8,13 +9,18 @@ import { useConfirmPayment } from '../hooks/usePurchase';
 import type { PaymentMethod, PurchaseOrderDetail } from '../types';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { PaymentAmountFields } from './PaymentAmountFields';
+import { PaymentProofGallery } from './PaymentProofGallery';
+import { newProofCount } from '../utils/paymentProofs';
+import { useAttachments } from '@/hooks/useAttachments';
+import { ATTACHMENT_OWNER } from '@/types/attachment';
+import { fill } from '@/utils/format';
+import { Alert } from 'antd';
 
 type Props = { open: boolean; order: PurchaseOrderDetail; onClose: () => void };
 
 type FormValues = {
   paymentDate: Dayjs;
   paidAmount: number | null;
-  actualAmount?: number | null;
   paymentMethod: PaymentMethod;
   paymentNote: string | null;
 };
@@ -23,40 +29,44 @@ const positiveOrNull = (value: number) => (value > 0 ? Math.round(value) : null)
 
 /**
  * UC34: Kế toán xác nhận thanh toán đơn mua. Ảnh chứng từ không bắt buộc, đính ở khung ảnh bên ngoài.
- * Đơn Chốt không bù: nhập Tổng giá trị thực tế (gợi ý theo số đã nhận) — DEV-ALL-129.
+ * Đơn Chốt không bù: thanh toán theo giá trị thực tế đã nhập ở nút riêng — DEV-ALL-129, 185.
  */
 export function ConfirmPaymentModal({ open, order, onClose }: Props) {
   const [form] = Form.useForm<FormValues>();
   const confirm = useConfirmPayment(order.purchaseOrderId);
   const text = PURCHASE_TEXT.pay;
   const closedShort = order.goodsStatus === 'ClosedShort';
+  // DEV-ALL-189: mỗi lần thanh toán cần ít nhất một ảnh chứng từ tải lên sau lần thanh toán trước.
+  const proofs = useAttachments(
+    ATTACHMENT_OWNER.PurchaseOrder,
+    open ? order.purchaseOrderId : null,
+  );
+  const newProofs = newProofCount(proofs.data ?? [], order.payments);
 
   useEffect(() => {
     if (!open) return;
-    const actual = closedShort ? positiveOrNull(order.actualAmount ?? order.receivedAmount) : null;
+    const target = closedShort ? (order.actualAmount ?? 0) : order.totalAmount;
     form.resetFields();
     form.setFieldsValue({
       paymentDate: dayjs(),
-      actualAmount: actual,
-      paidAmount: positiveOrNull(
-        (closedShort ? (actual ?? 0) : order.totalAmount) - (order.paidAmount ?? 0),
-      ),
+      paidAmount: positiveOrNull(target - (order.paidAmount ?? 0)),
       paymentMethod: 'BankTransfer',
     });
   }, [open, order, form, closedShort]);
 
   const handleFinish = (values: FormValues) => {
-    confirm.mutate(
-      {
-        paymentDate: toApiDate(values.paymentDate),
-        paidAmount: values.paidAmount ?? 0,
-        paymentMethod: values.paymentMethod,
-        paymentNote: values.paymentNote?.trim() || null,
-        rowVer: order.rowVer,
-        actualAmount: closedShort ? (values.actualAmount ?? null) : null,
-      },
-      { onSuccess: onClose },
-    );
+    confirmAmount(text.amount, values.paidAmount ?? 0, () => {
+      confirm.mutate(
+        {
+          paymentDate: toApiDate(values.paymentDate),
+          paidAmount: values.paidAmount ?? 0,
+          paymentMethod: values.paymentMethod,
+          paymentNote: values.paymentNote?.trim() || null,
+          rowVer: order.rowVer,
+        },
+        { onSuccess: onClose },
+      );
+    });
   };
 
   return (
@@ -66,6 +76,9 @@ export function ConfirmPaymentModal({ open, order, onClose }: Props) {
       okText={PURCHASE_TEXT.actions.confirmPayment}
       cancelText={MESSAGES.common.cancel}
       confirmLoading={confirm.isPending}
+      okButtonProps={{
+        disabled: (closedShort && order.actualAmountSetAt === null) || newProofs === 0,
+      }}
       onOk={() => form.submit()}
       onCancel={onClose}
       destroyOnHidden
@@ -90,6 +103,15 @@ export function ConfirmPaymentModal({ open, order, onClose }: Props) {
           <Input.TextArea rows={2} maxLength={500} showCount />
         </Form.Item>
       </Form>
+      <Typography.Title level={5}>{text.proofTitle}</Typography.Title>
+      <Alert
+        type={newProofs > 0 ? 'success' : 'warning'}
+        showIcon
+        message={newProofs > 0 ? fill(text.proofNew, newProofs) : text.proofMissing}
+        description={text.proofHint}
+        style={{ marginBottom: 12 }}
+      />
+      <PaymentProofGallery purchaseOrderId={order.purchaseOrderId} canEdit />
     </Modal>
   );
 }

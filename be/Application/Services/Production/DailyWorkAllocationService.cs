@@ -507,7 +507,8 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
 
         var workerIds = dto.Items.Select(i => i.WorkerId).Distinct().ToList();
         var okWorkers = await _uow.Repository<Employee>().Query().AsNoTracking()
-            .Where(e => workerIds.Contains(e.EmployeeId) && e.TeamId == teamId && e.Status == RecordStatus.Active)
+            .Where(e => workerIds.Contains(e.EmployeeId) && e.TeamId == teamId && e.Status == RecordStatus.Active
+                        && (e.Role == null || e.Role.RoleCode != RoleCodes.QaQc))   // QA/QC không được giao việc (DEV-ALL-184)
             .Select(e => e.EmployeeId).ToListAsync(ct);
         if (okWorkers.Count != workerIds.Count)
             return Result<DailyAllocationResultDto>.Failure(ErrorCodes.WarehouseTeamMismatch, WarehouseMessages.WorkerNotInTeam, ResultKind.Forbidden);

@@ -1,4 +1,5 @@
-import { Button, Form, Input, InputNumber, Space } from 'antd';
+import { MoneyInput } from '@/components/common/MoneyInput';
+import { Button, Form, Input, Space } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
 import { QtyInput } from '@/components/common/QtyInput';
@@ -55,7 +56,7 @@ export function PurchaseOrderLineRow({
         name={[name, 'unitPrice']}
         rules={[{ required: true, type: 'number', min: 0.01, message: LABELS.priceRequired }]}
       >
-        <InputNumber addonBefore={LABELS.unitPrice} min={0} style={{ width: 190 }} />
+        <MoneyInput addonBefore={LABELS.unitPrice} currency={false} style={{ width: 190 }} />
       </Form.Item>
       <Button icon={<DeleteOutlined />} onClick={onRemove} disabled={!canRemove} />
     </Space>

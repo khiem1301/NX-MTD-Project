@@ -18,4 +18,10 @@ public interface IMonthlyCostService
 
     /// <summary>Chi phí đã nhập của một tháng, kèm đối soát MEALS.</summary>
     Task<Result<MonthlyCostSummaryDto>> GetByPeriodMonthAsync(string periodMonth, CancellationToken ct);
+
+    /// <summary>DEV-ALL-187: kiểm lại bảng chi phí đã sửa trên màn hình (không ghi DB).</summary>
+    Task<Result<MonthlyCostExcelPreviewDto>> PreviewRowsAsync(MonthlyCostRowsDto dto, CancellationToken ct);
+
+    /// <summary>DEV-ALL-187: nhập chi phí tháng từ bảng đã sửa trên màn hình (thay toàn bộ dòng cũ của tháng).</summary>
+    Task<Result<MonthlyCostImportResultDto>> ImportRowsAsync(MonthlyCostRowsDto dto, CancellationToken ct);
 }

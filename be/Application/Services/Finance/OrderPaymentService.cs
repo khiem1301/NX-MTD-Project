@@ -70,7 +70,7 @@ public sealed class OrderPaymentService : IOrderPaymentService
         return Result<OrderPaymentDto>.Success(new OrderPaymentDto(order.OrderId, order.OrderCode, (order.Customer?.CustomerName)!,
             CodeText.ToPascal(order.Status), order.OrderLines.Sum(l => l.OrderedQty * l.CmtUnitPrice), order.FinalAmount,
             order.FinalAmountReason, paid, Remaining(order.FinalAmount, paid), StateOf(order.FinalAmount, paid), order.RowVer,
-            payments, history));
+            payments, history, order.FinalAmountSetAt, CanEditFinalAmount(order.FinalAmountSetAt, now)));
     }
 
     // ---------- Ghi ----------
@@ -80,16 +80,22 @@ public sealed class OrderPaymentService : IOrderPaymentService
         ArgumentNullException.ThrowIfNull(dto);
         var order = await LoadAsync(orderId, asNoTracking: false, ct);
         if (order is null) return Fail.NotFound();
-        if (string.IsNullOrWhiteSpace(dto.Reason))
+        var now = _clock.Now;
+        // DEV-ALL-185: nhập một lần; sau lần đầu chỉ sửa trong 24 giờ và bắt buộc lý do.
+        var entered = order.FinalAmountSetAt is not null;
+        if (!CanEditFinalAmount(order.FinalAmountSetAt, now))
+            return Result.Failure(ErrorCodes.PaymentEditExpired, Messages.FinalAmountEditExpired);
+        if (entered && string.IsNullOrWhiteSpace(dto.Reason))
             return Result.Failure(ErrorCodes.PaymentInvalid, Messages.FinalAmountReasonRequired, ResultKind.Validation);
         if (!InRange(Paid(order), dto.Amount))
             return Result.Failure(ErrorCodes.PaymentInvalid, Messages.FinalAmountBelowPaid, ResultKind.Validation);
 
         var before = new { order.FinalAmount };
-        var reason = dto.Reason.Trim();
+        var reason = Clean(dto.Reason);
         Touch(order, dto.RowVer);
         order.FinalAmount = dto.Amount;
-        order.FinalAmountReason = reason;
+        order.FinalAmountReason = reason ?? order.FinalAmountReason ?? Messages.FinalAmountFirstEntry;
+        order.FinalAmountSetAt ??= now;
         return await SaveAsync(order, AuditActions.Update, before, new { order.FinalAmount }, reason, Messages.FinalAmountSaved);
     }
 
@@ -151,6 +157,10 @@ public sealed class OrderPaymentService : IOrderPaymentService
     }
 
     // ---------- Quy tắc ----------
+
+    /// <summary>DEV-ALL-185: chưa nhập giá trị chốt thì nhập được; đã nhập thì sửa được trong 24 giờ kể từ lần nhập đầu tiên.</summary>
+    public static bool CanEditFinalAmount(DateTime? setAt, DateTime now) =>
+        setAt is null || now - setAt.Value <= TimeSpan.FromHours(PurchasePaymentRules.EditWindowHours);
 
     /// <summary>Sửa được trong 24 giờ kể từ lúc nhập lần thanh toán đó.</summary>
     public static bool IsEditable(OrderPayment payment, DateTime now) =>

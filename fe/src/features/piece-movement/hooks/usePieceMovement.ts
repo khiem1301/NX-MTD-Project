@@ -9,6 +9,7 @@ import type {
   ConfirmAllocationPayload,
   ConfirmBatchPayload,
   ConfirmOnBehalfPayload,
+  ConfirmWorkerOnBehalfPayload,
   SaveDailyPayload,
 } from '../types';
 
@@ -16,15 +17,24 @@ export const PM_KEY = ['piece-movement'] as const;
 // Số lần được giao là trần sản lượng và số BTP tổ giữ cũng đổi theo.
 const AFFECTED = [PM_KEY, ['warehouse'], ['production']];
 
-export const useAllocations = (query: AllocationQuery) => {
+export const useAllocations = (query: AllocationQuery, enabled = true) => {
   const { user } = useAuth();
   const base = user?.role === ROLES.Worker ? WORKER_BASE : LEADER_BASE;
   return useQuery({
     queryKey: [...PM_KEY, 'list', base, query],
     queryFn: () => pieceMovementApi.list(base, query),
+    enabled,
     placeholderData: keepPreviousData,
   });
 };
+
+/** DEV-ALL-182: phiếu của tổ gộp theo công nhân, phân trang theo công nhân. */
+export const useWorkerSummaries = (query: AllocationQuery) =>
+  useQuery({
+    queryKey: [...PM_KEY, 'workers', query],
+    queryFn: () => pieceMovementApi.workers(query),
+    placeholderData: keepPreviousData,
+  });
 
 export const useBoard = (orderId: number | undefined) =>
   useQuery({
@@ -55,6 +65,13 @@ export const useConfirmOnBehalf = () =>
   useApiMutation(
     ({ id, body }: { id: number; body: ConfirmOnBehalfPayload }) =>
       pieceMovementApi.confirmOnBehalf(id, body),
+    { invalidate: AFFECTED, successMessage: PM_MESSAGES.confirmed },
+  );
+
+export const useConfirmWorkerOnBehalf = () =>
+  useApiMutation(
+    ({ workerId, body }: { workerId: number; body: ConfirmWorkerOnBehalfPayload }) =>
+      pieceMovementApi.confirmWorkerOnBehalf(workerId, body),
     { invalidate: AFFECTED, successMessage: PM_MESSAGES.confirmed },
   );
 

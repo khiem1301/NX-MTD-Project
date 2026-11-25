@@ -58,6 +58,7 @@ public class OrderPaymentServiceTests
             RowVer = rowVer ?? V1,
             FinalAmount = final,
             FinalAmountReason = final is null ? null : "Chốt",
+            FinalAmountSetAt = final is null ? null : Now.AddHours(-1),   // đã nhập 1 giờ trước: còn trong 24 giờ sửa
             Customer = customer is null ? null! : new Customer { CustomerId = id, CustomerName = customer, Status = "ACTIVE" },
             MaterialStatus = "PENDING",
         };
@@ -1016,33 +1017,86 @@ public class OrderPaymentServiceTests
         await AssertNotWritten();
     }
 
+    // DEV-ALL-185: nhập một lần, sửa trong 24 giờ kể từ lần nhập đầu tiên.
+
     [Fact]
-    public async Task UTCID711_SetFinalAmountAsync_EmptyReason_Validation()
+    public async Task SetFinalAmount_FirstEntry_NeedsNoReason_StampsTimeAndUsesDefaultReason()
     {
-        // Arrange
         var order = Order(1, "DH2611-001");
+
+        var result = await Sut().SetFinalAmountAsync(1, new SetFinalAmountDto(100_000_000m, null, V1), default);
+
+        result.IsSuccess.Should().BeTrue();
+        order.FinalAmount.Should().Be(100_000_000m);
+        order.FinalAmountSetAt.Should().Be(Now);
+        order.FinalAmountReason.Should().Be(Messages.FinalAmountFirstEntry);   // CK_CustomerOrder_Final bắt buộc có lý do
+    }
+
+    [Fact]
+    public async Task SetFinalAmount_EditWithin24Hours_KeepsFirstEntryTime()
+    {
+        var order = Order(1, "DH2611-001", final: 50_000_000m);
+        var firstEntry = order.FinalAmountSetAt;
+
+        var result = await Sut().SetFinalAmountAsync(1, new SetFinalAmountDto(60_000_000m, "Nhập nhầm", V1), default);
+
+        result.IsSuccess.Should().BeTrue();
+        order.FinalAmount.Should().Be(60_000_000m);
+        order.FinalAmountSetAt.Should().Be(firstEntry);   // 24 giờ tính từ lần đầu, không gia hạn khi sửa
+    }
+
+    [Fact]
+    public async Task SetFinalAmount_After24HoursFromFirstEntry_IsLocked()
+    {
+        var order = Order(1, "DH2611-001", final: 50_000_000m);
+        order.FinalAmountSetAt = Now.AddHours(-24).AddMinutes(-1);
+
+        var result = await Sut().SetFinalAmountAsync(1, new SetFinalAmountDto(60_000_000m, "Sửa muộn", V1), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.PaymentEditExpired);
+        order.FinalAmount.Should().Be(50_000_000m);
+        await AssertNotWritten();
+    }
+
+    [Fact]
+    public async Task GetAsync_ReportsWhetherFinalAmountCanStillBeEdited()
+    {
+        var open = Order(1, "DH2611-001", final: 50_000_000m);
+        var locked = Order(2, "DH2611-002", final: 50_000_000m);
+        locked.FinalAmountSetAt = Now.AddHours(-25);
+
+        (await Sut().GetAsync(1, default)).Data!.CanEditFinalAmount.Should().BeTrue();
+        (await Sut().GetAsync(2, default)).Data!.CanEditFinalAmount.Should().BeFalse();
+        open.FinalAmountSetAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task UTCID711_SetFinalAmountAsync_EmptyReason_WhenEditing_Validation()
+    {
+        // Arrange: đã nhập rồi, nay sửa mà không ghi lý do
+        var order = Order(1, "DH2611-001", final: 50_000_000m);
 
         // Act
         var result = await Sut().SetFinalAmountAsync(1, new SetFinalAmountDto(100_000_000m, "", V1), default);
 
         // Assert
         AssertValidation(result, Messages.FinalAmountReasonRequired);
-        order.FinalAmount.Should().BeNull();
+        order.FinalAmount.Should().Be(50_000_000m);
         await AssertNotWritten();
     }
 
     [Fact]
-    public async Task UTCID712_SetFinalAmountAsync_BlankReason_Validation()
+    public async Task UTCID712_SetFinalAmountAsync_BlankReason_WhenEditing_Validation()
     {
         // Arrange
-        var order = Order(1, "DH2611-001");
+        var order = Order(1, "DH2611-001", final: 50_000_000m);
 
         // Act
         var result = await Sut().SetFinalAmountAsync(1, new SetFinalAmountDto(100_000_000m, "   ", V1), default);
 
         // Assert
         AssertValidation(result, Messages.FinalAmountReasonRequired);
-        order.FinalAmount.Should().BeNull();
+        order.FinalAmount.Should().Be(50_000_000m);
         await AssertNotWritten();
     }
 
@@ -1093,17 +1147,17 @@ public class OrderPaymentServiceTests
     }
 
     [Fact]
-    public async Task UTCID716_SetFinalAmountAsync_NullReason_Validation()
+    public async Task UTCID716_SetFinalAmountAsync_NullReason_WhenEditing_Validation()
     {
-        // Arrange
-        var order = Order(1, "DH2611-001");
+        // Arrange: đã nhập rồi, nay sửa mà không ghi lý do
+        var order = Order(1, "DH2611-001", final: 50_000_000m);
 
         // Act
         var result = await Sut().SetFinalAmountAsync(1, new SetFinalAmountDto(100_000_000m, null!, V1), default);
 
         // Assert
         AssertValidation(result, Messages.FinalAmountReasonRequired);
-        order.FinalAmount.Should().BeNull();
+        order.FinalAmount.Should().Be(50_000_000m);
         await AssertNotWritten();
     }
 

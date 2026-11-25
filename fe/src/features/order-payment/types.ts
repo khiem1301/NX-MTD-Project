@@ -35,6 +35,10 @@ export type OrderPaymentLine = {
 
 export type OrderPaymentDetail = OrderPaymentListItem & {
   finalAmountReason: string | null;
+  /** DEV-ALL-185: lúc nhập giá trị chốt (giá trị thực tế) lần đầu; null = chưa nhập. */
+  finalAmountSetAt: string | null;
+  /** Nhập được khi chưa nhập, hoặc trong 24 giờ kể từ lần nhập đầu tiên (server tính). */
+  canEditFinalAmount: boolean;
   rowVer: string;
   payments: OrderPaymentLine[];
   history: AuditEntry[];
@@ -47,7 +51,8 @@ export type OrderPaymentQuery = {
   state?: OrderPaymentState;
 };
 
-export type SetFinalAmountPayload = { amount: number; reason: string; rowVer: string };
+/** reason chỉ bắt buộc khi sửa (đã nhập lần đầu). */
+export type SetFinalAmountPayload = { amount: number; reason?: string; rowVer: string };
 
 export type AddOrderPaymentPayload = {
   paymentDate: string;

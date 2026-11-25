@@ -31,7 +31,10 @@ export type FgHandover = Omit<FgHandoverListItem, 'totalHandedQty'> & {
   lines: FgHandoverLine[];
 };
 
-export type FgHandoverableLine = {
+/** DEV-ALL-183: dòng đơn còn bàn giao của tổ may mà QA/QC thuộc về (gộp mọi đơn của tổ). qcQty = số QC đạt của tổ. */
+export type FgTeamHandoverableLine = {
+  orderId: number;
+  orderCode: string;
   orderLineId: number;
   productId: number;
   productCode: string;
@@ -42,13 +45,14 @@ export type FgHandoverableLine = {
   remainingQty: number;
 };
 
-export type FgHandoverQuery = PageParams & { status?: string; orderId?: number };
-
-export type CreateFgHandoverPayload = {
-  orderId: number;
-  productId: number;
-  lines: { orderLineId: number; handedQty: number }[];
+/** Kết quả bàn giao toàn bộ thành phẩm của tổ: mỗi đơn + mã hàng một phiếu. */
+export type FgHandoverAllResult = {
+  handoverCount: number;
+  totalQty: number;
+  handoverCodes: string[];
 };
+
+export type FgHandoverQuery = PageParams & { status?: string; orderId?: number };
 
 export type ConfirmFgHandoverPayload = {
   lines: { fgHandoverLineId: number; confirmedQty: number; discrepancyReason?: string }[];

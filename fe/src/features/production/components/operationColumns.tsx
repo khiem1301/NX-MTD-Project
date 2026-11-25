@@ -25,10 +25,27 @@ const noWrapHeader = () => ({ style: { whiteSpace: 'nowrap' as const } });
 const muted = (row: Operation) => (row.status === 'Active' ? undefined : 'secondary');
 
 /**
- * Đơn giá đang áp dụng, bên dưới là đơn giá đã duyệt sắp áp dụng gần nhất. Bản Nháp, Chờ duyệt, Bị từ chối không hiện
- * ở đây: lọc theo ô Đơn giá hoặc xem lịch sử đơn giá của công đoạn.
+ * Đơn giá đang áp dụng, bên dưới là đơn giá đã duyệt sắp áp dụng gần nhất. Công đoạn chưa có giá được duyệt thì hiện giá
+ * chờ duyệt (hoặc Nháp) gần nhất kèm trạng thái; bản Bị từ chối không hiện ở đây, xem lịch sử đơn giá của công đoạn.
  */
 const renderRate = (row: Operation) => {
+  // Chưa có giá được duyệt: hiện bản chờ duyệt (hoặc Nháp) gần nhất kèm trạng thái, để biết giá đang đợi duyệt.
+  const pending =
+    row.currentRate === null &&
+    row.status === 'Active' &&
+    (row.nextRate?.status === 'PendingApproval' || row.nextRate?.status === 'Draft')
+      ? row.nextRate
+      : null;
+  if (pending)
+    return (
+      <Space direction="vertical" size={0}>
+        <Typography.Text strong>{formatCurrency(pending.rate)}</Typography.Text>
+        <Space size={4} style={{ whiteSpace: 'nowrap' }}>
+          <StatusTag status={pending.status} labels={rateText.status} />
+          <Typography.Text type="secondary">{formatDate(pending.effectiveDate)}</Typography.Text>
+        </Space>
+      </Space>
+    );
   const current =
     row.currentRate !== null ? (
       <Typography.Text strong>{formatCurrency(row.currentRate)}</Typography.Text>

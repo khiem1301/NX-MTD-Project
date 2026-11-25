@@ -1,5 +1,7 @@
+import { confirmAmount } from '@/utils/confirmAmount';
 import { useEffect } from 'react';
-import { Form, Input, InputNumber, Modal } from 'antd';
+import { Form, Input, Modal } from 'antd';
+import { MoneyInput } from '@/components/common/MoneyInput';
 import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { MESSAGES } from '@/constants/messages';
 import { formatCurrency } from '@/utils/format';
@@ -9,15 +11,19 @@ import type { OrderPaymentDetail } from '../types';
 import { HintTip } from '@/components/common/HintTip';
 
 type Props = { order: OrderPaymentDetail; open: boolean; onClose: () => void };
-type FormValues = { amount: number | null; reason: string };
+type FormValues = { amount: number | null; reason?: string };
 
 const text = ORDER_PAYMENT_TEXT.final;
 
-/** Chốt hoặc đổi giá trị cả đơn hàng (cho phép âm khi mình phải đền hợp đồng), bắt buộc lý do. */
+/**
+ * Nhập giá trị thực tế (giá trị chốt) cả đơn hàng, cho phép âm khi mình phải đền hợp đồng. Nhập một lần; sau lần đầu chỉ sửa được trong 24 giờ
+ * và bắt buộc lý do (DEV-ALL-185).
+ */
 export function FinalAmountModal({ order, open, onClose }: Props) {
   const [form] = Form.useForm<FormValues>();
   const save = useSetFinalAmount(order.orderId);
   const paid = order.paidAmount;
+  const editing = order.finalAmountSetAt !== null;
 
   useEffect(() => {
     if (!open) return;
@@ -41,9 +47,15 @@ export function FinalAmountModal({ order, open, onClose }: Props) {
         layout="vertical"
         disabled={save.isPending}
         onFinish={(v) =>
-          save.mutate(
-            { amount: v.amount ?? 0, reason: v.reason.trim(), rowVer: order.rowVer },
-            { onSuccess: onClose },
+          confirmAmount(text.amount, v.amount ?? 0, () =>
+            save.mutate(
+              {
+                amount: v.amount ?? 0,
+                reason: v.reason?.trim() || undefined,
+                rowVer: order.rowVer,
+              },
+              { onSuccess: onClose },
+            ),
           )
         }
       >
@@ -63,15 +75,17 @@ export function FinalAmountModal({ order, open, onClose }: Props) {
           ]}
           extra={`${ORDER_PAYMENT_TEXT.detail.paid}: ${formatCurrency(paid)}`}
         >
-          <InputNumber precision={0} addonAfter="₫" style={{ width: 260 }} />
+          <MoneyInput allowNegative style={{ width: 260 }} />
         </Form.Item>
-        <Form.Item
-          name="reason"
-          label={text.reason}
-          rules={[{ required: true, whitespace: true, message: text.reasonRequired }]}
-        >
-          <Input.TextArea rows={2} maxLength={REASON_MAX_LENGTH} showCount />
-        </Form.Item>
+        {editing && (
+          <Form.Item
+            name="reason"
+            label={text.reason}
+            rules={[{ required: true, whitespace: true, message: text.reasonRequired }]}
+          >
+            <Input.TextArea rows={2} maxLength={REASON_MAX_LENGTH} showCount />
+          </Form.Item>
+        )}
       </Form>
     </Modal>
   );

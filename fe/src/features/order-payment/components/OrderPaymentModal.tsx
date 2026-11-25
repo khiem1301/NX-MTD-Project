@@ -88,9 +88,13 @@ export function OrderPaymentModal() {
 
   const actions = data && (
     <Space wrap>
-      <Button onClick={() => setDialog({ kind: 'final' })}>
-        {ORDER_PAYMENT_TEXT.actions.setFinal}
-      </Button>
+      {data.canEditFinalAmount && (
+        <Button onClick={() => setDialog({ kind: 'final' })}>
+          {data.finalAmountSetAt === null
+            ? ORDER_PAYMENT_TEXT.actions.setFinal
+            : ORDER_PAYMENT_TEXT.actions.editFinal}
+        </Button>
+      )}
       <Button
         type="primary"
         disabled={data.finalAmount === null}

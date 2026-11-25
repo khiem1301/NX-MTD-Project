@@ -30,9 +30,16 @@ public sealed class QcBatchService : IQcBatchService
     public async Task<Result<PagedResult<QcBatchDto>>> ListAsync(QcBatchQuery query, CancellationToken ct)
     {
         var keyword = query.Keyword?.Trim();
+        var teamScope = query.SewingTeamId;
+        if (!_guard.IsManager)   // QA/QC thuộc một tổ may: chỉ thấy đợt QC của tổ mình
+        {
+            var own = _guard.ResolveQcTeam(null);
+            if (!own.IsSuccess) return Fail.As<PagedResult<QcBatchDto>>(own);
+            teamScope = own.Data;
+        }
         var page = await Batches.AsNoTracking()
             .Where(b => query.WorkDate == null || b.WorkDate == query.WorkDate)
-            .Where(b => query.SewingTeamId == null || b.SewingTeamId == query.SewingTeamId)
+            .Where(b => teamScope == null || b.SewingTeamId == teamScope)
             .Where(b => query.OrderLineId == null || b.OrderLineId == query.OrderLineId)
             .Where(b => string.IsNullOrEmpty(keyword) || b.OrderLine.Order.OrderCode.Contains(keyword)
                         || b.OrderLine.ProductVariant.Product.ProductCode.Contains(keyword))
@@ -48,11 +55,16 @@ public sealed class QcBatchService : IQcBatchService
         return Result<PagedResult<QcBatchDto>>.Success(page with { Items = items });
     }
 
-    public async Task<Result<OnLineQtyDto>> GetOnLineAsync(int sewingTeamId, int orderLineId, CancellationToken ct) =>
-        Result<OnLineQtyDto>.Success(await _guard.ComputeOnLineAsync(sewingTeamId, orderLineId, null, ct));
+    public async Task<Result<OnLineQtyDto>> GetOnLineAsync(int? sewingTeamId, int orderLineId, CancellationToken ct)
+    {
+        var team = _guard.ResolveQcTeam(sewingTeamId);
+        return team.IsSuccess
+            ? Result<OnLineQtyDto>.Success(await _guard.ComputeOnLineAsync(team.Data, orderLineId, null, ct))
+            : Fail.As<OnLineQtyDto>(team);
+    }
 
     /// <summary>Kiểm ca, số lượng, ngày, kỳ khóa, tổ may, dòng đơn chưa đóng, lô trùng và số lượng không vượt số đang trên chuyền (MSG19).</summary>
-    private async Task<Result<int>?> ValidateAsync(CreateQcBatchDto dto, string shift, CancellationToken ct)
+    private async Task<Result<int>?> ValidateAsync(CreateQcBatchDto dto, int sewingTeamId, string shift, CancellationToken ct)
     {
         if (!ShiftCodes.All.Contains(shift))
             return Result<int>.Failure(ErrorCodes.OutputInvalid, "Ca làm việc không hợp lệ.", ResultKind.Validation);
@@ -64,7 +76,7 @@ public sealed class QcBatchService : IQcBatchService
             return Fail.As<int>(_guard.PeriodLockedFailure(dto.WorkDate));
 
         var team = await _uow.Repository<Team>().Query().AsNoTracking().FirstOrDefaultAsync(
-            t => t.TeamId == dto.SewingTeamId && t.TeamType == TeamTypes.Sewing && t.Status == RecordStatus.Active, ct);
+            t => t.TeamId == sewingTeamId && t.TeamType == TeamTypes.Sewing && t.Status == RecordStatus.Active, ct);
         if (team is null) return Fail.NotFound<int>();
 
         var closed = OrderStatuses.Closed.ToArray();
@@ -76,10 +88,10 @@ public sealed class QcBatchService : IQcBatchService
             return Result<int>.Failure(ErrorCodes.OutputInvalid, beforeStart, ResultKind.Validation);
 
         var duplicate = await Batches.AsNoTracking().AnyAsync(b => b.WorkDate == dto.WorkDate && b.ShiftCode == shift
-            && b.BatchTime == dto.BatchTime && b.SewingTeamId == dto.SewingTeamId && b.OrderLineId == dto.OrderLineId, ct);
+            && b.BatchTime == dto.BatchTime && b.SewingTeamId == sewingTeamId && b.OrderLineId == dto.OrderLineId, ct);
         if (duplicate) return Result<int>.Failure(ErrorCodes.QcBatchDuplicate, Messages.QcBatchDuplicate);
 
-        var onLine = await _guard.ComputeOnLineAsync(dto.SewingTeamId, dto.OrderLineId, null, ct);
+        var onLine = await _guard.ComputeOnLineAsync(sewingTeamId, dto.OrderLineId, null, ct);
         return dto.FinishedQty > onLine.OnLine
             ? Result<int>.Failure(ErrorCodes.QcExceedsOnLine, string.Format(Messages.QcExceedsOnLine, onLine.OnLine))   // MSG19
             : null;
@@ -88,12 +100,14 @@ public sealed class QcBatchService : IQcBatchService
     public async Task<Result<int>> CreateAsync(CreateQcBatchDto dto, CancellationToken ct)
     {
         var shift = CodeText.ToCode(dto.ShiftCode);
-        var invalid = await ValidateAsync(dto, shift, ct);
+        var team = _guard.ResolveQcTeam(dto.SewingTeamId);
+        if (!team.IsSuccess) return team;
+        var invalid = await ValidateAsync(dto, team.Data, shift, ct);
         if (invalid is not null) return invalid;
 
         var batch = new QcBatch
         {
-            WorkDate = dto.WorkDate, ShiftCode = shift, BatchTime = dto.BatchTime, SewingTeamId = dto.SewingTeamId,
+            WorkDate = dto.WorkDate, ShiftCode = shift, BatchTime = dto.BatchTime, SewingTeamId = team.Data,
             OrderLineId = dto.OrderLineId, FinishedQty = dto.FinishedQty, InspectorId = _user.EmployeeId,
             EditDeadline = await _guard.ShiftEndAsync(dto.WorkDate, shift, ct), CreatedAt = _clock.Now,
         };
@@ -112,7 +126,7 @@ public sealed class QcBatchService : IQcBatchService
         if (dto.FinishedQty <= 0)
             return Result.Failure(ErrorCodes.OutputInvalid, Messages.QcQtyInvalid, ResultKind.Validation);
         var batch = await Batches.FirstOrDefaultAsync(b => b.QcBatchId == qcBatchId, ct);
-        if (batch is null) return Fail.NotFound();
+        if (batch is null || !IsOwnTeam(batch)) return Fail.NotFound();
 
         var reason = string.IsNullOrWhiteSpace(dto.Reason) ? null : dto.Reason.Trim();
         var window = _guard.CheckEditWindow(batch.EditDeadline, reason);
@@ -138,7 +152,7 @@ public sealed class QcBatchService : IQcBatchService
     public async Task<Result> DeleteAsync(int qcBatchId, DeleteQcBatchDto dto, CancellationToken ct)
     {
         var batch = await Batches.FirstOrDefaultAsync(b => b.QcBatchId == qcBatchId, ct);
-        if (batch is null) return Fail.NotFound();
+        if (batch is null || !IsOwnTeam(batch)) return Fail.NotFound();
 
         var reason = string.IsNullOrWhiteSpace(dto.Reason) ? null : dto.Reason.Trim();
         var window = _guard.CheckEditWindow(batch.EditDeadline, reason);
@@ -172,6 +186,14 @@ public sealed class QcBatchService : IQcBatchService
         return total < handed
             ? Result.Failure(ErrorCodes.QcBelowHandedOver, string.Format(Messages.QcBelowHandedOver, total, handed))
             : null;
+    }
+
+    /// <summary>Quản đốc sửa được mọi tổ; QA/QC chỉ đợt QC của tổ mình.</summary>
+    private bool IsOwnTeam(QcBatch batch)
+    {
+        if (_guard.IsManager) return true;
+        var own = _guard.ResolveQcTeam(null);
+        return own.IsSuccess && own.Data == batch.SewingTeamId;
     }
 
     private static object Snapshot(QcBatch b) =>

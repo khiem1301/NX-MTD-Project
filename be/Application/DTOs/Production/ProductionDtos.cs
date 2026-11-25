@@ -32,7 +32,7 @@ public sealed record OperationRateDto(int PieceRateId, decimal Rate, DateOnly Ef
 public sealed record SaveOperationDto(
     int ProductId, string OperationCode, string OperationName, short StationSequence, byte? SkillLevel,
     decimal? StandardTimeSec, string? TeamType, bool IsFinalStep, string? GroupName = null,
-    IReadOnlyList<int>? ComponentIds = null);
+    IReadOnlyList<int>? ComponentIds = null, decimal? Rate = null, DateOnly? RateEffectiveDate = null);
 
 public sealed record PieceRateDto(
     int PieceRateId, int OperationId, string OperationCode, string OperationName, int ProductId, string ProductCode,
@@ -114,8 +114,9 @@ public sealed record QcBatchDto(
     int OrderLineId, string OrderCode, string ProductCode, string Color, string SizeCode, int FinishedQty,
     int InspectorId, string InspectorName, DateTime EditDeadline, bool CanEdit, byte[] RowVer);
 
+/// <summary>SewingTeamId chỉ Quản đốc điền; QA/QC thuộc một tổ may nên tổ lấy theo tài khoản (bỏ chọn tổ).</summary>
 public sealed record CreateQcBatchDto(
-    DateOnly WorkDate, string ShiftCode, TimeOnly BatchTime, int SewingTeamId, int OrderLineId, int FinishedQty);
+    DateOnly WorkDate, string ShiftCode, TimeOnly BatchTime, int? SewingTeamId, int OrderLineId, int FinishedQty);
 
 public sealed record UpdateQcBatchDto(int FinishedQty, string? Reason, byte[] RowVer);
 

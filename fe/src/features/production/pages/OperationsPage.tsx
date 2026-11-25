@@ -42,7 +42,6 @@ export function OperationsPage() {
   const [viewing, setViewing] = useState<Operation | null>(null);
   const [creating, setCreating] = useState(false);
   /** Công đoạn vừa thêm: mở luôn ô nhập đơn giá khi danh sách đã tải lại có nó. */
-  const [pendingRateId, setPendingRateId] = useState<number | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [groupsOpen, setGroupsOpen] = useState(false);
   const operations = useOperations(productId);
@@ -53,9 +52,7 @@ export function OperationsPage() {
 
   const all = operations.data ?? [];
   const groupList = groups.data ?? [];
-  const ratingTarget =
-    rating ??
-    (pendingRateId === null ? null : (all.find((o) => o.operationId === pendingRateId) ?? null));
+  const ratingTarget = rating;
   /** Dòng tóm tắt chỉ tính công đoạn đang dùng; số trên bộ lọc theo trạng thái đang chọn để khớp số dòng hiện ra. */
   const activeCounts = countOperations(filterOperations(all, { status: 'Active' }));
   const counts = countOperations(filterOperations(all, { status: filters.status }));
@@ -146,13 +143,11 @@ export function OperationsPage() {
               setEditing(null);
               setCreating(false);
             }}
-            onCreated={setPendingRateId}
           />
           <PieceRateFormModal
             operation={ratingTarget}
             onClose={() => {
               setRating(null);
-              setPendingRateId(null);
             }}
           />
           {importOpen && (

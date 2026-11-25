@@ -94,6 +94,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
                 p.PaymentMethod,
                 p.PaymentNote,
                 p.ActualAmount,
+                p.ActualAmountSetAt,
                 p.CreatedAt,
                 p.RowVer,
             })
@@ -117,11 +118,11 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
             header.PaymentReturnReason, header.PaymentDate, header.PaidAmount,
             header.PaymentMethod is null ? null : CodeText.ToPascal(header.PaymentMethod), header.PaymentNote,
             lines.Sum(l => l.OrderedQty * l.UnitPrice), header.CreatedAt, header.RowVer, lines,
-            PermissionsFor(header.GoodsStatus, header.PaymentStatus), history, header.ExpectedDeliveryDate,
+            PermissionsFor(header.GoodsStatus, header.PaymentStatus, header.ActualAmountSetAt, detail.Data!.CanEdit), history, header.ExpectedDeliveryDate,
             header.ExpectedDeliveryDateTo, deliveryDates, header.ActualAmount,
             // DEV-ALL-129: giá trị theo số đã nhận, gợi ý Tổng giá trị thực tế cho đơn Chốt không bù.
             lines.Sum(l => l.ReceivedQty * l.UnitPrice),
-            payments));
+            payments, header.ActualAmountSetAt));
     }
 
     // ---------- Quản đốc ----------
@@ -282,10 +283,18 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         if (!payable.IsSuccess) return payable;
         var target = payable.Data;
 
+        // DEV-ALL-189: mỗi lần thanh toán phải có ít nhất một ảnh chứng từ tải lên SAU lần thanh toán trước (lần đầu: bất kỳ ảnh nào).
+        var lastPaymentAt = po.PurchasePayments.Select(p => (DateTime?)p.CreatedAt).Max();
+        var newProofs = await _uow.Repository<Attachment>().Query().AsNoTracking().CountAsync(a =>
+            a.OwnerType == AttachmentOwnerTypes.PurchaseOrder && a.OwnerId == po.PurchaseOrderId
+            && a.Purpose == AttachmentPurposes.PaymentProof && a.IsCurrent
+            && (lastPaymentAt == null || a.UploadedAt > lastPaymentAt), ct);
+        if (newProofs == 0)
+            return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentProofRequired, ResultKind.Validation);
+
         _uow.Repository<PurchaseOrder>().SetOriginalRowVersion(po, dto.RowVer);
         var from = po.PaymentStatus;
         // Mỗi lần trả là một dòng; tổng đã trả đủ mốc (giá trị đơn / giá trị thực tế) thì đơn thành đã thanh toán (DEV-ALL-136, 129).
-        if (po.GoodsStatus == PurchaseGoodsStatuses.ClosedShort) po.ActualAmount = target;
         po.PurchasePayments.Add(new PurchasePayment
         {
             PaymentDate = dto.PaymentDate, Amount = dto.PaidAmount, PaymentMethod = method,
@@ -307,8 +316,8 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
     }
 
     /// <summary>
-    /// DEV-ALL-129: số tiền làm mốc "đã thanh toán đủ". Đơn thường = tổng giá trị đơn. Đơn Chốt không bù = Tổng giá trị thực tế Kế
-    /// toán nhập (bắt buộc lần đầu, các lần sau dùng lại số đã lưu; không vượt tổng giá trị đơn, không nhỏ hơn số đã trả).
+    /// DEV-ALL-129: số tiền làm mốc "đã thanh toán đủ". Đơn thường = tổng giá trị đơn. Đơn Chốt không bù = giá trị thực tế Kế
+    /// toán đã nhập riêng (DEV-ALL-185; không vượt tổng giá trị đơn, không nhỏ hơn số đã trả).
     /// Số trả lần này không được vượt phần còn phải trả của mốc (DEV-ALL-136: đơn trả nhiều lần).
     /// </summary>
     private static Result<decimal> PayableAmount(PurchaseOrder po, ConfirmPaymentDto dto)
@@ -322,12 +331,56 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         if (po.GoodsStatus != PurchaseGoodsStatuses.ClosedShort)
             return dto.PaidAmount > orderTotal - paid ? Invalid(Messages.PaymentAmountExceedsTotal) : Result<decimal>.Success(orderTotal);
 
-        if ((dto.ActualAmount ?? po.ActualAmount) is not { } actual || actual <= 0) return Invalid(Messages.PaymentActualAmountRequired);
-        if (actual > orderTotal) return Invalid(Messages.PaymentActualAmountExceedsTotal);
-        if (actual < paid) return Invalid(Messages.PaymentActualBelowPaid);
+        // DEV-ALL-185: giá trị thực tế nhập riêng (nút riêng) trước khi thanh toán; ở đây chỉ đọc lại số đã lưu.
+        if (po.ActualAmount is not { } actual || actual <= 0 || po.ActualAmountSetAt is null) return Invalid(Messages.PaymentActualAmountRequired);
         if (dto.PaidAmount > actual - paid) return Invalid(Messages.PaymentAmountExceedsActual);
         return Result<decimal>.Success(actual);
     }
+
+    /// <summary>
+    /// DEV-ALL-185: nhập giá trị thực tế của đơn Chốt không bù ở nút riêng. Nhập một lần; sau đó chỉ sửa được trong 24 giờ kể từ lần
+    /// nhập đầu tiên, bắt buộc lý do. Không vượt tổng giá trị đơn, không nhỏ hơn số đã trả; trạng thái thanh toán tính lại theo số mới.
+    /// </summary>
+    public async Task<Result> SetActualAmountAsync(int purchaseOrderId, SetActualAmountDto dto, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        var po = await PurchaseOrders.Include(p => p.PurchaseOrderLines).Include(p => p.PurchasePayments)
+            .FirstOrDefaultAsync(p => p.PurchaseOrderId == purchaseOrderId, ct);
+        if (po is null) return Fail.NotFound();
+        if (po.GoodsStatus != PurchaseGoodsStatuses.ClosedShort)
+            return Result.Failure(ErrorCodes.PurchaseOrderInvalidStatus, Messages.PurchaseOrderInvalidStatus);
+
+        var now = _clock.Now;
+        var entered = po.ActualAmountSetAt is not null;
+        if (!CanSetActualAmount(po.GoodsStatus, po.ActualAmountSetAt, now))
+            return Result.Failure(ErrorCodes.PaymentEditExpired, Messages.ActualAmountEditExpired);
+
+        static Result Invalid(string message) => Result.Failure(ErrorCodes.PaymentInvalid, message, ResultKind.Validation);
+        var reason = Clean(dto.Reason);
+        if (entered && reason is null) return Invalid(Messages.ActualAmountEditReasonRequired);
+        if (dto.Amount <= 0) return Invalid(Messages.PaymentActualAmountRequired);
+        if (dto.Amount > po.PurchaseOrderLines.Sum(l => l.OrderedQty * l.UnitPrice)) return Invalid(Messages.PaymentActualAmountExceedsTotal);
+        if (dto.Amount < PurchaseAmounts.Paid(po)) return Invalid(Messages.PaymentActualBelowPaid);
+
+        _uow.Repository<PurchaseOrder>().SetOriginalRowVersion(po, dto.RowVer);
+        var before = new { po.ActualAmount, po.PaymentStatus };
+        po.ActualAmount = dto.Amount;
+        po.ActualAmountSetAt ??= now;
+        PurchaseAmounts.Sync(po);
+
+        return await _uow.InTransactionAsync(async () =>
+        {
+            _audit.Add(new AuditEntry(nameof(PurchaseOrder), po.PurchaseOrderId, AuditActions.Update, before,
+                new { po.ActualAmount, po.PaymentStatus }, reason));
+            await _uow.SaveChangesAsync();
+            return Result.Success(Messages.ActualAmountSaved);
+        });
+    }
+
+    /// <summary>Nhập được khi đơn Chốt không bù chưa nhập giá trị thực tế, hoặc trong 24 giờ kể từ lần nhập đầu tiên.</summary>
+    internal static bool CanSetActualAmount(string goodsStatus, DateTime? setAt, DateTime now) =>
+        goodsStatus == PurchaseGoodsStatuses.ClosedShort
+        && (setAt is null || now - setAt.Value <= TimeSpan.FromHours(PurchasePaymentRules.EditWindowHours));
 
     public async Task<Result> ReturnPaymentAsync(int purchaseOrderId, ReturnPaymentDto dto, CancellationToken ct)
     {
@@ -392,7 +445,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
             p.PaymentNote, p.CreatedAt, p.UpdatedAt, p.EditReason, canEdit && PurchasePaymentService.IsEditable(p, now))).ToList();
     }
 
-    private PurchaseOrderPermissionsDto PermissionsFor(string goodsStatus, string paymentStatus)
+    private PurchaseOrderPermissionsDto PermissionsFor(string goodsStatus, string paymentStatus, DateTime? actualAmountSetAt, bool canEditOrder)
     {
         var isManager = _user.Role is Roles.Manager or Roles.Admin;
         var isAccountant = _user.Role == Roles.Accountant;
@@ -402,6 +455,8 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         var repriceable = PurchaseGoodsStatuses.Repriceable.Contains(goodsStatus)
                           && paymentStatus == PurchasePaymentStatuses.Returned;
         return new PurchaseOrderPermissionsDto(isManager && pending, isManager && pending, isManager && repriceable,
-            isAccountant && payable, isAccountant && returnable);
+            isAccountant && payable, isAccountant && returnable,
+            isAccountant && CanSetActualAmount(goodsStatus, actualAmountSetAt, _clock.Now),
+            isManager && canEditOrder);
     }
 }

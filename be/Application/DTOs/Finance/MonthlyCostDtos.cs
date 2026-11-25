@@ -9,6 +9,9 @@ public sealed record MonthlyCostExcelRowDto(
     int RowNumber, string? CostCategoryCode, string? CostType, string? ProductCode,
     decimal? Amount, int? Quantity, string? Note, string? ParseError);
 
+/// <summary>DEV-ALL-187: bảng chi phí đã đọc và sửa trên màn hình (popup nhập Excel), gửi lên để máy chủ kiểm lại / nhập, không đọc lại file.</summary>
+public sealed record MonthlyCostRowsDto(string PeriodMonth, IReadOnlyList<MonthlyCostExcelRowDto> Rows);
+
 /// <summary>Trạng thái một dòng sau khi kiểm tra nghiệp vụ (không lưu DB, chỉ để hiển thị preview).</summary>
 public static class MonthlyCostRowStatus
 {

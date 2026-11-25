@@ -94,3 +94,41 @@ export const MONTHLY_COST_TYPE_LABEL: Record<MonthlyCostType, StatusLabel> = {
   Fixed: { text: MONTHLY_COST_TEXT.typeLabel.Fixed, color: 'default' },
   Variable: { text: MONTHLY_COST_TEXT.typeLabel.Variable, color: 'blue' },
 };
+
+/** Giá trị gửi máy chủ của 10 khoản chi phí (MonthlyCost.CostCategoryCode) kèm tên hiển thị. */
+const CATEGORY_CODE: Record<MonthlyCostCategory, string> = {
+  Meals: 'MEALS',
+  Fuel: 'FUEL',
+  Utilities: 'UTILITIES',
+  Premises: 'PREMISES',
+  MachineRepair: 'MACHINE_REPAIR',
+  MachineSupplies: 'MACHINE_SUPPLIES',
+  Stationery: 'STATIONERY',
+  MaterialsBought: 'MATERIALS_BOUGHT',
+  Scrap: 'SCRAP',
+  Other: 'OTHER',
+};
+
+export const MONTHLY_COST_CATEGORY_OPTIONS = (
+  Object.keys(CATEGORY_CODE) as MonthlyCostCategory[]
+).map((key) => ({ value: CATEGORY_CODE[key], label: MONTHLY_COST_TEXT.categoryLabel[key] }));
+
+export const MONTHLY_COST_TYPE_OPTIONS = [
+  { value: 'FIXED', label: MONTHLY_COST_TEXT.typeLabel.Fixed },
+  { value: 'VARIABLE', label: MONTHLY_COST_TEXT.typeLabel.Variable },
+];
+
+/** DEV-ALL-187: chữ của popup nhập chi phí tháng từ Excel. */
+export const MONTHLY_COST_IMPORT_TEXT = {
+  open: 'Nhập từ Excel',
+  title: 'Nhập chi phí tháng từ Excel',
+  hint: 'Chọn file là xem trước ngay. Sửa trực tiếp từng ô, thêm hoặc xóa dòng; hệ thống kiểm lại sau mỗi lần sửa. Nhập xong sẽ thay toàn bộ chi phí cũ của tháng.',
+  chooseFile: 'Chọn file Excel (.xlsx)',
+  chooseFileHint:
+    'Cột nhận theo tên: Loại chi phí, Kiểu, Số tiền (bắt buộc); Mã hàng, Số lượng, Ghi chú (tùy chọn).',
+  checking: 'Đang kiểm tra lại...',
+  editHint: 'Sửa trực tiếp ở bảng; dòng lỗi đưa chuột vào cột Kết quả để xem lý do.',
+  resetEdits: 'Bỏ các sửa, về như file',
+  addRow: 'Thêm dòng',
+  confirm: 'Nhập chi phí tháng',
+} as const;

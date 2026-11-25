@@ -1,4 +1,5 @@
-import { Alert, Form, Input, InputNumber, Modal, Radio, Select } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
+import { Alert, Form, Input, Modal, Radio, Select } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import {
@@ -124,7 +125,7 @@ export function ExportDispatchModal({ note, onClose, onDone }: Props) {
                   : fill(DISPATCH_LABELS.odometerHint, lastOdometer)
               }
             >
-              <InputNumber min={0} max={MAX_ODOMETER} precision={0} style={{ width: 200 }} />
+              <QtyInput min={0} max={MAX_ODOMETER} style={{ width: 200 }} />
             </Form.Item>
             <Alert type="warning" showIcon message={DISPATCH_LABELS.tripHint} />
           </>

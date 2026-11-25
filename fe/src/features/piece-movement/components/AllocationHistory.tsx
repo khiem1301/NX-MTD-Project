@@ -1,35 +1,35 @@
 import { UserSwitchOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-
 import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { useTableQuery } from '@/hooks/useTableQuery';
-import { ConfirmMovementModal } from './ConfirmMovementModal';
-import { MOVEMENT_STATUS, PM_LABELS } from '../constants';
-import { useAllocations } from '../hooks/usePieceMovement';
-import type { WorkAllocation } from '../types';
 import { FilterSelect } from '@/components/common/FilterSelect';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
-import type { AllocationFilters } from '../types';
-import { allocationColumns } from './allocationColumns';
-import { STATUS_OPTIONS, TYPE_OPTIONS } from '../constants';
+import { PM_LABELS, STATUS_OPTIONS, TYPE_OPTIONS } from '../constants';
+import { useWorkerSummaries } from '../hooks/usePieceMovement';
+import type { AllocationFilters, WorkerAllocationSummary } from '../types';
+import { ConfirmWorkerOnBehalfModal } from './ConfirmWorkerOnBehalfModal';
+import { WorkerSlipsTable } from './WorkerSlipsTable';
+import { workerSlipColumns } from './workerSlipColumns';
 
+/**
+ * UC53 / UC54 (DEV-ALL-182): phiếu giao / thu hồi gộp theo công nhân. BE gộp và phân trang theo công nhân, mỗi dòng
+ * kèm số chờ xác nhận (giao và thu hồi); xác nhận hộ một lần cho mọi phiếu đang chờ ở modal.
+ */
 export function AllocationHistory() {
   const table = useTableQuery<AllocationFilters>({});
-  const allocations = useAllocations(table.params);
-  const [onBehalf, setOnBehalf] = useState<WorkAllocation | null>(null);
+  const workers = useWorkerSummaries(table.params);
+  const [onBehalf, setOnBehalf] = useState<WorkerAllocationSummary | null>(null);
 
-  const columns = allocationColumns(
-    (m) =>
-      m.status === MOVEMENT_STATUS.PENDING ? (
-        <IconAction
-          title={PM_LABELS.confirmOnBehalf}
-          icon={<UserSwitchOutlined />}
-          onClick={() => setOnBehalf(m)}
-        />
-      ) : null,
-    true,
+  const columns = workerSlipColumns((g) =>
+    g.pendingCount > 0 ? (
+      <IconAction
+        title={PM_LABELS.confirmWorkerOnBehalf}
+        icon={<UserSwitchOutlined />}
+        onClick={() => setOnBehalf(g)}
+      />
+    ) : null,
   );
 
   return (
@@ -54,15 +54,20 @@ export function AllocationHistory() {
           </>
         }
       />
-      <QueryError error={allocations.error} onRetry={() => void allocations.refetch()} />
+      <QueryError error={workers.error} onRetry={() => void workers.refetch()} />
       <DataTable
-        rowKey="workAllocationId"
+        rowKey="workerId"
         columns={columns}
-        dataSource={allocations.data?.items}
-        loading={allocations.isFetching}
-        pagination={table.pagination(allocations.data?.totalItems)}
+        dataSource={workers.data?.items}
+        loading={workers.isFetching}
+        pagination={table.pagination(workers.data?.totalItems)}
+        expandable={{
+          expandedRowRender: (g) => (
+            <WorkerSlipsTable workerId={g.workerId} filters={table.filters} />
+          ),
+        }}
       />
-      <ConfirmMovementModal movement={onBehalf} onBehalf onClose={() => setOnBehalf(null)} />
+      <ConfirmWorkerOnBehalfModal group={onBehalf} onClose={() => setOnBehalf(null)} />
     </>
   );
 }

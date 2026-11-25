@@ -25,10 +25,13 @@ public sealed record OrderPaymentLineDto(
 public sealed record OrderPaymentDto(
     int OrderId, string OrderCode, string CustomerName, string OrderStatus, decimal OrderAmount, decimal? FinalAmount,
     string? FinalAmountReason, decimal PaidAmount, decimal? Remaining, string State, byte[] RowVer, IReadOnlyList<OrderPaymentLineDto> Payments,
-    IReadOnlyList<AuditLogDto> History);
+    IReadOnlyList<AuditLogDto> History, DateTime? FinalAmountSetAt = null, bool CanEditFinalAmount = true);
 
-/// <summary>Giá trị chốt cả đơn (cho phép âm hoặc 0); bắt buộc lý do. Tổng đã thanh toán phải còn nằm giữa 0 và giá trị mới.</summary>
-public sealed record SetFinalAmountDto(decimal Amount, string Reason, byte[] RowVer);
+/// <summary>
+/// Giá trị chốt cả đơn = giá trị thực tế (cho phép âm hoặc 0). Nhập một lần; sửa được trong 24 giờ kể từ lần nhập đầu tiên, khi sửa
+/// bắt buộc <c>Reason</c> (DEV-ALL-185). Tổng đã thanh toán phải còn nằm giữa 0 và giá trị mới.
+/// </summary>
+public sealed record SetFinalAmountDto(decimal Amount, string? Reason, byte[] RowVer);
 
 public sealed record AddOrderPaymentDto(DateOnly PaymentDate, decimal Amount, string PaymentMethod, string? PaymentNote, byte[] RowVer);
 

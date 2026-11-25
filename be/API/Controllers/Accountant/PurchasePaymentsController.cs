@@ -34,6 +34,11 @@ public sealed class PurchasePaymentsController : AccountantBaseController
     public async Task<IActionResult> UpdatePayment(int id, int paymentId, [FromBody] UpdatePurchasePaymentDto dto, CancellationToken ct) =>
         this.ToResponse(await _payments.UpdatePaymentAsync(id, paymentId, dto, ct));
 
+    /// <summary>DEV-ALL-185: nhập giá trị thực tế của đơn Chốt không bù (một lần, sửa trong 24 giờ kèm lý do).</summary>
+    [HttpPut("{id:int}/actual-amount")]
+    public async Task<IActionResult> SetActualAmount(int id, [FromBody] SetActualAmountDto dto, CancellationToken ct) =>
+        this.ToResponse(await _flow.SetActualAmountAsync(id, dto, ct));
+
     [HttpPost("{id:int}/return")]
     public async Task<IActionResult> Return(int id, [FromBody] ReturnPaymentDto dto, CancellationToken ct) =>
         this.ToResponse(await _flow.ReturnPaymentAsync(id, dto, ct));

@@ -35,6 +35,12 @@ public interface IFgHandoverService
     Task<Result<FgHandoverDto>> GetByIdAsync(int handoverId, int? inspectorId, CancellationToken ct);
     Task<Result<IReadOnlyList<FgHandoverableLineDto>>> GetHandoverableAsync(int orderId, CancellationToken ct);
     Task<Result<FgHandoverDto>> CreateAsync(CreateFgHandoverDto dto, int inspectorId, CancellationToken ct);
+
+    /// <summary>DEV-ALL-183: thành phẩm đạt QC của tổ may mà QA/QC thuộc về, còn chờ bàn giao (mọi đơn). <paramref name="teamId"/> null = QA/QC chưa thuộc tổ may.</summary>
+    Task<Result<IReadOnlyList<FgTeamHandoverableLineDto>>> GetTeamHandoverableAsync(int? teamId, CancellationToken ct);
+
+    /// <summary>DEV-ALL-183: bàn giao toàn bộ thành phẩm còn lại của tổ vào kho: mỗi đơn + mã hàng một phiếu, một transaction.</summary>
+    Task<Result<FgHandoverAllResultDto>> CreateAllForTeamAsync(int? teamId, int inspectorId, CancellationToken ct);
     Task<Result> ConfirmAsync(int handoverId, ConfirmFgHandoverDto dto, int employeeId, CancellationToken ct);
     Task<Result> RejectAsync(int handoverId, ReasonDto dto, int employeeId, CancellationToken ct);
 

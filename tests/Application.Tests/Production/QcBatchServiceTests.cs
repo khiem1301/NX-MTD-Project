@@ -77,6 +77,69 @@ public class QcBatchServiceTests : ProductionTestBase
     private static CreateQcBatchDto Create(int qty = 100, TimeOnly? time = null, DateOnly? date = null, string shift = "MORNING") =>
         new(date ?? Today, shift, time ?? At, TeamId, LineId, qty);
 
+    // ========== QA/QC thuộc một tổ may (DEV-ALL-183) ==========
+
+    [Fact]
+    public async Task Create_by_QaQc_uses_the_team_of_the_account_without_a_team_in_the_request()
+    {
+        var result = await _sut.CreateAsync(new CreateQcBatchDto(Today, "MORNING", At, null, LineId, 100), default);
+
+        result.IsSuccess.Should().BeTrue();
+        _batches.Single().SewingTeamId.Should().Be(TeamId);
+    }
+
+    [Fact]
+    public async Task Create_by_QaQc_ignores_a_team_sent_in_the_request()
+    {
+        await _sut.CreateAsync(new CreateQcBatchDto(Today, "MORNING", At, 99, LineId, 100), default);
+
+        _batches.Single().SewingTeamId.Should().Be(TeamId);   // không nhập hộ tổ khác
+    }
+
+    [Fact]
+    public async Task QaQc_without_a_sewing_team_cannot_create_or_list_or_read_on_line()
+    {
+        AsQaQc(teamId: null);
+
+        (await _sut.CreateAsync(new CreateQcBatchDto(Today, "MORNING", At, null, LineId, 100), default)).Kind.Should().Be(ResultKind.Forbidden);
+        (await _sut.ListAsync(new QcBatchQuery(), default)).Kind.Should().Be(ResultKind.Forbidden);
+        (await _sut.GetOnLineAsync(null, LineId, default)).Kind.Should().Be(ResultKind.Forbidden);
+        _batches.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task QaQc_list_only_shows_batches_of_their_own_team_while_manager_sees_all()
+    {
+        Batch(10);
+        var other = Batch(20);
+        other.SewingTeamId = 6;
+
+        (await _sut.ListAsync(new QcBatchQuery(), default)).Data!.Items.Should().ContainSingle().Which.FinishedQty.Should().Be(10);
+
+        AsManager();
+        (await _sut.ListAsync(new QcBatchQuery(), default)).Data!.TotalItems.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task QaQc_cannot_update_or_delete_a_batch_of_another_team()
+    {
+        var other = Batch(20);
+        other.SewingTeamId = 6;
+
+        (await _sut.UpdateAsync(other.QcBatchId, new UpdateQcBatchDto(10, null, RowVer), default)).ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
+        (await _sut.DeleteAsync(other.QcBatchId, new DeleteQcBatchDto(null, RowVer), default)).ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
+        _batches.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Manager_must_choose_the_team_when_creating()
+    {
+        AsManager();
+
+        (await _sut.CreateAsync(new CreateQcBatchDto(Today, "MORNING", At, null, LineId, 100), default)).IsSuccess.Should().BeFalse();
+        (await _sut.CreateAsync(Create(100), default)).IsSuccess.Should().BeTrue();
+    }
+
     // ========== Tạo đợt QC ==========
 
     [Fact]
@@ -145,6 +208,7 @@ public class QcBatchServiceTests : ProductionTestBase
         (await _sut.CreateAsync(Create(0), default)).ErrorCode.Should().Be(ErrorCodes.OutputInvalid);
         (await _sut.CreateAsync(Create(date: Today.AddDays(1)), default)).ErrorCode.Should().Be(ErrorCodes.OutputInvalid);
         (await _sut.CreateAsync(Create(shift: "NIGHT"), default)).ErrorCode.Should().Be(ErrorCodes.OutputInvalid);
+        AsManager();   // chỉ Quản đốc chọn tổ; tổ không có thì không tìm thấy (QA/QC dùng tổ của mình)
         (await _sut.CreateAsync(Create() with { SewingTeamId = 99 }, default)).Kind.Should().Be(ResultKind.NotFound);
     }
 

@@ -11,6 +11,7 @@ import {
   RETRIEVAL_REASON_LABEL,
 } from '../constants';
 import type { WorkAllocation } from '../types';
+import { signedQty } from '../utils/signedQty';
 
 export function allocationColumns(
   extra: (m: WorkAllocation) => React.ReactNode,
@@ -63,12 +64,17 @@ export function allocationColumns(
           formatCurrency(m.unitRate)
         ),
     },
-    { title: PM_LABELS.quantity, dataIndex: 'quantity', align: 'right' },
+    {
+      title: PM_LABELS.quantity,
+      dataIndex: 'quantity',
+      align: 'right',
+      render: (v: number, m) => signedQty(m.movementType, v),
+    },
     {
       title: PM_LABELS.confirmedQty,
       dataIndex: 'confirmedQty',
       align: 'right',
-      render: (v: number | null) => v ?? '—',
+      render: (v: number | null, m) => (v === null ? '—' : signedQty(m.movementType, v)),
     },
     {
       title: PM_LABELS.discrepancyReason,

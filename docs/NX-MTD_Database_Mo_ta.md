@@ -645,6 +645,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `StopReason` | NVARCHAR(500) | ✓ |  |  |
 | `FinalAmount` | DECIMAL(18,2) | ✓ |  | giá trị chốt cả đơn do Kế toán nhập, có thể âm (mình phải đền hợp đồng); NULL = chưa chốt (DEV-ALL-137) |
 | `FinalAmountReason` | NVARCHAR(500) | ✓ |  | lý do chốt / đổi giá trị; bắt buộc khi có `FinalAmount` |
+| `FinalAmountSetAt` | DATETIME2(0) | ✓ |  | lúc nhập giá trị chốt lần đầu; sửa được trong 24 giờ kể từ lúc này (DEV-ALL-185) |
 | `DeliveryAddress` | NVARCHAR(500) |  | Mặc định `N''` | địa chỉ giao hàng của đơn (DEV-ALL-147); backend bắt buộc nhập khi tạo / sửa |
 | `Note` | NVARCHAR(1000) | ✓ |  |  |
 | `CustomerDeliveryCount` | SMALLINT | ✓ |  | số lần khách dự kiến giao NVL của cả đơn; một phiếu khách cấp thường đã xác nhận là một lần (11/11, DEV-ALL-95) |
@@ -961,7 +962,8 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 | `PaymentReturnReason` | NVARCHAR(500) | ✓ |  | Kế toán trả lại Quản đốc |
 | `PaymentDate` | DATE | ✓ |  |  |
 | `PaidAmount` | DECIMAL(18,2) | ✓ |  |  |
-| `ActualAmount` | DECIMAL(18,2) | ✓ | `CHECK > 0` | tổng giá trị thực tế đơn Chốt không bù, Kế toán nhập khi thanh toán (DEV-ALL-129) |
+| `ActualAmount` | DECIMAL(18,2) | ✓ | `CHECK > 0` | tổng giá trị thực tế đơn Chốt không bù, Kế toán nhập ở nút riêng (DEV-ALL-129, 185) |
+| `ActualAmountSetAt` | DATETIME2(0) | ✓ |  | lúc nhập giá trị thực tế lần đầu; sửa được trong 24 giờ kể từ lúc này; NULL = chưa nhập (DEV-ALL-185) |
 | `PaymentMethod` | VARCHAR(20) | ✓ |  |  |
 | `PaymentNote` | NVARCHAR(500) | ✓ |  |  |
 | `Note` | NVARCHAR(1000) | ✓ |  |  |

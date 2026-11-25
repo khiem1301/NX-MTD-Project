@@ -10,6 +10,8 @@ import type { ApiError } from '@/types/api';
 import { PURCHASE_TEXT } from '../constants';
 import { useCancelOrder, usePurchaseOrderDetail, useReturnPayment } from '../hooks/usePurchase';
 import type { PurchaseOrderLine, PurchaseRole } from '../types';
+import { ActualAmountModal } from './ActualAmountModal';
+import { EditOrderModal } from './EditOrderModal';
 import { ConfirmPaymentModal } from './ConfirmPaymentModal';
 import { PaymentProofGallery } from './PaymentProofGallery';
 import { PlaceOrderModal } from './PlaceOrderModal';
@@ -22,13 +24,13 @@ import { purchaseLineColumns } from './purchaseLineColumns';
 import { HintTip } from '@/components/common/HintTip';
 
 type Props = { role: PurchaseRole };
-type Dialog = 'place' | 'reprice' | 'confirm' | 'cancel' | 'return' | null;
+type Dialog = 'place' | 'reprice' | 'confirm' | 'actual' | 'edit' | 'cancel' | 'return' | null;
 
 const text = PURCHASE_TEXT.detail;
 
 /**
  * Chi tiết đơn mua mở theo ?id=<purchaseOrderId> (link trong thông báo chia sẻ được). Nút hiện theo `permissions`
- * server trả về: Quản đốc đặt hàng / hủy / sửa đơn giá; Kế toán xác nhận thanh toán / trả lại.
+ * server trả về: Quản đốc đặt hàng / hủy / sửa đơn giá; Kế toán xác nhận thanh toán / trả lại / nhập giá trị thực tế.
  */
 export function PurchaseOrderModal({ role }: Props) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -54,6 +56,16 @@ export function PurchaseOrderModal({ role }: Props) {
       {perm.canReprice && (
         <Button type="primary" onClick={() => setDialog('reprice')}>
           {PURCHASE_TEXT.actions.reprice}
+        </Button>
+      )}
+      {perm.canEditOrder && (
+        <Button onClick={() => setDialog('edit')}>{PURCHASE_TEXT.actions.editOrder}</Button>
+      )}
+      {perm.canSetActualAmount && (
+        <Button onClick={() => setDialog('actual')}>
+          {data.actualAmountSetAt === null
+            ? PURCHASE_TEXT.actions.setActualAmount
+            : PURCHASE_TEXT.actions.editActualAmount}
         </Button>
       )}
       {perm.canConfirmPayment && (
@@ -135,6 +147,8 @@ export function PurchaseOrderModal({ role }: Props) {
           <PlaceOrderModal open={dialog === 'place'} order={data} onClose={closeDialog} />
           <RepriceModal open={dialog === 'reprice'} order={data} onClose={closeDialog} />
           <ConfirmPaymentModal open={dialog === 'confirm'} order={data} onClose={closeDialog} />
+          <EditOrderModal open={dialog === 'edit'} order={data} onClose={closeDialog} />
+          <ActualAmountModal open={dialog === 'actual'} order={data} onClose={closeDialog} />
           <ReasonModal
             open={dialog === 'cancel'}
             title={PURCHASE_TEXT.cancelTitle}

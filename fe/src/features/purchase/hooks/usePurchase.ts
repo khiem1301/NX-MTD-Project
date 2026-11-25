@@ -2,8 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { PURCHASE_TEXT } from '../constants';
 import { purchaseApi } from '../api/purchaseApi';
+import { useManagerRolePath } from '@/hooks/useRolePath';
 import type {
+  EditOrderPayload,
   ConfirmPaymentPayload,
+  SetActualAmountPayload,
   PlacePayload,
   PurchaseOrderQuery,
   PurchaseRole,
@@ -91,6 +94,20 @@ export const useConfirmPayment = (id: number) =>
   useApiMutation(
     (body: ConfirmPaymentPayload) => purchaseApi.confirmPayment(id, body),
     afterAction(PURCHASE_TEXT.done.paid),
+  );
+
+export const useEditOrder = (id: number) => {
+  const role = useManagerRolePath();
+  return useApiMutation(
+    (body: EditOrderPayload) => purchaseApi.editOrder(role, id, body),
+    afterAction(PURCHASE_TEXT.done.edited),
+  );
+};
+
+export const useSetActualAmount = (id: number) =>
+  useApiMutation(
+    (body: SetActualAmountPayload) => purchaseApi.setActualAmount(id, body),
+    afterAction(PURCHASE_TEXT.done.actualSaved),
   );
 
 export const useUpdatePayment = (id: number) =>

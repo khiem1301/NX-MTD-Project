@@ -1,5 +1,6 @@
-import { Alert, Button, Modal, Select, Space, Table, Typography, Upload } from 'antd';
-import { InboxOutlined, PlusOutlined, UndoOutlined } from '@ant-design/icons';
+import { Alert, Button, Modal, Select, Space, Table, Typography } from 'antd';
+import { PlusOutlined, UndoOutlined } from '@ant-design/icons';
+import { ImportFileBar } from '@/components/common/ImportFileBar';
 import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
 import { ReplaceImportOption } from '@/components/common/ReplaceImportOption';
 import { MESSAGES } from '@/constants/messages';
@@ -8,6 +9,7 @@ import { PRODUCTION_TEXT } from '../constants';
 import type { OperationDraftRow } from '../utils/operationImportDraft';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { useOperationImport } from '../hooks/useOperationImport';
+import { useProductComponents } from '@/hooks/useOrderLookups';
 import { operationImportEditColumns } from './operationImportEditColumns';
 import { OperationImportRateOptions } from './OperationImportRateOptions';
 import { OperationImportSummary } from './OperationImportSummary';
@@ -37,8 +39,6 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
     setFile,
     finalStt,
     setFinalStt,
-    withRates,
-    setWithRates,
     effectiveDate,
     setEffectiveDate,
     submitRates,
@@ -63,6 +63,11 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
     reset,
     edited,
   } = useOperationImport(productId, onClose);
+  // Chi tiết vải (PANEL) của mã hàng trong DB để chọn ở cột Chi tiết; chi tiết phụ liệu (TRIM) không gắn được vào công đoạn.
+  const productComponents = useProductComponents(open ? productId : undefined);
+  const componentOptions = (productComponents.data ?? [])
+    .filter((c) => c.componentType === 'Panel')
+    .map((c) => ({ value: c.componentName, label: c.componentName }));
 
   return (
     <Modal
@@ -81,7 +86,6 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <HintTip text={text.hint} />
-        <ImportTemplateLink kind="operations" productId={productId} />
         <ReplaceImportOption
           checked={replace}
           onChange={setReplace}
@@ -91,27 +95,17 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
           unit="công đoạn"
         />
 
-        <Upload.Dragger
-          maxCount={1}
-          accept=".xlsx"
-          disabled={preview.isPending}
-          beforeUpload={(nextFile) => {
+        <ImportFileBar
+          fileName={file?.name}
+          emptyText={text.chooseFile}
+          hint={text.chooseFileHint}
+          loading={preview.isPending}
+          onPick={(nextFile) => {
             setFile(nextFile);
             runPreview(nextFile, { sheetName: undefined });
-            return false;
           }}
-          onRemove={() => {
-            setFile(null);
-            setFinalStt(undefined);
-            preview.reset();
-          }}
-        >
-          <p className="ant-upload-drag-icon">
-            <InboxOutlined />
-          </p>
-          <p>{text.chooseFile}</p>
-          <p className="ant-upload-hint">{text.chooseFileHint}</p>
-        </Upload.Dragger>
+          extra={<ImportTemplateLink kind="operations" productId={productId} />}
+        />
 
         {preview.error && <Alert type="error" showIcon message={preview.error.message} />}
 
@@ -158,13 +152,8 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
 
             <OperationImportRateOptions
               data={data}
-              withRates={withRates}
               effectiveDate={effectiveDate}
               submitRates={submitRates}
-              onWithRatesChange={(checked) => {
-                setWithRates(checked);
-                reapply({ withRates: checked });
-              }}
               onEffectiveDateChange={(date) => {
                 setEffectiveDate(date);
                 reapply({ date });
@@ -197,7 +186,7 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
               rowKey="rowNumber"
               size="small"
               pagination={false}
-              columns={operationImportEditColumns({ data, update, remove })}
+              columns={operationImportEditColumns({ data, update, remove, componentOptions })}
               dataSource={rows}
               scroll={{ x: 'max-content', y: 360 }}
               onRow={(r) => {

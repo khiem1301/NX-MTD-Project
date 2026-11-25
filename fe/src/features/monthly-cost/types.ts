@@ -77,3 +77,17 @@ export type MonthlyCostSummary = {
   items: MonthlyCostItem[];
   mealsReconciliation: MealsReconciliation;
 };
+
+/** DEV-ALL-187: một dòng chi phí đang sửa trên popup nhập Excel; gửi lên máy chủ để kiểm lại / nhập (parseError giữ lỗi ô không đọc được). */
+export type MonthlyCostDraftRow = {
+  rowNumber: number;
+  costCategoryCode: string | null;
+  costType: string | null;
+  productCode: string | null;
+  amount: number | null;
+  quantity: number | null;
+  note: string | null;
+  parseError: string | null;
+};
+
+export type MonthlyCostRowsPayload = { periodMonth: string; rows: MonthlyCostDraftRow[] };

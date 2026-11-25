@@ -34,7 +34,7 @@ public class OperationImportEditedSheetTests : ProductionTestBase
         new("Công đoạn", null, false, rows);
 
     private static OperationExcelRowDto Row(int row, int stt, string? name, byte? skill = 2, decimal? time = 18,
-        decimal? rate = null, string? parseError = null) =>
+        decimal? rate = 1000m, string? parseError = null) =>
         new(row, stt, name, skill, time, null, rate, parseError);
 
     private async Task<IReadOnlyList<OperationImportRowDto>> PreviewRows(params OperationExcelRowDto[] rows) =>
@@ -58,10 +58,21 @@ public class OperationImportEditedSheetTests : ProductionTestBase
     [InlineData("Ráp vai", 2, 18, 100.123, "TIỀN tối đa 2 số lẻ.")]
     public async Task Preview_BadCell_ActionErrorWithReason(string? name, byte skill, double time, double? rate, string expected)
     {
-        var rows = await PreviewRows(Row(4, 1, name, skill, (decimal)time, rate is null ? null : (decimal)rate));
+        var rows = await PreviewRows(Row(4, 1, name, skill, (decimal)time, rate is null ? 1000m : (decimal)rate));
 
         rows.Single().Action.Should().Be("Error");
         rows.Single().Error.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(null, "Thiếu đơn giá")]
+    [InlineData(0.0, "lớn hơn 0")]
+    public async Task Preview_RowWithoutAPositiveRate_IsAnError(double? rate, string expected)
+    {
+        var rows = await _sut.PreviewImportAsync(1, Sheet(new OperationExcelRowDto(4, 1, "Ráp vai", 2, 18, null, rate is null ? null : (decimal)rate, null)), null, default);
+
+        rows.Data!.Rows.Single().Action.Should().Be("Error");
+        rows.Data.Rows.Single().Error.Should().Contain(expected);
     }
 
     [Fact]

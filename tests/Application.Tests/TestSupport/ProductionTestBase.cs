@@ -64,10 +64,11 @@ public abstract class ProductionTestBase
         User.TeamTypeCode.Returns((string?)null);
     }
 
-    protected void AsQaQc()
+    /// <summary>QA/QC thuộc một tổ may (mặc định tổ 5); <paramref name="teamId"/> null = chưa gán tổ.</summary>
+    protected void AsQaQc(int? teamId = 5)
     {
         User.Role.Returns(Roles.QaQc);
-        User.TeamId.Returns((int?)null);
-        User.TeamTypeCode.Returns((string?)null);
+        User.TeamId.Returns(teamId);
+        User.TeamTypeCode.Returns(teamId is null ? null : TeamTypes.Sewing);
     }
 }

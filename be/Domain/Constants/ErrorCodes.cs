@@ -132,6 +132,7 @@ public static class ErrorCodes
     public const string MonthlyCostPeriodLocked = "MONTHLY_COST_PERIOD_LOCKED";
     public const string MonthlyCostExcelInvalid = "MONTHLY_COST_EXCEL_INVALID";
     public const string MonthlyCostExcelEmpty = "MONTHLY_COST_EXCEL_EMPTY";
+    public const string ImportFileInvalid = "IMPORT_FILE_INVALID";
 
     // --- KPI tổ may (Minh, UC19 KPI tổ may — khác UC19 lệnh cắt ở WorkOrderService) ---
     public const string KpiNotFound = "KPI_NOT_FOUND";

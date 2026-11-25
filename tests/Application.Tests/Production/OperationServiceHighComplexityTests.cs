@@ -115,12 +115,12 @@ public sealed class OperationServiceHighComplexityTests : ProductionTestBase
 
     private static SaveOperationDto Dto(string code = "OP99", short seq = 99, int productId = 1, string name = "May cổ",
         decimal? std = 45m, bool final = false, string? group = null, IReadOnlyList<int>? componentIds = null) =>
-        new(productId, code, name, seq, 1, std, "Sewing", final, group, componentIds);
+        new(productId, code, name, seq, 1, std, "Sewing", final, group, componentIds, 1000m);
 
     private static MemoryStream StreamStub() => new([0x50, 0x4B]);
 
     private static OperationExcelRowDto ExcelRow(int stt, string name = "May", bool final = false, string? parseError = null,
-        decimal? rate = null, IReadOnlyList<string>? componentNames = null, string? group = null) =>
+        decimal? rate = 1000m, IReadOnlyList<string>? componentNames = null, string? group = null) =>
         new(1, stt, name, 1, 5m, null, rate, parseError, group, componentNames, final);
 
     private static OperationExcelSheetDto Sheet(string name, IEnumerable<OperationExcelRowDto> rows, bool hasRate = true,
@@ -284,7 +284,7 @@ public sealed class OperationServiceHighComplexityTests : ProductionTestBase
     // ==================== CreateAsync ====================
 
     [Fact]
-    public async Task UTCID09_CreateAsync_Valid_CreatesWithTransactionAuditAndTwoSaves()
+    public async Task UTCID09_CreateAsync_Valid_CreatesWithTransactionAuditAndThreeSaves()
     {
         // Arrange
         var dto = Dto("OP10", 10, name: "May cổ");
@@ -296,9 +296,36 @@ public sealed class OperationServiceHighComplexityTests : ProductionTestBase
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().BeGreaterThan(0);
         await Uow.Received(1).BeginTransactionAsync();
-        await Uow.Received(2).SaveChangesAsync();
+        await Uow.Received(3).SaveChangesAsync();   // công đoạn, đơn giá Nháp kèm theo, nhật ký
         await Uow.Received(1).CommitTransactionAsync();
         Audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Operation) && e.Action == AuditActions.Insert));
+    }
+
+    [Theory]
+    [InlineData(null, "Thiếu đơn giá")]
+    [InlineData(0.0, "lớn hơn 0")]
+    [InlineData(-5.0, "lớn hơn 0")]
+    [InlineData(10.123, "2 số lẻ")]
+    public async Task CreateAsync_ManualOperationWithoutAValidRate_IsRejected(double? rate, string expected)
+    {
+        var dto = Dto("OP10", 10) with { Rate = rate is null ? null : (decimal)rate.Value };
+
+        var result = await _sut.CreateAsync(dto, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain(expected);
+        await Uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task CreateAsync_Valid_AlsoCreatesTheDraftRateEffectiveToday()
+    {
+        Repo<PieceRate>().When(r => r.AddAsync(Arg.Any<PieceRate>())).Do(c => _rates.Add(c.Arg<PieceRate>()));
+        var result = await _sut.CreateAsync(Dto("OP10", 10) with { Rate = 250m }, default);
+
+        result.IsSuccess.Should().BeTrue();
+        var rate = _rates.Single();
+        (rate.Rate, rate.Status, rate.EffectiveDate).Should().Be((250m, PieceRateStatuses.Draft, SpecToday));
     }
 
     [Fact]
@@ -1087,7 +1114,7 @@ public sealed class OperationServiceHighComplexityTests : ProductionTestBase
     // ==================== ImportAsync ====================
 
     [Fact]
-    public async Task UTCID60_ImportAsync_ThreeValidRows_CreatesThreeNoRatesCommit()
+    public async Task UTCID60_ImportAsync_ThreeValidRows_CreatesThreeWithDraftRatesCommit()
     {
         // Arrange
         MockExcelSheets(ThreeRowImportSheet());
@@ -1099,7 +1126,7 @@ public sealed class OperationServiceHighComplexityTests : ProductionTestBase
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Data!.Created.Should().Be(3);
-        _rates.Should().BeEmpty();
+        _rates.Should().HaveCount(3).And.OnlyContain(r => r.Status == PieceRateStatuses.Draft);   // đơn giá luôn đi kèm (DEV-ALL-190)
         await Uow.Received(1).CommitTransactionAsync();
     }
 

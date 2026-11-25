@@ -24,6 +24,11 @@ public sealed class WorkAllocationsController : TeamLeaderBaseController
     public async Task<IActionResult> GetPaged([FromQuery] WorkAllocationQuery query, CancellationToken ct) =>
         this.ToResponse(await _allocations.GetPagedAsync(query, TeamId, null, ct));
 
+    /// <summary>DEV-ALL-182: danh sách phiếu gộp theo công nhân (một dòng mỗi công nhân).</summary>
+    [HttpGet("workers")]
+    public async Task<IActionResult> GetWorkers([FromQuery] WorkAllocationQuery query, CancellationToken ct) =>
+        this.ToResponse(await _allocations.GetWorkerSummariesAsync(query, TeamId, ct));
+
     [HttpGet("board")]
     public async Task<IActionResult> GetBoard([FromQuery] int? orderId, CancellationToken ct) =>
         this.ToResponse(await _allocations.GetBoardAsync(TeamId, orderId, ct));
@@ -44,4 +49,9 @@ public sealed class WorkAllocationsController : TeamLeaderBaseController
     [HttpPost("{id:int}/confirm-on-behalf")]
     public async Task<IActionResult> ConfirmOnBehalf(int id, [FromBody] ConfirmOnBehalfDto dto, CancellationToken ct) =>
         this.ToResponse(await _allocations.ConfirmOnBehalfAsync(id, dto, TeamId, ct));
+
+    /// <summary>DEV-ALL-182: xác nhận hộ một lần mọi phiếu đang chờ của công nhân.</summary>
+    [HttpPost("workers/{workerId:int}/confirm-on-behalf")]
+    public async Task<IActionResult> ConfirmWorkerOnBehalf(int workerId, [FromBody] ConfirmWorkerOnBehalfDto dto, CancellationToken ct) =>
+        this.ToResponse(await _allocations.ConfirmWorkerOnBehalfAsync(workerId, dto, TeamId, ct));
 }

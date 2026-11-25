@@ -4,7 +4,7 @@ import { useApiMutation } from '@/hooks/useApiMutation';
 import { useAuth } from '@/hooks/useAuth';
 import { fgHandoverApi, QA_QC_BASE, WAREHOUSE_BASE } from '../api/fgHandoverApi';
 import { FG_MESSAGES } from '../constants';
-import type { ConfirmFgHandoverPayload, CreateFgHandoverPayload, FgHandoverQuery } from '../types';
+import type { ConfirmFgHandoverPayload, FgHandoverQuery } from '../types';
 
 export const FG_KEY = ['fg-handover'] as const;
 // Phiếu nhập kho thành phẩm làm đổi tồn kho nên cũng nạp lại dữ liệu kho.
@@ -33,18 +33,16 @@ export const useFgHandover = (id: number | undefined) => {
   });
 };
 
-export const useFgHandoverable = (orderId: number | undefined) =>
+/** Chỉ tải khi mở hộp bàn giao (enabled). */
+export const useTeamHandoverable = (enabled: boolean) =>
   useQuery({
-    queryKey: [...FG_KEY, 'handoverable', orderId],
-    queryFn: () => fgHandoverApi.handoverable(orderId ?? 0),
-    enabled: orderId !== undefined,
+    queryKey: [...FG_KEY, 'team-handoverable'],
+    queryFn: () => fgHandoverApi.teamHandoverable(),
+    enabled,
   });
 
-export const useCreateFgHandover = () =>
-  useApiMutation((body: CreateFgHandoverPayload) => fgHandoverApi.create(body), {
-    invalidate: AFFECTED,
-    successMessage: FG_MESSAGES.created,
-  });
+export const useHandoverAll = () =>
+  useApiMutation(() => fgHandoverApi.handoverAll(), { invalidate: AFFECTED });
 
 export const useCancelFgHandover = () =>
   useApiMutation((id: number) => fgHandoverApi.cancel(id), {

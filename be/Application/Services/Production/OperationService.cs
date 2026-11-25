@@ -106,6 +106,8 @@ public sealed class OperationService : IOperationService
 
         var fields = ValidateSaveFields(dto);
         if (fields is not null) return Fail.As<int>(fields);
+        var rateProblem = CreateRateProblem(dto.Rate);   // DEV-ALL-190: thêm công đoạn bằng tay cũng bắt buộc đơn giá
+        if (rateProblem is not null) return Result<int>.Failure(ErrorCodes.OperationInvalid, rateProblem, ResultKind.Validation);
 
         var code = dto.OperationCode.Trim().ToUpperInvariant();
         var check = await CheckAsync(dto, code, null, ct);
@@ -125,6 +127,14 @@ public sealed class OperationService : IOperationService
                 await _uow.Repository<Operation>().AddAsync(operation);
                 await _uow.SaveChangesAsync();
                 _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Insert, null, Snapshot(operation)));
+                var rate = new PieceRate
+                {
+                    OperationId = operation.OperationId, Rate = dto.Rate!.Value, EffectiveDate = dto.RateEffectiveDate ?? _clock.Today,
+                    Status = PieceRateStatuses.Draft,
+                };
+                await _uow.Repository<PieceRate>().AddAsync(rate);
+                await _uow.SaveChangesAsync();   // lấy PieceRateId để ghi nhật ký
+                _audit.Add(new AuditEntry(nameof(PieceRate), rate.PieceRateId, AuditActions.Insert, null, RateSnapshot(rate)));
                 await _uow.SaveChangesAsync();
                 return Result<int>.Success(operation.OperationId, Messages.Saved);
             }
@@ -137,6 +147,14 @@ public sealed class OperationService : IOperationService
             }
         });
     }
+
+    /// <summary>DEV-ALL-190: công đoạn mới phải có đơn giá lớn hơn 0 và không vượt trần; lỗi đầu tiên được trả về.</summary>
+    private static string? CreateRateProblem(decimal? rate) =>
+        rate is null ? Messages.OperationRateRequired
+        : rate <= 0 ? Messages.OperationRateMustBePositive
+        : decimal.Round(rate.Value, 2) != rate ? "Đơn giá tối đa 2 số lẻ."
+        : rate > PieceRateLimits.MaxRate ? string.Format(Messages.PieceRateTooHigh, PieceRateLimits.MaxRate)
+        : null;
 
     public async Task<Result> UpdateAsync(int operationId, SaveOperationDto dto, CancellationToken ct)
     {
@@ -295,9 +313,11 @@ public sealed class OperationService : IOperationService
             if (decimal.Round(time, 2) != time) return "TGCT tối đa 2 số lẻ.";
             if (time > OperationLimits.MaxStandardTimeSec) return $"TGCT không được vượt quá {OperationLimits.MaxStandardTimeSec}.";
         }
+        if (raw.Rate is null) return Messages.OperationRateRequired;
         if (raw.Rate is { } rate)
         {
             if (rate < 0) return "TIỀN không được âm.";
+            if (rate == 0) return Messages.OperationRateMustBePositive;
             if (decimal.Round(rate, 2) != rate) return "TIỀN tối đa 2 số lẻ.";
             if (rate > PieceRateLimits.MaxRate) return string.Format(Messages.PieceRateTooHigh, PieceRateLimits.MaxRate);
         }
@@ -311,12 +331,12 @@ public sealed class OperationService : IOperationService
 
     public async Task<Result<OperationImportPreviewDto>> PreviewImportAsync(
         int productId, Stream stream, string? sheetName, DateOnly? effectiveDate, CancellationToken ct, bool replace = false) =>
-        ToPreview(await BuildImportPlanAsync(productId, stream, sheetName, effectiveDate, ct, replace));
+        ToPreview(await BuildImportPlanAsync(productId, stream, sheetName, effectiveDate ?? _clock.Today, ct, replace));
 
     /// <summary>DEV-ALL-179: xem trước từ bảng đã đọc và sửa trên màn hình (không đọc lại file), không ghi gì.</summary>
     public async Task<Result<OperationImportPreviewDto>> PreviewImportAsync(
         int productId, OperationExcelSheetDto sheet, DateOnly? effectiveDate, CancellationToken ct, bool replace = false) =>
-        ToPreview(await BuildImportPlanAsync(productId, sheet, effectiveDate, ct, replace));
+        ToPreview(await BuildImportPlanAsync(productId, sheet, effectiveDate ?? _clock.Today, ct, replace));
 
     private static Result<OperationImportPreviewDto> ToPreview(Result<ImportPlan> plan)
     {
@@ -354,7 +374,8 @@ public sealed class OperationService : IOperationService
         Func<DateOnly?, Task<Result<ImportPlan>>> buildPlan)
     {
         // submitRates mà không chọn ngày → dùng hôm nay (đơn giá chờ duyệt phải có EffectiveDate).
-        var rateEffective = effectiveDate ?? (submitRates ? _clock.Today : (DateOnly?)null);
+        // DEV-ALL-190: đơn giá luôn đi kèm file nên luôn có ngày hiệu lực (mặc định hôm nay).
+        var rateEffective = effectiveDate ?? _clock.Today;
         var plan = await buildPlan(rateEffective);
         if (!plan.IsSuccess) return Fail.As<OperationImportResultDto>(plan);
 

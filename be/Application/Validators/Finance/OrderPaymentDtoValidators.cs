@@ -9,7 +9,7 @@ public sealed class SetFinalAmountDtoValidator : AbstractValidator<SetFinalAmoun
 {
     public SetFinalAmountDtoValidator()
     {
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.FinalAmountReasonRequired).MaximumLength(TextLimits.Reason);
+        RuleFor(x => x.Reason).MaximumLength(TextLimits.Reason);   // bắt buộc khi sửa: service kiểm theo lần nhập đầu
         RuleFor(x => x.RowVer).NotEmpty();
     }
 }
