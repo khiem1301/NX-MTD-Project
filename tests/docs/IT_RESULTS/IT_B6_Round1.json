@@ -1,0 +1,627 @@
+[
+    {
+        "Id": "IT_B6_001",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_002",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_003",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_004",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_005",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_006",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_007",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_008",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_009",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_010",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 404 {\"success\":false,\"errorCode\":\"COMMON_NOT_FOUND\",\"message\":\"Không tìm thấy dữ liệu hoặc bạn không có quyền xem.\"}, but found 404 (difference of 204)."
+    },
+    {
+        "Id": "IT_B6_011",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_012",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_013",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"RECEIPT_DUPLICATE_PENDING\",\"message\":\"NVL này đã có phiếu nhập chờ xác nhận (PN-B6-01). Chờ Quản đốc xác nhận hoặc trả lại rồi mới …"
+    },
+    {
+        "Id": "IT_B6_014",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"RECEIPT_DUPLICATE_PENDING\",\"message\":\"NVL này đã có phiếu nhập chờ xác nhận (PN-B6-02). Chờ Quản đốc xác nhận hoặc trả lại rồi mới …"
+    },
+    {
+        "Id": "IT_B6_015",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"RECEIPT_DUPLICATE_PENDING\",\"message\":\"NVL này đã có phiếu nhập chờ xác nhận (PN-B6-01). Chờ Quản đốc xác nhận hoặc trả lại…"
+    },
+    {
+        "Id": "IT_B6_016",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_017",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_018",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"NVL không thuộc đơn hàng của phiếu.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B6_019",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Dòng đơn mua không thuộc đơn mua của phiếu.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B6_020",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"RECEIPT_DUPLICATE_PENDING\",\"message\":\"NVL này đã có phiếu nhập chờ xác nhận (PN-B6-01). Chờ Quản đốc xác nhận hoặc trả lại…"
+    },
+    {
+        "Id": "IT_B6_021",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_022",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_023",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"RECEIPT_DUPLICATE_PENDING\",\"message\":\"NVL này đã có phiếu nhập chờ xác nhận (PN-B6-01). Chờ Quản đốc xác nhận hoặc trả lại…"
+    },
+    {
+        "Id": "IT_B6_024",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_025",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_026",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"RECEIPT_DUPLICATE_PENDING\",\"message\":\"NVL này đã có phiếu nhập chờ xác nhận (PN-B6-01). Chờ Quản đốc xác nhận hoặc trả lại rồi mới …"
+    },
+    {
+        "Id": "IT_B6_027",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_028",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_STATUS\",\"message\":\"Đơn mua chưa đặt hàng hoặc đã nhận đủ / đã đóng, không lập thêm phiếu nhập.\"}, b…"
+    },
+    {
+        "Id": "IT_B6_029",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Dòng đơn mua không thuộc đơn mua của phiếu.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B6_030",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"RECEIPT_DUPLICATE_PENDING\",\"message\":\"NVL này đã có phiếu nhập chờ xác nhận (PN-B6-01). Chờ Quản đốc xác nhận hoặc trả lại rồi mới …"
+    },
+    {
+        "Id": "IT_B6_031",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_032",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_033",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_034",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_035",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_036",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_037",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"RECEIPT_DUPLICATE_PENDING\",\"message\":\"NVL này đã có phiếu nhập chờ xác nhận (PN-B6-01). Chờ Quản đốc xác nhận hoặc trả lại rồi mới …"
+    },
+    {
+        "Id": "IT_B6_038",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {200, 400} because 409 {\"success\":false,\"errorCode\":\"RECEIPT_DUPLICATE_PENDING\",\"message\":\"NVL này đã có phiếu nhập chờ xác nhận (PN-B6-02). Chờ Quản đốc xác nhận hoặc tr…"
+    },
+    {
+        "Id": "IT_B6_039",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_040",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_041",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_042",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_043",
+        "Outcome": "Failed",
+        "Message": "Expected results to contain only items matching (r.Code < 500) because 200 {\"success\":true,\"data\":{\"materialReceiptId\":12551,\"receiptCode\":\"PN-C6-a5f8bd8d262d\",\"receiptType\":\"NEW\",\"orderId\":31415,\"or…"
+    },
+    {
+        "Id": "IT_B6_044",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_045",
+        "Outcome": "Failed",
+        "Message": "Expected a value."
+    },
+    {
+        "Id": "IT_B6_046",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_047",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_048",
+        "Outcome": "Failed",
+        "Message": "Expected results.Count(IsSuccess) to be 1 because đúng 1 request thắng. 409 {\"success\":false,\"errorCode\":\"RECEIPT_DELIVERY_COUNT_REACHED\",\"message\":\"Đã nhận đủ 1 lần giao dự kiến (PO-B6-02). Chờ Quản…"
+    },
+    {
+        "Id": "IT_B6_049",
+        "Outcome": "Failed",
+        "Message": "Did not expect r.Body \"{\"success\":false,\"errorCode\":\"COMMON_DB_RULE\",\"message\":\"it-b5 injected fault\"}\" to contain any of the strings: {\"it-b5 injected fault\"}."
+    },
+    {
+        "Id": "IT_B6_050",
+        "Outcome": "Failed",
+        "Message": "Did not expect r.Body \"{\"success\":false,\"errorCode\":\"COMMON_DB_RULE\",\"message\":\"it-b5 injected fault\"}\" to contain any of the strings: {\"it-b5 injected fault\"}."
+    },
+    {
+        "Id": "IT_B6_051",
+        "Outcome": "Failed",
+        "Message": "Expected second.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"RECEIPT_DELIVERY_COUNT_REACHED\",\"message\":\"Đã nhận đủ 1 lần giao dự kiến (PO-B6-02). Chờ Quản đốc xử lý đơn thiếu NVL; hàng gi…"
+    },
+    {
+        "Id": "IT_B6_052",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_053",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_054",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_055",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_056",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_057",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":null,\"message\":\"Đã trả phiếu nhập cho Thủ kho.\"}, but found 200."
+    },
+    {
+        "Id": "IT_B6_058",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_059",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_060",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_061",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_062",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_063",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_064",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_065",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Mỗi dòng phiếu nhập phải chọn NVL của đơn (khách cấp) hoặc dòng đơn mua (nhà …"
+    },
+    {
+        "Id": "IT_B6_066",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {200, 400} because 409 {\"success\":false,\"errorCode\":\"SHORTAGE_EXCEEDED\",\"message\":\"Số nhận bù vượt số còn phải bù của dòng: còn 40, nhận 41.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B6_067",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_068",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_069",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_070",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_071",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_072",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_073",
+        "Outcome": "Failed",
+        "Message": "Expected sd.ResultNote to be \"NCC giao bù\", but found <null>."
+    },
+    {
+        "Id": "IT_B6_074",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_075",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_076",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 500 {\"success\":false,\"errorCode\":\"COMMON_INTERNAL_ERROR\",\"message\":\"Lỗi hệ thống. Vui lòng thử lại.\"}, but found 500 (difference of 300)."
+    },
+    {
+        "Id": "IT_B6_077",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":null,\"message\":\"Đã ghi nhận cách xử lý hàng thiếu.\"}, but found 200."
+    },
+    {
+        "Id": "IT_B6_078",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"SHORTAGE_EXCEEDED\",\"message\":\"Số giao bù vượt số thiếu / lỗi của dòng: tối đa 100.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B6_079",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Cách xử lý phải là giao bù hoặc không bù.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B6_080",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Cách xử lý phải là giao bù hoặc không bù.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B6_081",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"note\":[\"The length of 'Note' must be 500 characters or fewer. You e…"
+    },
+    {
+        "Id": "IT_B6_082",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_083",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_084",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_085",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_086",
+        "Outcome": "Failed",
+        "Message": "Did not expect r.Body \"{\"success\":false,\"errorCode\":\"COMMON_DB_RULE\",\"message\":\"it-b5 injected fault\"}\" to contain any of the strings: {\"it-b5 injected fault\"}."
+    },
+    {
+        "Id": "IT_B6_087",
+        "Outcome": "Failed",
+        "Message": "Expected a <Microsoft.EntityFrameworkCore.DbUpdateException> to be thrown because UX_Request_Receipt: mỗi phiếu nhập gốc tối đa 1 yêu cầu thiếu giao, but no exception was thrown."
+    },
+    {
+        "Id": "IT_B6_088",
+        "Outcome": "Failed",
+        "Message": "System.InvalidOperationException : Sequence contains no matching element"
+    },
+    {
+        "Id": "IT_B6_089",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_090",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_091",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_092",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_093",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_094",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_095",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_096",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_097",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_098",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_099",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_100",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_101",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_102",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_103",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_104",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_105",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_106",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_107",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 404 {\"success\":false,\"errorCode\":\"COMMON_NOT_FOUND\",\"message\":\"Không tìm thấy dữ liệu hoặc bạn không có quyền xem.\"}, but found 404."
+    },
+    {
+        "Id": "IT_B6_108",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_109",
+        "Outcome": "Failed",
+        "Message": "Expected old.IsCurrent to be False, but found True."
+    },
+    {
+        "Id": "IT_B6_110",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_111",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_112",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_113",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_114",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_115",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 403} because 404 {\"success\":false,\"errorCode\":\"COMMON_NOT_FOUND\",\"message\":\"Không tìm thấy dữ liệu hoặc bạn không có quyền xem.\"}, but found 404."
+    },
+    {
+        "Id": "IT_B6_116",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_117",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_118",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_119",
+        "Outcome": "Failed",
+        "Message": "Expected rows.Count(a => a.IsCurrent) to be 1 because vòng 0: đúng 1 ảnh hiện hành, but found 3."
+    },
+    {
+        "Id": "IT_B6_120",
+        "Outcome": "Failed",
+        "Message": "Did not expect r.Body \"{\"success\":false,\"errorCode\":\"COMMON_DB_RULE\",\"message\":\"it-b5 injected fault\"}\" to contain any of the strings: {\"it-b5 injected fault\"}."
+    },
+    {
+        "Id": "IT_B6_121",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_122",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B6_123",
+        "Outcome": "Failed",
+        "Message": "Expected (Call(\"warehouse\", Post, MRW, CustBody())).Code to be 200, but found 409 (difference of 209)."
+    },
+    {
+        "Id": "IT_B6_124",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"SHORTAGE_EXCEEDED\",\"message\":\"Số giao bù vượt số thiếu / lỗi của dòng: tối đa 100.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B6_125",
+        "Outcome": "Failed",
+        "Message": "Expected (CurrentAttAsync(up.MaterialReceiptId)).Count(a => a.IsCurrent) to be 1, but found 3."
+    }
+]

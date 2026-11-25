@@ -1,0 +1,612 @@
+[
+    {
+        "Id": "IT_B5_001",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_002",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_003",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_004",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_005",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_006",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_007",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_008",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_009",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_010",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_011",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_012",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_013",
+        "Outcome": "Failed",
+        "Message": "Expected upper.Code to be 200 because 404 , but found 404 (difference of 204)."
+    },
+    {
+        "Id": "IT_B5_014",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_015",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 201 because 200 {\"success\":true,\"data\":14230,\"message\":\"Đã lưu nhà cung cấp.\"}, but found 200 (difference of -1)."
+    },
+    {
+        "Id": "IT_B5_016",
+        "Outcome": "Failed",
+        "Message": "Expected ok.Code to be 201 because 200 {\"success\":true,\"data\":14255,\"message\":\"Đã lưu nhà cung cấp.\"}, but found 200 (difference of -1)."
+    },
+    {
+        "Id": "IT_B5_017",
+        "Outcome": "Failed",
+        "Message": "Expected a.Code to be 201 because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"phone\":[\"Vui lòng nhập số điện thoại.\",\"Số điện thoại không hợp lệ …"
+    },
+    {
+        "Id": "IT_B5_018",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 201 because 200 {\"success\":true,\"data\":14205,\"message\":\"Đã lưu nhà cung cấp.\"}, but found 200 (difference of -1)."
+    },
+    {
+        "Id": "IT_B5_019",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_020",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_021",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_022",
+        "Outcome": "Failed",
+        "Message": "Expected already.Code to be one of {400, 409}, but found 200."
+    },
+    {
+        "Id": "IT_B5_023",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 201 because 200 {\"success\":true,\"data\":{\"purchaseOrderId\":16593,\"poCode\":\"DM-20261124-001\",\"orderId\":null,\"orderCode\":null,\"supplierId\":14685,\"supplierName\":\"Vải Thành Công\",\"go…"
+    },
+    {
+        "Id": "IT_B5_024",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_025",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_026",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_027",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_028",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_029",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_030",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":{\"purchaseOrderId\":16576,\"poCode\":\"DM-20261124-001\",\"orderId\":null,\"orderCode\":null,\"supplierId\":14679,\"supplierName\":\"Vải Thành …"
+    },
+    {
+        "Id": "IT_B5_031",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_032",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 201 because 200 {\"success\":true,\"data\":{\"purchaseOrderId\":16335,\"poCode\":\"DM-20261124-001\",\"orderId\":null,\"orderCode\":null,\"supplierId\":14592,\"supplierName\":\"Vải Thành Công\",\"go…"
+    },
+    {
+        "Id": "IT_B5_033",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"SUPPLIER_NOT_ACTIVE\",\"message\":\"Nhà cung cấp đã ngừng hợp tác, vui lòng chọn nhà cung cấp khác.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B5_034",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_ORDER_CLOSED\",\"message\":\"Đơn hàng đã đóng, không thể lập thêm phiếu.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B5_035",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_MATERIAL_INACTIVE\",\"message\":\"NVL đã ngừng sử dụng.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B5_036",
+        "Outcome": "Failed",
+        "Message": "Expected Code to be less than 500 because mọi lỗi phải xử lý êm, không được 5xx. Body: {\"success\":false,\"errorCode\":\"COMMON_INTERNAL_ERROR\",\"message\":\"Lỗi hệ thống. Vui lòng thử lại.\"}, but found 500."
+    },
+    {
+        "Id": "IT_B5_037",
+        "Outcome": "Failed",
+        "Message": "Expected Code to be less than 500 because mọi lỗi phải xử lý êm, không được 5xx. Body: {\"success\":false,\"errorCode\":\"COMMON_INTERNAL_ERROR\",\"message\":\"Lỗi hệ thống. Vui lòng thử lại.\"}, but found 500."
+    },
+    {
+        "Id": "IT_B5_038",
+        "Outcome": "Failed",
+        "Message": "Expected Code to be less than 500 because mọi lỗi phải xử lý êm, không được 5xx. Body: {\"success\":false,\"errorCode\":\"COMMON_INTERNAL_ERROR\",\"message\":\"Lỗi hệ thống. Vui lòng thử lại.\"}, but found 500."
+    },
+    {
+        "Id": "IT_B5_039",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_040",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_041",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_042",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_043",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":{\"purchaseOrderId\":16458,\"poCode\":\"DM-20261124-001\",\"orderId\":null,\"orderCode\":null,\"supplierId\":14637,\"supplierName\":\"Vải Thành …"
+    },
+    {
+        "Id": "IT_B5_044",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 201 because 200 {\"success\":true,\"data\":{\"purchaseOrderId\":16233,\"poCode\":\"DM-20261124-001\",\"orderId\":null,\"orderCode\":null,\"supplierId\":14556,\"supplierName\":\"Vải Thành Công\",\"go…"
+    },
+    {
+        "Id": "IT_B5_045",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_046",
+        "Outcome": "Failed",
+        "Message": "Expected results to contain only items matching ((r.Code == 201) OrElse (r.Code == 409)) because 200 {\"success\":true,\"data\":{\"purchaseOrderId\":15323,\"poCode\":\"DM-20261124-004\",\"orderId\":null,\"orderCo…"
+    },
+    {
+        "Id": "IT_B5_047",
+        "Outcome": "Failed",
+        "Message": "Did not expect r.Body \"{\"success\":false,\"errorCode\":\"COMMON_DB_RULE\",\"message\":\"it-b5 injected fault\"}\" to contain any of the strings: {\"it-b5 injected fault\"}."
+    },
+    {
+        "Id": "IT_B5_048",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_049",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_050",
+        "Outcome": "Failed",
+        "Message": "Microsoft.EntityFrameworkCore.DbUpdateException : An error occurred while saving the entity changes. See the inner exception for details. ---- Microsoft.Data.SqlClient.SqlException : The INSERT state…"
+    },
+    {
+        "Id": "IT_B5_051",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_052",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_053",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_054",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_055",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_056",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_057",
+        "Outcome": "Failed",
+        "Message": "Expected codes to be in ascending order because ASC, but found {\"PO-B5-06\", \"PO-B5-05\", \"PO-B5-04\", \"PO-B5-03\", \"PO-B5-02\", \"PO-B5-01\", \"PO-B2-02\", \"PO-B2-01\", \"DM-20261101-001\", \"DM-DEMO-009\", \"DM-D…"
+    },
+    {
+        "Id": "IT_B5_058",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_059",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_060",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_061",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_062",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_063",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_064",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"PURCHASE_ORDER_LINES_MISMATCH\",\"message\":\"Danh sách dòng phải đủ mọi dòng của đơn mua, không thêm hoặc bớt.\"}, but fo…"
+    },
+    {
+        "Id": "IT_B5_065",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 400, but found 409 (difference of 9)."
+    },
+    {
+        "Id": "IT_B5_066",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"PURCHASE_ORDER_LINES_MISMATCH\",\"message\":\"Danh sách dòng phải đủ mọi dòng của đơn mua, không thêm hoặc bớt.\"}, but fo…"
+    },
+    {
+        "Id": "IT_B5_067",
+        "Outcome": "Failed",
+        "Message": "Expected Code to be less than 500 because mọi lỗi phải xử lý êm, không được 5xx. Body: {\"success\":false,\"errorCode\":\"COMMON_INTERNAL_ERROR\",\"message\":\"Lỗi hệ thống. Vui lòng thử lại.\"}, but found 500."
+    },
+    {
+        "Id": "IT_B5_068",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"SUPPLIER_NOT_ACTIVE\",\"message\":\"Nhà cung cấp đã ngừng hợp tác, vui lòng chọn nhà cung cấp khác.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B5_069",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":null,\"message\":\"Đã đặt hàng. Kế toán sẽ xác nhận thanh toán.\"}, but found 200."
+    },
+    {
+        "Id": "IT_B5_070",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_071",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 404 because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"rowVer\":[\"The RowVer field is required.\"]}}, but found 400 (differe…"
+    },
+    {
+        "Id": "IT_B5_072",
+        "Outcome": "Failed",
+        "Message": "Did not expect r.Body \"{\"success\":false,\"errorCode\":\"COMMON_DB_RULE\",\"message\":\"it-b5 injected fault\"}\" to contain any of the strings: {\"it-b5 injected fault\"}."
+    },
+    {
+        "Id": "IT_B5_073",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_074",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_075",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_076",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_077",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_078",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_079",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_080",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_081",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"PURCHASE_ORDER_INVALID_STATUS\",\"message\":\"Trạng thái đơn mua không cho phép thao tác này.\"}, but found 409 (difference of 209)."
+    },
+    {
+        "Id": "IT_B5_082",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_083",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"PURCHASE_ORDER_INVALID_STATUS\",\"message\":\"Trạng thái đơn mua không cho phép thao tác này.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B5_084",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {200, 400}, but found 409."
+    },
+    {
+        "Id": "IT_B5_085",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"PURCHASE_ORDER_INVALID_STATUS\",\"message\":\"Trạng thái đơn mua không cho phép thao tác này.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B5_086",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_087",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_088",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_089",
+        "Outcome": "Failed",
+        "Message": "Expected payments to contain 1 item(s), but found 0: {empty}."
+    },
+    {
+        "Id": "IT_B5_090",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_091",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_092",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_093",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_094",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_095",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":null,\"message\":\"Đã xác nhận thanh toán đơn mua.\"}, but found 200."
+    },
+    {
+        "Id": "IT_B5_096",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 400 because 200 {\"success\":true,\"data\":null,\"message\":\"Đã xác nhận thanh toán đơn mua.\"}, but found 200 (difference of -200)."
+    },
+    {
+        "Id": "IT_B5_097",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_098",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_099",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_100",
+        "Outcome": "Failed",
+        "Message": "Did not expect r.Body \"{\"success\":false,\"errorCode\":\"COMMON_DB_RULE\",\"message\":\"it-b5 injected fault\"}\" to contain any of the strings: {\"it-b5 injected fault\"}."
+    },
+    {
+        "Id": "IT_B5_101",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_102",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_103",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_104",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_105",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_106",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_107",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_108",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_109",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"PURCHASE_ORDER_INVALID_STATUS\",\"message\":\"Trạng thái đơn mua không cho phép thao tác này.\"}, but found 409 (difference of 209)."
+    },
+    {
+        "Id": "IT_B5_110",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"PURCHASE_ORDER_INVALID_STATUS\",\"message\":\"Trạng thái đơn mua không cho phép thao tác này.\"}, but found 409 (difference of 209)."
+    },
+    {
+        "Id": "IT_B5_111",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 409} because 200 {\"success\":true,\"data\":null,\"message\":\"Đã trả lại Quản đốc kèm lý do.\"}, but found 200."
+    },
+    {
+        "Id": "IT_B5_112",
+        "Outcome": "Failed",
+        "Message": "Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException : The database operation was expected to affect 1 row(s), but actually affected 0 row(s); data may have been modified or deleted since entit…"
+    },
+    {
+        "Id": "IT_B5_113",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_114",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_115",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_116",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_117",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_118",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_119",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_120",
+        "Outcome": "Failed",
+        "Message": "Expected place.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"PURCHASE_ORDER_INVALID_STATUS\",\"message\":\"Trạng thái đơn mua không cho phép thao tác này.\"}, but found 409 (difference of 209)."
+    },
+    {
+        "Id": "IT_B5_121",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B5_122",
+        "Outcome": "Passed",
+        "Message": ""
+    }
+]

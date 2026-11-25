@@ -24,7 +24,24 @@ public sealed class IntegrationUnitOfWork : IUnitOfWork
     public IGenericRepository<T> Repository<T>() where T : class =>
         new GenericRepository<T>(_context);
 
-    public Task<int> SaveChangesAsync() => _context.SaveChangesAsync();
+    /// <summary>
+    /// Production: EF tự bọc SaveChanges trong transaction riêng nên lỗi giữa batch (vd. RowVer lệch) rollback toàn bộ.
+    /// Với transaction ambient EF không làm vậy, nên dùng savepoint để SaveChanges lỗi vẫn atomic.
+    /// </summary>
+    public async Task<int> SaveChangesAsync()
+    {
+        var name = $"it_sc_{Guid.NewGuid():N}"[..20];
+        await _context.Database.ExecuteSqlRawAsync($"SAVE TRANSACTION {name}");
+        try
+        {
+            return await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            await _context.Database.ExecuteSqlRawAsync($"ROLLBACK TRANSACTION {name}");
+            throw;
+        }
+    }
 
     public async Task BeginTransactionAsync()
     {

@@ -1,4 +1,7 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
@@ -17,6 +20,9 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>
     private readonly TestDbState _dbState = new();
     private readonly FixedClock _clock = FixedClock.Default;
     private readonly string _connectionString;
+    private readonly string _jwtKey;
+    private readonly string _jwtIssuer;
+    private readonly string _jwtAudience;
 
     public TestDbState DbState => _dbState;
     public FixedClock Clock => _clock;
@@ -34,6 +40,9 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>
         _connectionString = config.GetConnectionString("Default")
             ?? throw new InvalidOperationException(
                 "Thiếu ConnectionStrings:Default trong appsettings.Integration.json.");
+        _jwtKey = config["Jwt:Key"] ?? throw new InvalidOperationException("Thiếu Jwt:Key trong appsettings.Integration.json.");
+        _jwtIssuer = config["Jwt:Issuer"]!;
+        _jwtAudience = config["Jwt:Audience"]!;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -75,6 +84,15 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>
             });
 
             services.AddScoped<IUnitOfWork, IntegrationUnitOfWork>();
+
+            // AddApiCore đọc Jwt:Key/Issuer/Audience ngay lúc dựng host (config của app), còn TokenService đọc muộn qua
+            // IOptions (config Integration) ⇒ token cấp ra bị JwtBearer từ chối. Ép JwtBearer dùng đúng khóa của Test config.
+            services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
+            {
+                o.TokenValidationParameters.ValidIssuer = _jwtIssuer;
+                o.TokenValidationParameters.ValidAudience = _jwtAudience;
+                o.TokenValidationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtKey));
+            });
         });
     }
 

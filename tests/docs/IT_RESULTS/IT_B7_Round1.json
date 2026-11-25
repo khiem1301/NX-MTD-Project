@@ -1,0 +1,667 @@
+[
+    {
+        "Id": "IT_B7_001",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_002",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_003",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_004",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_005",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_006",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_007",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_008",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_009",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_010",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_011",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_012",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_013",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_014",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_015",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_016",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_017",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_018",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_019",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_020",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_021",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_022",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_023",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_024",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_025",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_026",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_027",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 409} because 200 {\"success\":true,\"data\":{\"workOrderId\":1630,\"workOrderCode\":\"LC-20261124-001\",\"orderId\":34103,\"orderCode\":\"DH-B7-02\",\"productId\":21089,\"productCode\"…"
+    },
+    {
+        "Id": "IT_B7_028",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_029",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_030",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_031",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_032",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_033",
+        "Outcome": "Failed",
+        "Message": "Expected created to contain only items matching (w.DueDate.Year > 1), but the collection is empty."
+    },
+    {
+        "Id": "IT_B7_034",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Tổ nhận phải là tổ cắt đang hoạt động.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B7_035",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Mã hàng không có trong đơn.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B7_036",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Mã hàng không có trong đơn.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B7_037",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Chi tiết cắt lẻ phải là chi tiết vải đang dùng trong định mức của đúng màu – …"
+    },
+    {
+        "Id": "IT_B7_038",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":{\"workOrderId\":1792,\"workOrderCode\":\"LC-20261124-001\",\"orderId\":34280,\"orderCode\":\"DH-0001\",\"productId\":21167,\"productCode\":\"SP00…"
+    },
+    {
+        "Id": "IT_B7_039",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"note\":[\"Ghi chú tối đa 600 ký tự.\"]}}, but found 400 (difference of…"
+    },
+    {
+        "Id": "IT_B7_040",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_041",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_042",
+        "Outcome": "Failed",
+        "Message": "Expected results.Count(IsSuccess) to be 1 because đúng 1 request thắng. 200 {\"success\":true,\"data\":{\"workOrderId\":2499,\"workOrderCode\":\"LC-20261124-002\",\"orderId\":35100,\"orderCode\":\"DH-C7-5219afc0f0\"…"
+    },
+    {
+        "Id": "IT_B7_043",
+        "Outcome": "Failed",
+        "Message": "Did not expect r.Body \"{\"success\":false,\"errorCode\":\"COMMON_DB_RULE\",\"message\":\"it-b7 injected fault\"}\" to contain any of the strings: {\"it-b7 injected fault\"}."
+    },
+    {
+        "Id": "IT_B7_044",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_045",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_046",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_047",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_048",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_049",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_050",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_051",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_STATUS\",\"message\":\"Còn phiếu bàn giao BTP chờ kho xác nhận, chưa đóng lệnh được.\"}, but found 409 (difference of …"
+    },
+    {
+        "Id": "IT_B7_052",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 415 {\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.16\",\"title\":\"Unsupported Media Type\",\"status\":415,\"traceId\":\"00-2d871438a7ad9e053fe2087a71367c…"
+    },
+    {
+        "Id": "IT_B7_053",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_054",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_055",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_056",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_057",
+        "Outcome": "Failed",
+        "Message": "Expected results.Count(IsSuccess) to be 1 because đúng 1 request thắng. 200 {\"success\":true,\"data\":null,\"message\":\"Đã hủy lệnh cắt.\"} | 200 {\"success\":true,\"data\":{\"cuttingLayId\":1121,\"workOrderId\":2…"
+    },
+    {
+        "Id": "IT_B7_058",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_059",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_060",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_061",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_062",
+        "Outcome": "Failed",
+        "Message": "Expected results.Count(IsSuccess) to be 1 because đúng 1 request thắng. 200 {\"success\":true,\"data\":{\"workOrderId\":2444,\"workOrderCode\":\"LC-20261124-001\",\"orderId\":35042,\"orderCode\":\"DH-C7-7494d9ef70\"…"
+    },
+    {
+        "Id": "IT_B7_063",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 409} because 404 {\"success\":false,\"errorCode\":\"COMMON_NOT_FOUND\",\"message\":\"Không tìm thấy dữ liệu.\"}, but found 404."
+    },
+    {
+        "Id": "IT_B7_064",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_065",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_066",
+        "Outcome": "Failed",
+        "Message": "Expected item.ValueKind not to be JsonValueKind.Undefined {value: 0} because vải MA1 phải có nhu cầu theo màu Đen / size M, but it is."
+    },
+    {
+        "Id": "IT_B7_067",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_068",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_069",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_070",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because /api/v1/manager/work-orders?PageSize=0: 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"pageSize\":[\"Số dòng mỗi tra…"
+    },
+    {
+        "Id": "IT_B7_071",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_072",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_073",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_074",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_075",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_076",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_077",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_078",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 409} because 200 {\"success\":true,\"data\":{\"cuttingLayId\":1063,\"workOrderId\":2373,\"workOrderCode\":\"LC-B7-02\",\"workDate\":\"2026-11-24\",\"shiftCode\":\"MORNING\",\"laySequenc…"
+    },
+    {
+        "Id": "IT_B7_079",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_080",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_081",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Dòng đơn không thuộc lệnh cắt.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B7_082",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_083",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Bàn cắt phải nhập đủ đúng các vải của các dòng cắt. Thiếu: V-0001. Thừa: 1034…"
+    },
+    {
+        "Id": "IT_B7_084",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Ngày cắt không được sau hôm nay.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B7_085",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_086",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_087",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_088",
+        "Outcome": "Failed",
+        "Message": "Did not expect r.Body \"{\"success\":false,\"errorCode\":\"COMMON_DB_RULE\",\"message\":\"it-b7 injected fault\"}\" to contain any of the strings: {\"it-b7 injected fault\"}."
+    },
+    {
+        "Id": "IT_B7_089",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_090",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_091",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 409} because 200 {\"success\":true,\"data\":{\"cuttingLayId\":1048,\"workOrderId\":2349,\"workOrderCode\":\"LC-B7-02\",\"workDate\":\"2026-11-24\",\"shiftCode\":\"MORNING\",\"laySequenc…"
+    },
+    {
+        "Id": "IT_B7_092",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_093",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_094",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_095",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_096",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_097",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_098",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_099",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_100",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_101",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_102",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_103",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Dòng đơn không thuộc lệnh cắt.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B7_104",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_105",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_106",
+        "Outcome": "Failed",
+        "Message": "Did not expect r.Body \"{\"success\":false,\"errorCode\":\"COMMON_DB_RULE\",\"message\":\"it-b7 injected fault\"}\" to contain any of the strings: {\"it-b7 injected fault\"}."
+    },
+    {
+        "Id": "IT_B7_107",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_108",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_109",
+        "Outcome": "Failed",
+        "Message": "Expected results.Count(IsSuccess) to be 1 because đúng 1 request thắng. 200 {\"success\":true,\"data\":null,\"message\":\"Đã rút phiếu bàn giao BTP.\"} | 200 {\"success\":true,\"data\":null,\"message\":\"Đã nhận BT…"
+    },
+    {
+        "Id": "IT_B7_110",
+        "Outcome": "Failed",
+        "Message": "Expected B1Json.Str(r.Data, \"confirmedByName\") to be \"Thủ Kho Một\", but found <null>."
+    },
+    {
+        "Id": "IT_B7_111",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_112",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Số xác nhận khác số giao, vui lòng nhập lý do.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B7_113",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Số xác nhận không được lớn hơn số tổ giao.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B7_114",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_115",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Phiếu phải có ít nhất một dòng.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B7_116",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_INVALID_REFERENCE\",\"message\":\"Phiếu phải có ít nhất một dòng.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B7_117",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_118",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_119",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_120",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_121",
+        "Outcome": "Failed",
+        "Message": "Did not expect r.Body \"{\"success\":false,\"errorCode\":\"COMMON_DB_RULE\",\"message\":\"it-b7 injected fault\"}\" to contain any of the strings: {\"it-b7 injected fault\"}."
+    },
+    {
+        "Id": "IT_B7_122",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_123",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 400 because 415 {\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.16\",\"title\":\"Unsupported Media Type\",\"status\":415,\"traceId\":\"00-bdcb1fba6eabaae0be9ec209d79a548c-959a57…"
+    },
+    {
+        "Id": "IT_B7_124",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_125",
+        "Outcome": "Failed",
+        "Message": "Expected results.Count(IsSuccess) to be 1 because đúng 1 request thắng. 200 {\"success\":true,\"data\":null,\"message\":\"Đã nhận BTP vào kho.\"} | 200 {\"success\":true,\"data\":null,\"message\":\"Đã từ chối phiếu…"
+    },
+    {
+        "Id": "IT_B7_126",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_127",
+        "Outcome": "Failed",
+        "Message": "Expected (ViewAsync(K.Wol3.WorkOrderLineId)) to be equal to { Item1 = 40, Item2 = 40 }, but found { Item1 = 40, Item2 = 10 }."
+    },
+    {
+        "Id": "IT_B7_128",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_129",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_130",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_131",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_132",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B7_133",
+        "Outcome": "Failed",
+        "Message": "Expected results.Count(IsSuccess) to be 1 because đúng 1 request thắng. 200 {\"success\":true,\"data\":{\"workOrderId\":2598,\"workOrderCode\":\"LC-20261124-001\",\"orderId\":35181,\"orderCode\":\"DH-C7-4fa4f4a6e7\"…"
+    }
+]

@@ -1,0 +1,1062 @@
+﻿[
+    {
+        "Id":  "IT_B1_001",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_002",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_003",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_004",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_005",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_006",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_007",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_008",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_009",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_010",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_011",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_012",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_013",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_014",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_015",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_016",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_017",
+        "Outcome":  "Failed",
+        "Message":  "Expected rExpired.Code to be 401 because quá hạn 1 giây phải bị từ chối. 200 {\"success\":true,\"data\":{\"accessToken\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NDU0MiIsImVtcGxveWVlSWQiOiI1NDU0MyIsInVzZXJuYW1lIjoiYWRtaW4wMSIsImZ1bGxOYW1lIjoiUXXhuqNuIFRy4buLIE3hu5l0Iiwicm9sZSI6IkFkbWluIiwic3RhbXAiOiI2M2RlNWUyNC00OWVkLTQ5NmYtOTFjZS01MGRiYWY3MWUzMDkiLCJ0b2tlblR5cGUiOiJhY2Nlc3MiLCJuYmYiOjE3OTU1OTQwNTYsImV4cCI6MTc5NTU5NzY1NiwiaXNzIjoibnhtdGQtYXBpIiwiYXVkIjoibnhtdGQtd2ViIn0.LAHl9vFSHEJEeamvXPktADm1WyaYLDZ9XJbfBkPR4Ps\",\"accessExpiresAt\":\"2026-11-25T09:07:36Z\",\"refreshToken\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NDU0MiIsInN0YW1wIjoiNjNkZTVlMjQtNDllZC00OTZmLTkxY2UtNTBkYmFmNzFlMzA5IiwidG9rZW5UeXBlIjoicmVmcmVzaCIsIm5iZiI6MTc5NTU5NDA1NiwiZXhwIjoxNzk2MTk4ODU2LCJpc3MiOiJueG10ZC1hcGkiLCJhdWQiOiJueG10ZC13ZWIifQ.20GylhVENUMYSBhy_oDqWGdmWmCfbzsAgeW8GOrkErU\",\"refreshExpiresAt\":\"2026-12-02T08:07:36Z\",\"user\":{\"accountId\":54542,\"employeeId\":54543,\"username\":\"admin01\",\"fullName\":\"Quản Trị Một\",\"role\":\"Admin\",\"roleName\":\"Giám đốc (Admin)\",\"teamId\":null,\"teamCode\":null,\"teamType\":null,\"isTemporaryPassword\":false}},\"message\":null}, but found 200 (difference of -201)."
+    },
+    {
+        "Id":  "IT_B1_018",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_019",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_020",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_021",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_022",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_023",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_024",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_025",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_026",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_027",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"phone\":[\"Số điện thoại không hợp lệ (10 số bắt đầu bằng 0, hoặc +84 và 9 số).\"]}}, but found 400 (difference of 200)."
+    },
+    {
+        "Id":  "IT_B1_028",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_029",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_030",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_031",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_032",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_033",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_034",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be 400 because 409 {\"success\":false,\"errorCode\":\"AUTH_WRONG_CURRENT_PASSWORD\",\"message\":\"Mật khẩu hiện tại không đúng.\"}, but found 409 (difference of 9)."
+    },
+    {
+        "Id":  "IT_B1_035",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be one of {400, 401}, but found 409."
+    },
+    {
+        "Id":  "IT_B1_036",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_037",
+        "Outcome":  "Failed",
+        "Message":  "Expected rShort.Code to be 400 because 200 {\"success\":true,\"data\":{\"accessToken\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTgyNSIsImVtcGxveWVlSWQiOiI1NTgyNiIsInVzZXJuYW1lIjoid2swMSIsImZ1bGxOYW1lIjoiQ8O0bmcgTmjDom4gTeG7mXQiLCJyb2xlIjoiV29ya2VyIiwic3RhbXAiOiJjNzM5ZGE3Zi1jMWJlLTQwMGYtYTRhNC0yNjFiYzExMWU4M2MiLCJ0b2tlblR5cGUiOiJhY2Nlc3MiLCJ0ZWFtSWQiOiI3NTIxIiwidGVhbVR5cGUiOiJTZXdpbmciLCJuYmYiOjE3OTU1OTQxMTksImV4cCI6MTc5NTU5NzcxOSwiaXNzIjoibnhtdGQtYXBpIiwiYXVkIjoibnhtdGQtd2ViIn0.zLKMW7Le6L7kQcphgORH-PSrbCyP9Q2AdpbXXr2bsms\",\"accessExpiresAt\":\"2026-11-25T09:08:39Z\",\"refreshToken\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTgyNSIsInN0YW1wIjoiYzczOWRhN2YtYzFiZS00MDBmLWE0YTQtMjYxYmMxMTFlODNjIiwidG9rZW5UeXBlIjoicmVmcmVzaCIsIm5iZiI6MTc5NTU5NDExOSwiZXhwIjoxNzk2MTk4OTE5LCJpc3MiOiJueG10ZC1hcGkiLCJhdWQiOiJueG10ZC13ZWIifQ.QJ2iFFwJbpvZQqz3cV1aF9Fhwwq6ELZgh7vBuF2usoU\",\"refreshExpiresAt\":\"2026-12-02T08:08:39Z\",\"user\":{\"accountId\":55825,\"employeeId\":55826,\"username\":\"wk01\",\"fullName\":\"Công Nhân Một\",\"role\":\"Worker\",\"roleName\":\"Công nhân\",\"teamId\":7521,\"teamCode\":\"T_SEW01\",\"teamType\":\"Sewing\",\"isTemporaryPassword\":false}},\"message\":\"Đã đổi mật khẩu. Các thiết bị khác đã được đăng xuất.\"}, but found 200 (difference of -200)."
+    },
+    {
+        "Id":  "IT_B1_038",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be 400 because 200 {\"success\":true,\"data\":{\"accessToken\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTY4MSIsImVtcGxveWVlSWQiOiI1NTY4MiIsInVzZXJuYW1lIjoid2swMSIsImZ1bGxOYW1lIjoiQ8O0bmcgTmjDom4gTeG7mXQiLCJyb2xlIjoiV29ya2VyIiwic3RhbXAiOiIxMzJlZTc4YS1jOTg3LTQxZmUtYWJlZS00MmIyYjM5NjEzM2MiLCJ0b2tlblR5cGUiOiJhY2Nlc3MiLCJ0ZWFtSWQiOiI3NDU4IiwidGVhbVR5cGUiOiJTZXdpbmciLCJuYmYiOjE3OTU1OTQxMTEsImV4cCI6MTc5NTU5NzcxMSwiaXNzIjoibnhtdGQtYXBpIiwiYXVkIjoibnhtdGQtd2ViIn0.ECjREyQKCcAtDInB7AlptQyencb-mSCZ9HGXIvtWquw\",\"accessExpiresAt\":\"2026-11-25T09:08:31Z\",\"refreshToken\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTY4MSIsInN0YW1wIjoiMTMyZWU3OGEtYzk4Ny00MWZlLWFiZWUtNDJiMmIzOTYxMzNjIiwidG9rZW5UeXBlIjoicmVmcmVzaCIsIm5iZiI6MTc5NTU5NDExMSwiZXhwIjoxNzk2MTk4OTExLCJpc3MiOiJueG10ZC1hcGkiLCJhdWQiOiJueG10ZC13ZWIifQ.oEk129h_3u4PqbDkIAHWH5ySRtuQeYQxWIaEHbVn0AA\",\"refreshExpiresAt\":\"2026-12-02T08:08:31Z\",\"user\":{\"accountId\":55681,\"employeeId\":55682,\"username\":\"wk01\",\"fullName\":\"Công Nhân Một\",\"role\":\"Worker\",\"roleName\":\"Công nhân\",\"teamId\":7458,\"teamCode\":\"T_SEW01\",\"teamType\":\"Sewing\",\"isTemporaryPassword\":false}},\"message\":\"Đã đổi mật khẩu. Các thiết bị khác đã được đăng xuất.\"}, but found 200 (difference of -200)."
+    },
+    {
+        "Id":  "IT_B1_039",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_040",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_041",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_042",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_043",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_044",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_045",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_046",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_047",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_048",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_049",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be 400 because 200 {\"success\":true,\"data\":[],\"message\":null}, but found 200 (difference of -200)."
+    },
+    {
+        "Id":  "IT_B1_050",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_051",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_052",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_053",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_054",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_055",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_056",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_057",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_058",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_059",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_060",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_061",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_062",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_063",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_064",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_065",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_066",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_067",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_068",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_069",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_070",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_071",
+        "Outcome":  "Failed",
+        "Message":  "Expected unknown.Code to be one of {400, 404}, but found 409."
+    },
+    {
+        "Id":  "IT_B1_072",
+        "Outcome":  "Failed",
+        "Message":  "Expected r2.Code to be 400 because 200 {\"success\":true,\"data\":{\"employeeId\":54932,\"username\":\"ThaiPH\",\"temporaryPassword\":\"680828\"},\"message\":\"Đã thêm nhân viên và tạo tài khoản.\"}, but found 200 (difference of -200)."
+    },
+    {
+        "Id":  "IT_B1_073",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_074",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_075",
+        "Outcome":  "Failed",
+        "Message":  "Expected rows to contain 1 item(s) because AuditLogs +1, but found 2: { NX_MTD.Domain.Entities.AuditLog { Action = \"UPDATE\", AuditLogId = 372L, ChangedAt = \u003c2026-11-25 15:07:55\u003e, ChangedBy = 54935, ChangedByNavigation = \u003cnull\u003e, NewValues = \"{\"AttendanceCode\":2001}\", OldValues = \u003cnull\u003e, Reason = \u003cnull\u003e, RecordId = 54949L, Summary = \u003cnull\u003e, TableName = \"Employee\" }, NX_MTD.Domain.Entities.AuditLog { Action = \"INSERT\", AuditLogId = 373L, ChangedAt = \u003c2026-11-24 08:00:00\u003e, ChangedBy = 54935, ChangedByNavigation = \u003cnull\u003e, NewValues = \"{\"EmployeeCode\":\"RJ2001\",\"FullName\":\"Nguyễn Văn An\",\"Gender\":null,\"DateOfBirth\":null,\"Phone\":null,\"RoleCode\":\"WORKER\",\"TeamId\":7137,\"PayType\":\"PIECE_RATE\",\"StartDate\":\"2026-11-24\",\"AttendanceCode\":null,\"Status\":\"ACTIVE\"}\", OldValues = \u003cnull\u003e, Reason = \u003cnull\u003e, RecordId = 54949L, Summary = \"Tạo mới nhân viên RJ2001\", TableName = \"Employee\" } }."
+    },
+    {
+        "Id":  "IT_B1_076",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_077",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_078",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_079",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_080",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be 400 because 409 {\"success\":false,\"errorCode\":\"TEAM_NOT_ACTIVE\",\"message\":\"Tổ đã ngừng hoạt động.\"}, but found 409 (difference of 9)."
+    },
+    {
+        "Id":  "IT_B1_081",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_082",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_083",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_084",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_085",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_086",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_087",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_088",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_089",
+        "Outcome":  "Failed",
+        "Message":  "Expected (account is null || account.Value.ValueKind == System.Text.Json.JsonValueKind.Null) to be True because Manager nhận Account = null. Body: {\"success\":true,\"data\":{\"employeeId\":43308,\"employeeCode\":\"S0-WK01\",\"fullName\":\"Công Nhân Một\",\"gender\":null,\"dateOfBirth\":null,\"phone\":null,\"avatarUrl\":null,\"role\":\"Worker\",\"roleName\":\"Công nhân\",\"teamId\":6435,\"teamCode\":\"T_SEW01\",\"payType\":\"PieceRate\",\"currentGradeCode\":\"B1\",\"attendanceCode\":1001,\"startDate\":\"2025-11-24\",\"resignDate\":null,\"status\":\"Active\",\"rowVer\":\"AAAAAAABVao=\",\"account\":{\"accountId\":43307,\"username\":\"wk01\",\"status\":\"Active\",\"isTemporaryPassword\":false,\"lockedAt\":null,\"lockReason\":null},\"history\":[]},\"message\":null}, but found False."
+    },
+    {
+        "Id":  "IT_B1_090",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_091",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_092",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_093",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_094",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_095",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_096",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_097",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_098",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_099",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_100",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_101",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_102",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_103",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_104",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_105",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be 400 because 409 {\"success\":false,\"errorCode\":\"ACCOUNT_CANNOT_LOCK_SELF\",\"message\":\"Không thể tự thao tác trên tài khoản của mình.\"}, but found 409 (difference of 9)."
+    },
+    {
+        "Id":  "IT_B1_106",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_107",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_108",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_109",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_110",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_111",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_112",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_113",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be 400 because 409 {\"success\":false,\"errorCode\":\"ACCOUNT_CANNOT_LOCK_SELF\",\"message\":\"Không thể tự khóa tài khoản của mình.\"}, but found 409 (difference of 9)."
+    },
+    {
+        "Id":  "IT_B1_114",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_115",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_116",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_117",
+        "Outcome":  "Failed",
+        "Message":  "Expected resigned.Code to be 400 because 200 {\"success\":true,\"data\":{\"username\":\"rs01\",\"temporaryPassword\":\"339480\"},\"message\":\"Đã đặt lại mật khẩu tạm.\"}, but found 200 (difference of -200)."
+    },
+    {
+        "Id":  "IT_B1_118",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_119",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_120",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_121",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_122",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_123",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_124",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_125",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_126",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_127",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_128",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_129",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_130",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be one of {400, 409}, but found 200."
+    },
+    {
+        "Id":  "IT_B1_131",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_132",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_133",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_134",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_135",
+        "Outcome":  "Failed",
+        "Message":  "Expected resigned.Code to be 400 because 404 {\"success\":false,\"errorCode\":\"COMMON_NOT_FOUND\",\"message\":\"Không tìm thấy dữ liệu hoặc bạn không có quyền xem.\"}, but found 404 (difference of 4)."
+    },
+    {
+        "Id":  "IT_B1_136",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_137",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be 400 because 409 {\"success\":false,\"errorCode\":\"TEAM_MEMBER_NOT_IN_TEAM\",\"message\":\"Nhân viên không thuộc tổ này.\"}, but found 409 (difference of 9)."
+    },
+    {
+        "Id":  "IT_B1_138",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_139",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_140",
+        "Outcome":  "Failed",
+        "Message":  "Expected intoOld.Code to be 400 because 409 {\"success\":false,\"errorCode\":\"TEAM_NOT_ACTIVE\",\"message\":\"Tổ đã ngừng hoạt động.\"}, but found 409 (difference of 9)."
+    },
+    {
+        "Id":  "IT_B1_141",
+        "Outcome":  "Failed",
+        "Message":  "Expected tomorrow.Code to be one of {200, 400}, but found 409. Expected silly.Code to be 400 because 200 {\"success\":true,\"data\":null,\"message\":\"Đã chuyển 1 nhân viên.\"}, but found 200 (difference of -200). Expected (after == before) to be True because [DB] không được thay đổi. , but found False. "
+    },
+    {
+        "Id":  "IT_B1_142",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be one of {400, 409}, but found 200."
+    },
+    {
+        "Id":  "IT_B1_143",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be one of {400, 409}, but found 200."
+    },
+    {
+        "Id":  "IT_B1_144",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_145",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_146",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be 400 because 409 {\"success\":false,\"errorCode\":\"TEAM_MEMBER_NOT_IN_TEAM\",\"message\":\"Nhân viên không thuộc tổ này.\"}, but found 409 (difference of 9)."
+    },
+    {
+        "Id":  "IT_B1_147",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be one of {400, 409}, but found 200."
+    },
+    {
+        "Id":  "IT_B1_148",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_149",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_150",
+        "Outcome":  "Failed",
+        "Message":  "Expected resigned.Code to be 400 because 409 {\"success\":false,\"errorCode\":\"TEAM_MEMBER_NOT_IN_TEAM\",\"message\":\"Nhân viên không thuộc tổ này.\"}, but found 409 (difference of 9)."
+    },
+    {
+        "Id":  "IT_B1_151",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_152",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_153",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_154",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be 400 because 409 {\"success\":false,\"errorCode\":\"TEAM_MEMBER_NOT_IN_TEAM\",\"message\":\"Nhân viên không thuộc tổ này.\"}, but found 409 (difference of 9)."
+    },
+    {
+        "Id":  "IT_B1_155",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_156",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_157",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_158",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_159",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_160",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_161",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_162",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_163",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_164",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_165",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_166",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_167",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_168",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_169",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_170",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_171",
+        "Outcome":  "Failed",
+        "Message":  "Expected max.Code to be one of {200, 201} because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"attendanceCode\":[\"\u0027Attendance Code\u0027 must be between 1 and 99999999. You entered 2147483647.\"]}}, but found 400. "
+    },
+    {
+        "Id":  "IT_B1_172",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_173",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_174",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_175",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_176",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_177",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_178",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_179",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_180",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_181",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_182",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_183",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_184",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_185",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_186",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_187",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_188",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_189",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_190",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_191",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_192",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_193",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_194",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_195",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_196",
+        "Outcome":  "Failed",
+        "Message":  "Expected inactive.Code to be 400 because 200 {\"success\":true,\"data\":{\"gradeLevelId\":2684,\"gradeCode\":\"B9\",\"monthlyAmount\":1000,\"effectiveDate\":\"2026-12-06\",\"isCurrent\":false},\"message\":\"Đã lưu.\"}, but found 200 (difference of -200)."
+    },
+    {
+        "Id":  "IT_B1_197",
+        "Outcome":  "Failed",
+        "Message":  "Expected zero.Code to be 400 because 200 {\"success\":true,\"data\":{\"gradeLevelId\":2679,\"gradeCode\":\"B2\",\"monthlyAmount\":0,\"effectiveDate\":\"2026-12-15\",\"isCurrent\":false},\"message\":\"Đã lưu.\"}, but found 200 (difference of -200). Expected saved to be a collection with 1 item(s) because chỉ ca hợp lệ (0.01) được lưu, but {0.00M, 0.01M} contains 1 item(s) more than {0.01M}. With configuration: - Use declared types and members - Compare enums by value - Compare tuples by their properties - Compare anonymous types by their properties - Compare records by their members - Include non-browsable members - Include all non-private properties - Include all non-private fields - Match member by name (or throw) - Be strict about the order of items in byte arrays - Without automatic conversion. "
+    },
+    {
+        "Id":  "IT_B1_198",
+        "Outcome":  "Failed",
+        "Message":  "Expected Code to be less than 500 because mọi lỗi phải xử lý êm, không được 5xx. Body: {\"success\":false,\"errorCode\":\"COMMON_INTERNAL_ERROR\",\"message\":\"Lỗi hệ thống. Vui lòng thử lại.\"}, but found 500. Expected over.Code to be 400 because 500 {\"success\":false,\"errorCode\":\"COMMON_INTERNAL_ERROR\",\"message\":\"Lỗi hệ thống. Vui lòng thử lại.\"}, but found 500 (difference of 100). "
+    },
+    {
+        "Id":  "IT_B1_199",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_200",
+        "Outcome":  "Failed",
+        "Message":  "Expected r.Code to be 400 because 200 {\"success\":true,\"data\":{\"gradeLevelId\":2688,\"gradeCode\":\"B2\",\"monthlyAmount\":5000000,\"effectiveDate\":\"2026-11-23\",\"isCurrent\":true},\"message\":\"Đã lưu.\"}, but found 200 (difference of -200)."
+    },
+    {
+        "Id":  "IT_B1_201",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_202",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_203",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_204",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_205",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_206",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_207",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_208",
+        "Outcome":  "Failed",
+        "Message":  "Expected history.GetArrayLength() to be 4 because History[] gồm 4 mục mới, but found 1."
+    },
+    {
+        "Id":  "IT_B1_209",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_210",
+        "Outcome":  "Failed",
+        "Message":  "Expected appoint.Code to be one of {400, 409}, but found 200."
+    },
+    {
+        "Id":  "IT_B1_211",
+        "Outcome":  "Passed",
+        "Message":  ""
+    },
+    {
+        "Id":  "IT_B1_212",
+        "Outcome":  "Passed",
+        "Message":  ""
+    }
+]
