@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Modal, message } from 'antd';
 import type { Operation, OperationGroup } from '../types';
 import { OperationsPage } from './OperationsPage';
@@ -81,6 +81,12 @@ const group = (
 });
 
 describe('OperationsPage', () => {
+  // Hộp xác nhận tĩnh (Modal.confirm) nằm ngoài cây React nên không tự dọn: bài nào bỏ dở (lỗi giữa chừng) sẽ để lại hộp làm các bài sau thấy 2 hộp thoại.
+  afterEach(async () => {
+    act(() => Modal.destroyAll());
+    await waitFor(() => expect(document.querySelector('.ant-modal-confirm')).toBeNull());
+  });
+
   beforeEach(() => {
     [mockSetGroup, mockSubmitRates, mockCreateGroup, mockRename, mockDelete].forEach((m) =>
       m.mockReset(),
@@ -193,7 +199,8 @@ describe('OperationsPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt 1 đơn giá Nháp' }));
       fireEvent.click(await screen.findByRole('button', { name: /Xác nhận|Đồng ý|OK/ }));
 
-      expect(mockSubmitRates).toHaveBeenCalledWith([11], expect.anything());
+      // Nút xác nhận gọi onOk không đồng bộ: máy chậm thì kiểm ngay sau khi bấm sẽ thấy 0 lần gọi.
+      await waitFor(() => expect(mockSubmitRates).toHaveBeenCalledWith([11], expect.anything()));
     });
 
     it('dòng đã tích không có Nháp thì không hiện nút', () => {
