@@ -240,6 +240,7 @@ export const API = {
   },
   kpi: {
     targets: '/api/v1/manager/kpi-targets',
+    teamTargets: '/api/v1/team-leader/kpi-targets',
     orderCapacity: '/api/v1/manager/kpi-targets/order-capacity',
     lineCapacity: '/api/v1/manager/kpi-targets/line-capacity',
     allottedTeams: '/api/v1/manager/order-line-teams/teams',

@@ -1,40 +1,70 @@
-import { Card, Col, Row, Typography } from 'antd';
+import { useState } from 'react';
+import { CloseOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Col, Progress, Row, Typography, theme } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { MEAL_ROUTES, PRODUCTION_ROUTES, ROUTES } from '@/constants/routes';
-import { formatQty } from '@/utils/format';
+import { fill, formatQty } from '@/utils/format';
+import { TeamKpiPanel } from '@/features/kpi/components/TeamKpiPanel';
 import { HOME_ROLE_TEXT as T } from '../../constants';
-import type { SewingHome as SewingHomeData } from '../../types';
+import type { HomeItem, SewingHome as SewingHomeData } from '../../types';
 import { HomeItemList } from './HomeItemList';
 import { SectionLabel } from './SectionLabel';
 import { StatTile } from './StatTile';
 
-/** Trang chủ tổ trưởng / tổ phó tổ may: KPI hôm nay, phiếu BTP chờ nhận (có cảnh báo chặn), giao việc, suất ăn. */
+/** Phiếu bị chặn (đỏ) lên trước để tổ trưởng xử lý phân công trước khi nhận. */
+const byBlockFirst = (items: HomeItem[]) =>
+  [...items].sort((a, b) => Number(b.tagColor === 'red') - Number(a.tagColor === 'red'));
+
+/** Trang chủ tổ trưởng / tổ phó tổ may: KPI hôm nay, việc cần xử lý, nhận BTP, KPI của tổ. */
 export function SewingHome({ data: d }: { data: SewingHomeData }) {
   const navigate = useNavigate();
+  const { token } = theme.useToken();
   const percent = d.kpiTarget > 0 ? Math.round((100 * d.kpiActual) / d.kpiTarget) : null;
   const meal = d.mealConfirmed ?? d.mealSuggested;
+  const btpItems = byBlockFirst(d.btpIssues);
+  const blocked = btpItems.filter((i) => i.tagColor === 'red').length;
+  const waiting = btpItems.length - blocked;
+  const hintKey = `${blocked}:${waiting}`;
+  const [hiddenHintKey, setHiddenHintKey] = useState<string | null>(null);
+  const showHint = btpItems.length > 0 && hiddenHintKey !== hintKey;
+
   return (
     <>
-      <SectionLabel>{T.team}</SectionLabel>
-      <Card title={T.kpiToday} size="small" style={{ marginBottom: 12 }}>
-        <Row gutter={[12, 12]}>
-          <Col xs={24} sm={8}>
-            <StatTile
-              label={T.kpiAchieved}
-              value={percent === null ? '—' : `${percent}%`}
-              tone={percent !== null && percent >= 100 ? 'ok' : 'default'}
+      <SectionLabel>{T.today}</SectionLabel>
+      <Card size="small" title={T.kpiToday} style={{ marginBottom: 12 }}>
+        <Row gutter={[16, 8]} align="middle">
+          <Col xs={24} md={14}>
+            <Progress
+              percent={percent ?? 0}
+              status={percent === null ? 'normal' : percent >= 100 ? 'success' : 'active'}
+              format={() => (percent === null ? '—' : `${percent}%`)}
             />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {fill(T.kpiTodayProgress, formatQty(d.kpiActual), formatQty(d.kpiTarget))}
+            </Typography.Text>
           </Col>
-          <Col xs={12} sm={8}>
-            <StatTile label={T.kpiTarget} value={formatQty(d.kpiTarget)} />
+          <Col xs={12} md={5}>
+            <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+              {T.kpiTarget}
+            </Typography.Text>
+            <Typography.Text strong style={{ fontSize: 18 }}>
+              {formatQty(d.kpiTarget)}
+            </Typography.Text>
           </Col>
-          <Col xs={12} sm={8}>
-            <StatTile label={T.kpiActual} value={formatQty(d.kpiActual)} tone="primary" />
+          <Col xs={12} md={5}>
+            <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+              {T.kpiActual}
+            </Typography.Text>
+            <Typography.Text strong style={{ fontSize: 18, color: token.colorPrimary }}>
+              {formatQty(d.kpiActual)}
+            </Typography.Text>
           </Col>
         </Row>
       </Card>
-      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} xl={6}>
+
+      <SectionLabel>{T.needAction}</SectionLabel>
+      <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+        <Col xs={12} sm={12} xl={6}>
           <StatTile
             label={T.tiles.btpPending}
             value={d.btpPending}
@@ -42,7 +72,7 @@ export function SewingHome({ data: d }: { data: SewingHomeData }) {
             to={ROUTES.materialIssues}
           />
         </Col>
-        <Col xs={24} sm={12} xl={6}>
+        <Col xs={12} sm={12} xl={6}>
           <StatTile
             label={T.tiles.unassigned}
             value={d.unassignedOperations}
@@ -51,7 +81,7 @@ export function SewingHome({ data: d }: { data: SewingHomeData }) {
             to={PRODUCTION_ROUTES.assignments}
           />
         </Col>
-        <Col xs={24} sm={12} xl={6}>
+        <Col xs={12} sm={12} xl={6}>
           <StatTile
             label={T.tiles.allocations}
             value={d.allocationsPending}
@@ -59,7 +89,7 @@ export function SewingHome({ data: d }: { data: SewingHomeData }) {
             to={ROUTES.pieceMovements}
           />
         </Col>
-        <Col xs={24} sm={12} xl={6}>
+        <Col xs={12} sm={12} xl={6}>
           <StatTile
             label={T.tiles.meal}
             value={meal}
@@ -73,11 +103,46 @@ export function SewingHome({ data: d }: { data: SewingHomeData }) {
           />
         </Col>
       </Row>
-      <HomeItemList
-        title={T.cards.btpIssues}
-        items={d.btpIssues}
-        onOpen={() => navigate(ROUTES.materialIssues)}
-      />
+
+      <Row gutter={[12, 12]} align="stretch">
+        <Col xs={24} xl={8}>
+          <HomeItemList
+            title={T.cards.btpIssues}
+            items={btpItems}
+            bodyMaxHeight={320}
+            onOpen={() => navigate(ROUTES.materialIssues)}
+            extra={
+              showHint ? (
+                <Alert
+                  type={blocked > 0 ? 'error' : 'warning'}
+                  showIcon
+                  style={{ marginBottom: 8 }}
+                  message={
+                    blocked > 0
+                      ? fill(T.btpBlockedHint, blocked)
+                      : fill(T.btpWaitingHint, waiting)
+                  }
+                  action={
+                    <Button
+                      type="text"
+                      size="small"
+                      aria-label={T.hideHint}
+                      icon={<CloseOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setHiddenHintKey(hintKey);
+                      }}
+                    />
+                  }
+                />
+              ) : undefined
+            }
+          />
+        </Col>
+        <Col xs={24} xl={16}>
+          <TeamKpiPanel compact />
+        </Col>
+      </Row>
     </>
   );
 }
