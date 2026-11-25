@@ -1,0 +1,862 @@
+[
+    {
+        "Id": "IT_B4_001",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_002",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_003",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_004",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_005",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_006",
+        "Outcome": "Failed",
+        "Message": "Expected ((int)res.StatusCode) to be 403 because body: , but found 415 (difference of 12)."
+    },
+    {
+        "Id": "IT_B4_007",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_008",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_009",
+        "Outcome": "Failed",
+        "Message": "Expected team.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"TEAM_ORDER_BUSY\",\"message\":\"Tổ đang làm đơn DH-0002 (đã nhập kho TP 0% / đặt). Chỉ giao đơn khác khi đạt từ 90% hoặc đơn đã đóng…"
+    },
+    {
+        "Id": "IT_B4_010",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_011",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_012",
+        "Outcome": "Failed",
+        "Message": "Expected ((int)res.StatusCode) to be 403 because body: {\"success\":false,\"errorCode\":\"AUTH_UNAUTHORIZED\",\"message\":\"Bạn chưa đăng nhập hoặc phiên đã hết hạn.\"}, but found 401 (difference of -2)."
+    },
+    {
+        "Id": "IT_B4_013",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because electrician /api/v1/common/order-lookups/orders: 401 {\"success\":false,\"errorCode\":\"AUTH_UNAUTHORIZED\",\"message\":\"Bạn chưa đăng nhập hoặc phiên đã hết hạn.\"}, but fou…"
+    },
+    {
+        "Id": "IT_B4_014",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_015",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_016",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_017",
+        "Outcome": "Failed",
+        "Message": "Expected code to match regex \"^DH-\\d+$\", but \"DH2611-001\" does not match."
+    },
+    {
+        "Id": "IT_B4_018",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_019",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_020",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_021",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_022",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_023",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_024",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_025",
+        "Outcome": "Failed",
+        "Message": "Expected B1Json.Str(map, \"productCode\") to be the same string, but they differ at index 7: ↓ (actual) \"SPB4429D89\" \"SPB4429d89\" ↑ (expected)."
+    },
+    {
+        "Id": "IT_B4_026",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_027",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_028",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_029",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_030",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_031",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_032",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_033",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_034",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"COMMON_NOT_FOUND\",\"message\":\"Khách hàng không tồn tại.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B4_035",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_036",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_037",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {200, 201} because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"lines[0].OrderedQty\":[\"'Ordered Qty' must be between …"
+    },
+    {
+        "Id": "IT_B4_038",
+        "Outcome": "Failed",
+        "Message": "Expected api.Code to be one of {200, 201} because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"lines[0].CmtUnitPrice\":[\"'Cmt Unit Price' must be b…"
+    },
+    {
+        "Id": "IT_B4_039",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_040",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {404, 400} because 409 {\"success\":false,\"errorCode\":\"PRODUCT_NOT_ACTIVE\",\"message\":\"Mã hàng #1017315 đã ngừng sản xuất.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B4_041",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_042",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_043",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_044",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_045",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_046",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_047",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_048",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_049",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_050",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_051",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_052",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_053",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_054",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_055",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Vui lòng nhập lý do.\"}, but found 400 (difference of 200)."
+    },
+    {
+        "Id": "IT_B4_056",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_057",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_058",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_059",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_060",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_061",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_062",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_063",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_064",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_065",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":{\"items\":[{\"orderLineId\":3,\"orderId\":1,\"orderCode\":\"DEMO-DH001\",\"dueDate\":\"2026-11-10\",\"productId\":1,\"productCode\":\"DEMO-AO01\",\"c…"
+    },
+    {
+        "Id": "IT_B4_066",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_067",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_068",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_069",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_070",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_071",
+        "Outcome": "Failed",
+        "Message": "Expected ids {14659, 14660, 14662} to not contain {14659, 14661, 14662, 14663}, but found {14659, 14662}."
+    },
+    {
+        "Id": "IT_B4_072",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_073",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_074",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_075",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_076",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_077",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_078",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_079",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_080",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_081",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":[],\"message\":null}, but found 200."
+    },
+    {
+        "Id": "IT_B4_082",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"TEAM_ORDER_BUSY\",\"message\":\"Tổ đang làm đơn DH-0002 (đã nhập kho TP 0% / đặt). Chỉ giao đơn khác khi đạt từ 90% hoặc đơn đã đóng.\"}…"
+    },
+    {
+        "Id": "IT_B4_083",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_084",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_085",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"ORDER_LINE_TEAM_INVALID\",\"message\":\"Tổ được chia phải là tổ may đang hoạt động.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B4_086",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"ORDER_LINE_TEAM_INVALID\",\"message\":\"Tổ được chia phải là tổ may đang hoạt động.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B4_087",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_088",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"ORDER_LINE_TEAM_INVALID\",\"message\":\"Tổ được chia phải là tổ may đang hoạt động.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B4_089",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_090",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"TEAM_ORDER_BUSY\",\"message\":\"Tổ đang làm đơn DH-0002 (đã nhập kho TP 0% / đặt). Chỉ giao đơn khác khi đạt từ 90% hoặc đơn đã đóng.\"}…"
+    },
+    {
+        "Id": "IT_B4_091",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_092",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"ORDER_LINE_TEAM_INVALID\",\"message\":\"Tổ được chia phải là tổ may đang hoạt động.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B4_093",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_094",
+        "Outcome": "Failed",
+        "Message": "Expected results.Count(IsSuccess) to be greater than or equal to 1 because 409 {\"success\":false,\"errorCode\":\"TEAM_ORDER_BUSY\",\"message\":\"Tổ đang làm đơn DH-0002 (đã nhập kho TP 0% / đặt). Chỉ giao đơ…"
+    },
+    {
+        "Id": "IT_B4_095",
+        "Outcome": "Failed",
+        "Message": "Expected results.Count(IsSuccess) to be greater than or equal to 1 because 409 {\"success\":false,\"errorCode\":\"TEAM_ORDER_BUSY\",\"message\":\"Tổ đang làm đơn DH-0002 (đã nhập kho TP 0% / đặt). Chỉ giao đơ…"
+    },
+    {
+        "Id": "IT_B4_096",
+        "Outcome": "Failed",
+        "Message": "Expected (PutAsync(M + \"order-line-teams\", token, new { OrderLineId = id, TeamIds = new[] { S0.TSew01.TeamId } })).Code to be 200, but found 409 (difference of 209)."
+    },
+    {
+        "Id": "IT_B4_097",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_098",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_099",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_100",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_101",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_102",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_103",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_104",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_105",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_106",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_107",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_108",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_109",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_110",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_111",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_112",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_113",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_114",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_115",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_116",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"ORDER_MARKER_INVALID\",\"message\":\"Bìa S1: size M không có trong đơn ở các màu dùng nhóm bìa của bìa.\"}, but found 409 (difference of…"
+    },
+    {
+        "Id": "IT_B4_117",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_118",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"ORDER_MARKER_INVALID\",\"message\":\"Mã hàng không có trong đơn hàng.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B4_119",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_120",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_121",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_122",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_123",
+        "Outcome": "Failed",
+        "Message": "Expected B1Json.Bool(r.Data, \"canImport\") to be True, but found False."
+    },
+    {
+        "Id": "IT_B4_124",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_125",
+        "Outcome": "Failed",
+        "Message": "Expected keep.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"SPEC_IMPORT_INVALID\",\"message\":\"File không có thay đổi nào hợp lệ để nhập.\"}, but found 400 (difference of 200)."
+    },
+    {
+        "Id": "IT_B4_126",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_127",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_128",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_129",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_130",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_131",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_132",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_133",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {200, 201} because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"requiredQty\":[\"Số cần tối đa 100.000.000.\"]}}, but fo…"
+    },
+    {
+        "Id": "IT_B4_134",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_135",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"WAREHOUSE_MATERIAL_INACTIVE\",\"message\":\"NVL đã ngừng sử dụng.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B4_136",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_137",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_138",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_139",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_140",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_141",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_142",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_143",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 409} because 200 {\"success\":true,\"data\":{\"orderMaterialId\":4634,\"orderId\":15350,\"materialId\":17184,\"materialCode\":\"V-0001\",\"materialName\":\"Kaki\",\"materialType\":\"FAB…"
+    },
+    {
+        "Id": "IT_B4_144",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_145",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_146",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_147",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_148",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_149",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_150",
+        "Outcome": "Failed",
+        "Message": "Expected (DsdAsync(D.Od1.OrderId)) to contain only items matching (Convert(x.SeqNo, Int32) >= 1), but the collection is empty."
+    },
+    {
+        "Id": "IT_B4_151",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":{\"orderId\":15211,\"deliveryCount\":2,\"deliveryDate\":\"2026-12-05\",\"deliveryDateTo\":\"2026-12-05\",\"receivedCount\":0,\"hasCustomerMateri…"
+    },
+    {
+        "Id": "IT_B4_152",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_153",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_154",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_155",
+        "Outcome": "Failed",
+        "Message": "Expected B1Json.Prop(r.Data, \"rows\")!.Value.EnumerateArray().Select(x => B1Json.Str(x, \"action\")) to contain only items matching B4OrderMaterialTests.Actions.Contains(a), but {\"Error\", \"Error\", \"Erro…"
+    },
+    {
+        "Id": "IT_B4_156",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_157",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_158",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"ORDER_MATERIAL_IMPORT_INVALID\",\"message\":\"File không có dòng hợp lệ nào thay đổi NVL của đơn.\"}, but found 400 (difference of 200)."
+    },
+    {
+        "Id": "IT_B4_159",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_160",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_161",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_162",
+        "Outcome": "Failed",
+        "Message": "Expected B1Json.Prop(preview.Data, \"blocked\")!.Value.EnumerateArray().Select(x => x.GetString()) {empty} to contain \"V-0001\"."
+    },
+    {
+        "Id": "IT_B4_163",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":{\"created\":1,\"updated\":0,\"removed\":0},\"message\":\"Đã nhập NVL của đơn: thêm 1, cập nhật 0.\"}, but found 200."
+    },
+    {
+        "Id": "IT_B4_164",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_165",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_166",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 404 {\"success\":false,\"errorCode\":\"COMMON_NOT_FOUND\",\"message\":\"Không tìm thấy dữ liệu hoặc bạn không có quyền xem.\"}, but found 404."
+    },
+    {
+        "Id": "IT_B4_167",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_168",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_169",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_170",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"ORDER_LINE_TEAM_INVALID\",\"message\":\"Tổ được chia phải là tổ may đang hoạt động.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B4_171",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B4_172",
+        "Outcome": "Passed",
+        "Message": ""
+    }
+]

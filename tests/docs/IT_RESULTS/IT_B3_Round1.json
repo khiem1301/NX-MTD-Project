@@ -1,0 +1,857 @@
+[
+    {
+        "Id": "IT_B3_001",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_002",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_003",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_004",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_005",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_006",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_007",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_008",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_009",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_010",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_011",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_012",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_013",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_014",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_015",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 404 , but found 404 (difference of 204)."
+    },
+    {
+        "Id": "IT_B3_016",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_017",
+        "Outcome": "Failed",
+        "Message": "Expected results.Count(IsSuccess) to be 1 because 409 {\"success\":false,\"errorCode\":\"PRODUCT_CODE_DUPLICATE\",\"message\":\"Mã hàng đã tồn tại.\"} | 409 {\"success\":false,\"errorCode\":\"PRODUCT_CODE_DUPLICATE…"
+    },
+    {
+        "Id": "IT_B3_018",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_019",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_020",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_021",
+        "Outcome": "Failed",
+        "Message": "Expected big.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"pageSize\":[\"Số dòng mỗi trang phải từ 1 đến 100.\"]}}, but found 4…"
+    },
+    {
+        "Id": "IT_B3_022",
+        "Outcome": "Failed",
+        "Message": "Expected j to be in descending order, but found {1, 2, 2922, 2923, 2924, 8935, 8936, 8937, 8938, 8939, 8940, 8941, 8942, 8943, 8944, 8945, 8946, 8947, 8948, 8949} where item at index 0 is in wrong or…"
+    },
+    {
+        "Id": "IT_B3_023",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_024",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_025",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_026",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"PRODUCT_SPEC_INVALID\",\"message\":\"Nhóm bìa 1, màu Đen: các chi tiết dùng vải khác nhau. Một bìa chỉ trải trên một vải: chuyển màu Đe…"
+    },
+    {
+        "Id": "IT_B3_027",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_028",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {200, 409}, but found 400."
+    },
+    {
+        "Id": "IT_B3_029",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_030",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_031",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_032",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_033",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_034",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_035",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"PRODUCT_SPEC_INVALID\",\"message\":\"Chi tiết cắt \\\"Thân trước\\\" màu Đen khai hơn một vải. Mỗi chi tiết cắt chỉ một vải: tách vải lót, …"
+    },
+    {
+        "Id": "IT_B3_036",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_037",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_038",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_039",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_040",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_041",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_042",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_043",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_044",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_045",
+        "Outcome": "Failed",
+        "Message": "Did not expect r.Body \"{\"success\":false,\"errorCode\":\"COMMON_DB_RULE\",\"message\":\"it-b3 fault injection\"}\" to contain any of the strings: {\"it-b3 fault\"}."
+    },
+    {
+        "Id": "IT_B3_046",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_047",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_048",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_049",
+        "Outcome": "Failed",
+        "Message": "Expected B1Json.Str(FindBy(r.Data, \"productCode\", \"SP400\")!.Value, \"action\") to be one of {\"New\", \"Pending\"}, but found \"Error\"."
+    },
+    {
+        "Id": "IT_B3_050",
+        "Outcome": "Failed",
+        "Message": "Expected B1Json.Str(FindBy(r.Data, \"materialCode\", \"V-9999\", skip: B1Json.Prop(r.Data, \"missingMaterials\")!.Value)!.Value, \"action\") to be the same string, but they differ at index 0: ↓ (actual) \"New…"
+    },
+    {
+        "Id": "IT_B3_051",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_052",
+        "Outcome": "Failed",
+        "Message": "Expected B1Json.Str(B1Json.Prop(r.Data, \"orderMarkers\")!.Value.EnumerateArray().Single(), \"action\") to be \"New\" with a length of 3, but \"Error\" has a length of 5, differs near \"Err\" (index 0)."
+    },
+    {
+        "Id": "IT_B3_053",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"SPEC_IMPORT_INVALID\",\"message\":\"File không có thay đổi nào hợp lệ để nhập.\"}, but found 400 (difference of 200)."
+    },
+    {
+        "Id": "IT_B3_054",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_055",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_056",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_057",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":{\"components\":0,\"norms\":0,\"markerGroups\":0,\"orderMarkers\":1,\"removed\":0},\"message\":\"Đã nhập: 0 thành phần, 0 dòng định mức, 0 nhó…"
+    },
+    {
+        "Id": "IT_B3_058",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 409} because 200 {\"success\":true,\"data\":{\"components\":0,\"norms\":0,\"markerGroups\":0,\"orderMarkers\":1,\"removed\":0},\"message\":\"Đã nhập: 0 thành phần, 0 dòng định mức, …"
+    },
+    {
+        "Id": "IT_B3_059",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"ORDER_MARKER_INVALID\",\"message\":\"Mã hàng không có trong đơn hàng.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B3_060",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"SPEC_IMPORT_INVALID\",\"message\":\"File không có thay đổi nào hợp lệ để nhập.\"}, but found 400 (difference of 200)."
+    },
+    {
+        "Id": "IT_B3_061",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"SPEC_IMPORT_INVALID\",\"message\":\"File không có thay đổi nào hợp lệ để nhập.\"}, but found 400 (difference of 200)."
+    },
+    {
+        "Id": "IT_B3_062",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"SPEC_IMPORT_INVALID\",\"message\":\"Màu Đen: chi tiết cắt \\\"Cổ\\\" chưa nằm trong nhóm bìa nào của màu này.\"}, but found 400 (difference …"
+    },
+    {
+        "Id": "IT_B3_063",
+        "Outcome": "Failed",
+        "Message": "Expected B1Json.Int(r.Data, \"removed\") to be 2, but found 1."
+    },
+    {
+        "Id": "IT_B3_064",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":{\"components\":1,\"norms\":0,\"markerGroups\":0,\"orderMarkers\":0,\"removed\":0},\"message\":\"Đã nhập: 1 thành phần, 0 dòng định mức, 0 nhó…"
+    },
+    {
+        "Id": "IT_B3_065",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_066",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_067",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_068",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_069",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_070",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_071",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_072",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_073",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_074",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 409} because 200 {\"success\":true,\"data\":5910,\"message\":\"Đã lưu.\"}, but found 200."
+    },
+    {
+        "Id": "IT_B3_075",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 409} because 200 {\"success\":true,\"data\":null,\"message\":\"Đã lưu.\"}, but found 200."
+    },
+    {
+        "Id": "IT_B3_076",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_077",
+        "Outcome": "Failed",
+        "Message": "Expected off.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"OPERATION_FINAL_STEP_REQUIRED\",\"message\":\"Không ngừng dùng được: đây là công đoạn may cuối đang dùng duy nhất của mã hàng. Hãy ch…"
+    },
+    {
+        "Id": "IT_B3_078",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_079",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_080",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_081",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_082",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_083",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_084",
+        "Outcome": "Failed",
+        "Message": "Expected Code to be less than 500 because mọi lỗi phải xử lý êm, không được 5xx. Body: {\"success\":false,\"errorCode\":\"COMMON_INTERNAL_ERROR\",\"message\":\"Lỗi hệ thống. Vui lòng thử lại.\"}, but found 500."
+    },
+    {
+        "Id": "IT_B3_085",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_086",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_087",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"PRODUCT_NOT_ACTIVE\",\"message\":\"Mã hàng SP003 đã ngừng sản xuất.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B3_088",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_089",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"OPERATION_INVALID\",\"message\":\"Công đoạn chỉ gắn chi tiết vải (PANEL) của đúng mã hàng; phụ liệu không gắn công đoạn.\"}, but found 4…"
+    },
+    {
+        "Id": "IT_B3_090",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 409} because 200 {\"success\":true,\"data\":null,\"message\":\"Đã lưu.\"}, but found 200."
+    },
+    {
+        "Id": "IT_B3_091",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_092",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 200 {\"success\":true,\"data\":null,\"message\":\"Đã lưu.\"}, but found 200."
+    },
+    {
+        "Id": "IT_B3_093",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_094",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 409} because 200 {\"success\":true,\"data\":null,\"message\":\"Đã lưu.\"}, but found 200."
+    },
+    {
+        "Id": "IT_B3_095",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_096",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_097",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_098",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 404 {\"success\":false,\"errorCode\":\"COMMON_NOT_FOUND\",\"message\":\"Không tìm thấy dữ liệu hoặc bạn không có quyền xem.\"}, but found 404."
+    },
+    {
+        "Id": "IT_B3_099",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_100",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_101",
+        "Outcome": "Failed",
+        "Message": "Expected (Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.CountAsync(db.PieceRates)) to be 5 because S0 có 5 đơn giá, import không tạo thêm, but found 310 (difference of 305)."
+    },
+    {
+        "Id": "IT_B3_102",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":{\"created\":3,\"updated\":0,\"unchanged\":0,\"skipped\":0,\"rateCreated\":3,\"rateUpdated\":0,\"rateUnchanged\":0,\"rateSkipped\":0,\"removed\":0}…"
+    },
+    {
+        "Id": "IT_B3_103",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":{\"created\":2,\"updated\":0,\"unchanged\":0,\"skipped\":1,\"rateCreated\":2,\"rateUpdated\":0,\"rateUnchanged\":0,\"rateSkipped\":0,\"removed\":0}…"
+    },
+    {
+        "Id": "IT_B3_104",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_105",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"OPERATION_FINAL_STEP_EXISTS\",\"message\":\"Mã hàng này đã có công đoạn may cuối đang dùng. Chỉ được một công đoạn cuối.\"}, bu…"
+    },
+    {
+        "Id": "IT_B3_106",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 409 {\"success\":false,\"errorCode\":\"OPERATION_FINAL_STEP_EXISTS\",\"message\":\"Mã hàng này đã có công đoạn may cuối đang dùng. Chỉ được một công đoạn cuối.\"}, but found 4…"
+    },
+    {
+        "Id": "IT_B3_107",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 500 {\"success\":false,\"errorCode\":\"COMMON_INTERNAL_ERROR\",\"message\":\"Lỗi hệ thống. Vui lòng thử lại.\"}, but found 500 (difference of 300)."
+    },
+    {
+        "Id": "IT_B3_108",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_109",
+        "Outcome": "Failed",
+        "Message": "Expected B1Json.Int(r.Data, \"rateUpdated\") to be 1, but found 0 (difference of -1)."
+    },
+    {
+        "Id": "IT_B3_110",
+        "Outcome": "Failed",
+        "Message": "Expected B1Json.Int(r.Data, \"rateSkipped\") to be greater than or equal to 1, but found 0 (difference of -1)."
+    },
+    {
+        "Id": "IT_B3_111",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 200 {\"success\":true,\"data\":{\"created\":1,\"updated\":0,\"unchanged\":0,\"skipped\":0,\"rateCreated\":0,\"rateUpdated\":0,\"rateUnchanged\":0,\"rateSkipped\":0,\"removed\":0}…"
+    },
+    {
+        "Id": "IT_B3_112",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 400 because 409 {\"success\":false,\"errorCode\":\"COMMON_CONSTRAINT_VIOLATION\",\"message\":\"Không lưu được: dữ liệu đang được dùng ở nơi khác hoặc giá trị không hợp lệ.\"}, but found 4…"
+    },
+    {
+        "Id": "IT_B3_113",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_114",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_115",
+        "Outcome": "Failed",
+        "Message": "Did not expect r.Body \"{\"success\":false,\"errorCode\":\"COMMON_DB_RULE\",\"message\":\"it-b3 fault injection\"}\" to contain any of the strings: {\"it-b3 fault\"}."
+    },
+    {
+        "Id": "IT_B3_116",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_117",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_118",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_119",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_120",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_121",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_122",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_123",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_124",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_125",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_126",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_127",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_128",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_129",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_130",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"OPERATION_INVALID\",\"message\":\"Công đoạn và nhóm phải cùng mã hàng.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B3_131",
+        "Outcome": "Failed",
+        "Message": "Expected dup.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"operationIds\":[\"Công đoạn bị chọn trùng.\"]}}, but found 400 (diff…"
+    },
+    {
+        "Id": "IT_B3_132",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_133",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_134",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_135",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_136",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 400 because 200 {\"success\":true,\"data\":3636,\"message\":\"Đã lưu.\"}, but found 200 (difference of -200)."
+    },
+    {
+        "Id": "IT_B3_137",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {200, 201} because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"rate\":[\"Đơn giá không được vượt quá 100,000,000 đồng.…"
+    },
+    {
+        "Id": "IT_B3_138",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400} because 409 {\"success\":false,\"errorCode\":\"OPERATION_NOT_ACTIVE\",\"message\":\"Công đoạn đã ngừng dùng.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B3_139",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_140",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_141",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_142",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_143",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 200 {\"success\":true,\"data\":null,\"message\":\"Đã lưu.\"}, but found 200."
+    },
+    {
+        "Id": "IT_B3_144",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_145",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_146",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_147",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_148",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_149",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be 200 because 400 {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"ids\":[\"The specified condition was not met for 'Ids'.\"]}}, but foun…"
+    },
+    {
+        "Id": "IT_B3_150",
+        "Outcome": "Failed",
+        "Message": "Expected B1Json.Str(r.Data, \"approvalNote\") to be \"Đồng ý\", but found <null>."
+    },
+    {
+        "Id": "IT_B3_151",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_152",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_153",
+        "Outcome": "Failed",
+        "Message": "Expected Code to be less than 500 because mọi lỗi phải xử lý êm, không được 5xx. Body: {\"success\":false,\"errorCode\":\"COMMON_INTERNAL_ERROR\",\"message\":\"Lỗi hệ thống. Vui lòng thử lại.\"}, but found 500."
+    },
+    {
+        "Id": "IT_B3_154",
+        "Outcome": "Failed",
+        "Message": "Expected B1Json.Str(r.Data, \"rejectReason\") to be \"Đơn giá cao hơn thị trường\", but found <null>."
+    },
+    {
+        "Id": "IT_B3_155",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_156",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_157",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_158",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_159",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_160",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 404} because 409 {\"success\":false,\"errorCode\":\"PIECE_RATE_INVALID_STATUS\",\"message\":\"Trạng thái đơn giá không cho phép thao tác này.\"}, but found 409."
+    },
+    {
+        "Id": "IT_B3_161",
+        "Outcome": "Failed",
+        "Message": "Expected results.Count(IsSuccess) to be 1 because 200 {\"success\":true,\"data\":null,\"message\":\"Đã duyệt đơn giá.\"} | 200 {\"success\":true,\"data\":null,\"message\":\"Đã từ chối đơn giá.\"}, but found 2."
+    },
+    {
+        "Id": "IT_B3_162",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_163",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_164",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_165",
+        "Outcome": "Failed",
+        "Message": "Expected pending.Items().Select(i => B1Json.Int(i, \"pieceRateId\")!.Value) to be a collection with 2 item(s), but {2336, 2335, 2334, 2333, 2332, 2331, 3698, 3695, 2375, 2372, 2369, 2366, 2364, 2361, 2…"
+    },
+    {
+        "Id": "IT_B3_166",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_167",
+        "Outcome": "Failed",
+        "Message": "Expected op2.GetRawText() \"{\"operationId\":5358,\"productId\":10742,\"productCode\":\"SP001\",\"operationCode\":\"CD02\",\"operationName\":\"Công đoạn CD02\",\"stationSequence\":2,\"skillLevel\":null,\"standardTimeSec\":…"
+    },
+    {
+        "Id": "IT_B3_168",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_169",
+        "Outcome": "Failed",
+        "Message": "Expected r.Code to be one of {400, 409} because 200 {\"success\":true,\"data\":{\"components\":0,\"norms\":0,\"markerGroups\":0,\"orderMarkers\":1,\"removed\":0},\"message\":\"Đã nhập: 0 thành phần, 0 dòng định mức, …"
+    },
+    {
+        "Id": "IT_B3_170",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "IT_B3_171",
+        "Outcome": "Passed",
+        "Message": ""
+    }
+]
