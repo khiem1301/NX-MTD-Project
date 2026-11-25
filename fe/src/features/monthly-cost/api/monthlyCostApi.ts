@@ -4,6 +4,7 @@ import type { ApiResponse } from '@/types/api';
 import type {
   MonthlyCostExcelPreview,
   MonthlyCostImportResult,
+  MonthlyCostRowsPayload,
   MonthlyCostSummary,
 } from '../types';
 
@@ -40,4 +41,12 @@ export const monthlyCostApi = {
 
   confirmImport: (file: File, periodMonth: string) =>
     post<MonthlyCostImportResult>(API.monthlyCost.import, asFormData(file), { periodMonth }),
+
+  /** DEV-ALL-187: kiểm lại bảng đã sửa trên màn hình (không ghi DB). */
+  previewRows: (body: MonthlyCostRowsPayload) =>
+    post<MonthlyCostExcelPreview>(API.monthlyCost.importRowsPreview, body),
+
+  /** DEV-ALL-187: nhập chi phí tháng từ bảng đã sửa. */
+  importRows: (body: MonthlyCostRowsPayload) =>
+    post<MonthlyCostImportResult>(API.monthlyCost.importRows, body),
 };

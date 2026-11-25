@@ -43,6 +43,9 @@ public interface IPurchaseOrderFlowService
     /// <summary>Thêm một lần thanh toán (UNPAID / PARTIALLY_PAID → PARTIALLY_PAID / PAID): ngày, số tiền (không quá số còn phải trả), hình thức; ảnh chứng từ tùy chọn (Attachment). Không sửa nhà cung cấp / số lượng (GBR-18).</summary>
     Task<Result> ConfirmPaymentAsync(int purchaseOrderId, ConfirmPaymentDto dto, CancellationToken ct);
 
+    /// <summary>DEV-ALL-185: Kế toán nhập giá trị thực tế của đơn Chốt không bù: một lần, sửa trong 24 giờ kể từ lần đầu (kèm lý do).</summary>
+    Task<Result> SetActualAmountAsync(int purchaseOrderId, SetActualAmountDto dto, CancellationToken ct);
+
     /// <summary>UNPAID → RETURNED (bắt buộc lý do): trả lại Quản đốc sửa.</summary>
     Task<Result> ReturnPaymentAsync(int purchaseOrderId, ReturnPaymentDto dto, CancellationToken ct);
 }

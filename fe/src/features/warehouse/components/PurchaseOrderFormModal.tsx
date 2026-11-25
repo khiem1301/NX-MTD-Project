@@ -14,6 +14,7 @@ import {
   type PurchaseOrderLineValues,
 } from '../utils/purchaseOrderForm';
 import { PurchaseOrderLineRow } from './PurchaseOrderLineRow';
+import { confirmDialog } from '@/utils/confirmDialog';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { formatCurrency } from '@/utils/format';
 import { purchaseOrderTotal } from '../utils/purchaseOrderTotal';
@@ -89,7 +90,13 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
       <Form
         form={form}
         layout="vertical"
-        onFinish={(values) => create.mutate(toPurchaseOrderPayload(values), { onSuccess: onClose })}
+        onFinish={(values) =>
+          confirmDialog({
+            title: LABELS.confirmCreateTitle,
+            content: `${LABELS.purchaseOrderTotal}: ${formatCurrency(purchaseOrderTotal(values.lines))}. ${LABELS.confirmCreateContent}`,
+            onOk: () => create.mutate(toPurchaseOrderPayload(values), { onSuccess: onClose }),
+          })
+        }
         disabled={create.isPending}
       >
         <Form.Item name="supplierId" label={LABELS.supplier} rules={required}>

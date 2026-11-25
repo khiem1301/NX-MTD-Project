@@ -57,9 +57,11 @@ public class OperationImportGroupTests : ProductionTestBase
     {
         var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("Công đoạn");
-        string[] headers = ["STT", "BƯỚC CÔNG VIỆC", "BẬC", "TGCT", "NHÓM CÔNG ĐOẠN", "CHI TIẾT", "CUỐI"];
+        string[] headers = ["STT", "BƯỚC CÔNG VIỆC", "BẬC", "TGCT", "NHÓM CÔNG ĐOẠN", "CHI TIẾT", "CUỐI", "TIỀN"];
         for (var c = 0; c < headers.Length; c++) ws.Cell(3, c + 1).Value = headers[c];
         for (var r = 0; r < rows.Length; r++)
+        {
+            ws.Cell(4 + r, 8).Value = 1000;   // đơn giá bắt buộc (DEV-ALL-190)
             for (var c = 0; c < rows[r].Length; c++)
             {
                 var cell = ws.Cell(4 + r, c + 1);
@@ -70,6 +72,7 @@ public class OperationImportGroupTests : ProductionTestBase
                     case var v: cell.Value = v.ToString(); break;
                 }
             }
+        }
         var ms = new MemoryStream();
         wb.SaveAs(ms);
         ms.Position = 0;

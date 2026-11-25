@@ -1,8 +1,10 @@
-import { API } from '@/constants/apiEndpoints';
+import { API, type RolePath } from '@/constants/apiEndpoints';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import type {
   ConfirmPaymentPayload,
+  EditOrderPayload,
+  SetActualAmountPayload,
   PlacePayload,
   PurchaseOrderDetail,
   PurchaseOrderListItem,
@@ -57,6 +59,10 @@ export const purchaseApi = {
   // Kế toán
   confirmPayment: (id: number, body: ConfirmPaymentPayload) =>
     post<void>(API.purchase.confirmPayment(id), body),
+  editOrder: (role: RolePath, id: number, body: EditOrderPayload) =>
+    put<void>(`${API.warehouse.purchaseOrders(role)}/${id}`, body),
+  setActualAmount: (id: number, body: SetActualAmountPayload) =>
+    put<void>(API.purchase.setActualAmount(id), body),
   updatePayment: (id: number, paymentId: number, body: UpdatePaymentPayload) =>
     put<void>(API.purchase.updatePayment(id, paymentId), body),
   returnPayment: (id: number, body: ReasonPayload) =>

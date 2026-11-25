@@ -1,5 +1,6 @@
-import { Alert, Form, InputNumber, type FormInstance } from 'antd';
-import { fill, formatCurrency } from '@/utils/format';
+import { Alert, Form, type FormInstance } from 'antd';
+import { MoneyInput } from '@/components/common/MoneyInput';
+import { formatCurrency } from '@/utils/format';
 import { PURCHASE_TEXT } from '../constants';
 import type { PurchaseOrderDetail } from '../types';
 
@@ -10,12 +11,12 @@ type Props = { order: PurchaseOrderDetail; form: FormInstance; closedShort: bool
 const isPositive = (value: unknown): value is number => typeof value === 'number' && value > 0;
 
 /**
- * Ô số tiền thanh toán. Đơn Chốt không bù có thêm ô Tổng giá trị thực tế (DEV-ALL-129):
- * trạng thái thanh toán xét theo giá trị này — trả đủ → Đã thanh toán, trả thiếu → Thanh toán một phần.
+ * Ô số tiền thanh toán. Đơn Chốt không bù xét theo giá trị thực tế đã nhập ở nút riêng (DEV-ALL-129, 185):
+ * trả đủ → Đã thanh toán, trả thiếu → Thanh toán một phần; chưa nhập giá trị thực tế thì chưa thanh toán được.
  */
 export function PaymentAmountFields({ order, form, closedShort }: Props) {
   const paid = Form.useWatch('paidAmount', form);
-  const actual = Form.useWatch('actualAmount', form);
+  const actual = order.actualAmountSetAt === null ? null : order.actualAmount;
   const alreadyPaid = order.paidAmount ?? 0;
   const target = closedShort ? actual : order.totalAmount;
   const exceedsMessage = closedShort ? text.amountExceedsActual : text.amountExceedsTotal;
@@ -24,39 +25,8 @@ export function PaymentAmountFields({ order, form, closedShort }: Props) {
 
   return (
     <>
-      {closedShort && (
-        <Form.Item
-          name="actualAmount"
-          label={text.actualAmount}
-          validateTrigger="onSubmit"
-          rules={[
-            { required: true, type: 'number', min: 0.01, message: text.actualAmountRequired },
-            {
-              validator: async (_, value) => {
-                if (typeof value !== 'number' || value <= order.totalAmount) return;
-                throw new Error(text.actualExceedsTotal);
-              },
-            },
-          ]}
-          extra={fill(
-            text.actualHint,
-            formatCurrency(order.receivedAmount),
-            formatCurrency(order.totalAmount),
-          )}
-        >
-          <InputNumber
-            min={0}
-            precision={0}
-            addonAfter="₫"
-            style={{ width: 240 }}
-            onChange={(value) =>
-              form.setFieldValue(
-                'paidAmount',
-                typeof value === 'number' && value > alreadyPaid ? value - alreadyPaid : null,
-              )
-            }
-          />
-        </Form.Item>
+      {closedShort && actual === null && (
+        <Alert type="warning" showIcon message={text.actualMissing} style={{ marginBottom: 16 }} />
       )}
       <Form.Item
         name="paidAmount"
@@ -66,7 +36,7 @@ export function PaymentAmountFields({ order, form, closedShort }: Props) {
           { required: true, type: 'number', min: 0.01, message: text.amountRequired },
           {
             validator: async (_, value) => {
-              const max = closedShort ? form.getFieldValue('actualAmount') : order.totalAmount;
+              const max = closedShort ? actual : order.totalAmount;
               if (
                 typeof value !== 'number' ||
                 typeof max !== 'number' ||
@@ -83,7 +53,7 @@ export function PaymentAmountFields({ order, form, closedShort }: Props) {
             : `${text.remaining}: ${formatCurrency(Math.max(0, order.totalAmount - alreadyPaid))} (${PURCHASE_TEXT.detail.total}: ${formatCurrency(order.totalAmount)})`
         }
       >
-        <InputNumber min={0} precision={0} addonAfter="₫" style={{ width: 240 }} />
+        <MoneyInput style={{ width: 240 }} />
       </Form.Item>
       {showPreview && (closedShort || !fullyPaid) && (
         <Alert

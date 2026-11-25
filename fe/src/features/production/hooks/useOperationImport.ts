@@ -35,7 +35,6 @@ const RECHECK_DELAY_MS = 500;
 export function useOperationImport(productId: number, onClose: () => void) {
   const [file, setFile] = useState<File | null>(null);
   const [finalStt, setFinalStt] = useState<number | undefined>(undefined);
-  const [withRates, setWithRates] = useState(true);
   const [effectiveDate, setEffectiveDate] = useState<Dayjs>(dayjs());
   const [submitRates, setSubmitRates] = useState(true);
   const [replace, setReplaceState] = useState(false);
@@ -62,17 +61,16 @@ export function useOperationImport(productId: number, onClose: () => void) {
   }
 
   const data: OperationImportPreview | undefined = edited ? (checked ?? base) : base;
-  const ratesOn = withRates && data?.hasRateColumn === true;
+  const ratesOn = data?.hasRateColumn === true;
 
-  const runCheck = (options: { withRates?: boolean; date?: Dayjs; replace?: boolean } = {}) => {
+  const runCheck = (options: { date?: Dayjs; replace?: boolean } = {}) => {
     if (!base) return;
-    const useRates = options.withRates ?? withRates;
     const date = options.date ?? effectiveDate;
     previewData.mutate(
       {
         body: sheetBodyOf(base, rows),
         productId,
-        effectiveDate: useRates ? toApiDate(date) : undefined,
+        effectiveDate: toApiDate(date),
         replace: (options.replace ?? replace) || undefined,
       },
       {
@@ -100,10 +98,9 @@ export function useOperationImport(productId: number, onClose: () => void) {
 
   const runPreview = (
     nextFile: File,
-    options: { sheetName?: string; withRates?: boolean; date?: Dayjs; replace?: boolean } = {},
+    options: { sheetName?: string; date?: Dayjs; replace?: boolean } = {},
   ) => {
     setFinalStt(undefined);
-    const useRates = options.withRates ?? withRates;
     const date = options.date ?? effectiveDate;
     // Chọn file mới truyền sheetName: undefined (đọc sheet đầu); đổi ngày / tùy chọn thì giữ sheet đang xem.
     const sheetName = 'sheetName' in options ? options.sheetName : base?.sheetName;
@@ -112,7 +109,7 @@ export function useOperationImport(productId: number, onClose: () => void) {
         file: nextFile,
         productId,
         sheetName,
-        effectiveDate: useRates ? toApiDate(date) : undefined,
+        effectiveDate: toApiDate(date),
         replace: (options.replace ?? replace) || undefined,
       },
       {
@@ -126,7 +123,7 @@ export function useOperationImport(productId: number, onClose: () => void) {
   };
 
   /** Đổi tùy chọn (đơn giá, ngày, thay thế): đã sửa bảng thì kiểm lại bản sửa, chưa sửa thì đọc lại file. */
-  const reapply = (options: { withRates?: boolean; date?: Dayjs; replace?: boolean }) => {
+  const reapply = (options: { date?: Dayjs; replace?: boolean }) => {
     if (edited) runCheck(options);
     else if (file) runPreview(file, options);
   };
@@ -199,8 +196,6 @@ export function useOperationImport(productId: number, onClose: () => void) {
     setFile,
     finalStt,
     setFinalStt,
-    withRates,
-    setWithRates,
     effectiveDate,
     setEffectiveDate,
     submitRates,

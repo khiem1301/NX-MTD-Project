@@ -36,7 +36,8 @@ export const sheetBodyOf = (
 ): OperationExcelSheetBody => ({
   sheetName: base.sheetName,
   productText: base.productText,
-  hasRateColumn: base.hasRateColumn,
+  // Đơn giá bắt buộc nên luôn gửi như có cột TIỀN: file thiếu cột thì nhập tay ở ô Đơn giá của bảng (DEV-ALL-190).
+  hasRateColumn: true,
   hasGroupColumn: base.hasGroupColumn,
   hasComponentColumn: base.hasComponentColumn,
   rows: rows.map((r) => ({ ...r, isFinal: false })),

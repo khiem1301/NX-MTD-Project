@@ -135,7 +135,7 @@ export const MESSAGES = {
     templateDownloaded: 'Đã xuất file Excel.', // MSG27
     templateDownloadFailed: 'Không tải được file mẫu. Vui lòng thử lại.',
     importedPrefix: 'Đã nhập chi phí tháng:',
-    noDataYet: 'Tháng này chưa có dữ liệu chi phí. Hãy tải file mẫu và nhập Excel.',
+    noDataYet: 'Tháng này chưa có dữ liệu chi phí. Bấm "Nhập từ Excel" (có file mẫu để tải).',
     confirmImportTitle: 'Nhập chi phí tháng?',
     confirmImportContent:
       'Dữ liệu cũ (nếu có) của tháng này sẽ bị thay thế bằng các dòng hợp lệ trong file.',

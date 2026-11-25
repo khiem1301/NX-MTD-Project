@@ -16,7 +16,7 @@ export const FG_STATUS_LABEL: Record<string, StatusLabel> = {
 
 export const FG_LABELS = {
   title: 'Bàn giao thành phẩm',
-  create: 'Lập phiếu bàn giao',
+  create: 'Bàn giao toàn bộ',
   code: 'Mã phiếu',
   order: 'Đơn hàng',
   product: 'Mã hàng',
@@ -29,7 +29,7 @@ export const FG_LABELS = {
   qcQty: 'QC đạt',
   handedQty: 'Đã giao',
   remainingQty: 'Còn giao được',
-  handoverQty: 'Giao lần này',
+  handoverQty: 'Bàn giao',
   confirmedQty: 'Số kho đếm',
   discrepancyReason: 'Lý do lệch',
   receive: 'Nhận vào kho',
@@ -37,15 +37,16 @@ export const FG_LABELS = {
   rejectTitle: 'Từ chối phiếu bàn giao thành phẩm',
   rejectReason: 'Lý do từ chối',
   cancel: 'Rút phiếu',
-  selectOrder: 'Chọn đơn hàng',
-  selectProduct: 'Chọn mã hàng',
-  nothingToHand: 'Đơn này chưa có số QC đạt nào còn giao được.',
+  nothingToHand: 'Tổ chưa có thành phẩm đạt QC nào còn chờ bàn giao.',
+  teamHint:
+    'Bàn giao toàn bộ thành phẩm đã đạt QC của tổ mình vào kho. Mỗi đơn + mã hàng một phiếu; Thủ kho đếm và nhận từng phiếu.',
+  summary: '{0} phiếu · {1} sản phẩm',
 } as const;
 
 export const FG_MESSAGES = {
-  created: 'Đã lập phiếu bàn giao thành phẩm, chờ Thủ kho nhận.',
+  createdAll: 'Đã lập {0} phiếu bàn giao ({1} sản phẩm), chờ Thủ kho nhận.',
   confirmCreate:
-    'Lập phiếu bàn giao thành phẩm? Số giao sẽ được giữ cho phiếu này đến khi kho nhận hoặc từ chối.',
+    'Bàn giao toàn bộ thành phẩm của tổ vào kho? Số giao được giữ cho các phiếu đến khi kho nhận hoặc từ chối.',
   confirmReceive: 'Xác nhận nhận thành phẩm vào kho theo số đếm?',
   received: 'Đã nhận thành phẩm vào kho.',
   rejected: 'Đã từ chối phiếu bàn giao thành phẩm.',

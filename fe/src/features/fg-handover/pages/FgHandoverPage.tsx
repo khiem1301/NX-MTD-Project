@@ -9,7 +9,7 @@ import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { fill, formatDateTime } from '@/utils/format';
-import { FgHandoverCreateModal } from '../components/FgHandoverCreateModal';
+import { FgHandoverAllModal } from '../components/FgHandoverAllModal';
 import { FgHandoverModal } from '../components/FgHandoverModal';
 import { FG_LABELS, FG_STATUS_LABEL } from '../constants';
 import { useFgHandovers } from '../hooks/useFgHandover';
@@ -114,7 +114,7 @@ export function FgHandoverPage() {
         pagination={table.pagination(handovers.data?.totalItems)}
       />
       <FgHandoverModal handoverId={viewingId} onClose={() => setViewingId(undefined)} />
-      <FgHandoverCreateModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <FgHandoverAllModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </Card>
   );
 }

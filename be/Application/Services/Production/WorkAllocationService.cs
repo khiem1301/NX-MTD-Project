@@ -49,6 +49,33 @@ public sealed partial class WorkAllocationService : IWorkAllocationService
         return Result<PagedResult<WorkAllocationDto>>.Success(await WithRatesAsync(page, ct));
     }
 
+    /// <summary>DEV-ALL-182: một dòng mỗi công nhân của tổ; phân trang theo công nhân, xếp theo mã công nhân.</summary>
+    public async Task<Result<PagedResult<WorkerAllocationSummaryDto>>> GetWorkerSummariesAsync(WorkAllocationQuery query,
+        int teamId, CancellationToken ct)
+    {
+        var keyword = query.Keyword?.Trim();
+        var page = await Allocations.AsNoTracking()
+            .Where(m => m.SewingTeamId == teamId)
+            .Where(m => query.WorkerId == null || m.WorkerId == query.WorkerId)
+            .Where(m => string.IsNullOrEmpty(query.Status) || m.Status == query.Status)
+            .Where(m => string.IsNullOrEmpty(query.MovementType) || m.MovementType == query.MovementType)
+            .Where(m => query.OrderId == null || m.OrderLine.OrderId == query.OrderId)
+            .Where(m => string.IsNullOrEmpty(keyword) || m.Worker.FullName.Contains(keyword)
+                        || m.Worker.EmployeeCode.Contains(keyword) || m.OrderLine.Order.OrderCode.Contains(keyword)
+                        || m.Operation.OperationName.Contains(keyword))
+            .GroupBy(m => new { m.WorkerId, m.Worker.EmployeeCode, m.Worker.FullName })
+            .OrderBy(g => g.Key.EmployeeCode)
+            .Select(g => new WorkerAllocationSummaryDto(
+                g.Key.WorkerId, g.Key.EmployeeCode, g.Key.FullName, g.Count(),
+                g.Where(m => m.Status != HandoverStatuses.Rejected && m.MovementType == PieceMovementTypes.Handover).Sum(m => m.Quantity),
+                g.Where(m => m.Status != HandoverStatuses.Rejected && m.MovementType == PieceMovementTypes.Retrieval).Sum(m => m.Quantity),
+                g.Count(m => m.Status == HandoverStatuses.Pending),
+                g.Where(m => m.Status == HandoverStatuses.Pending && m.MovementType == PieceMovementTypes.Handover).Sum(m => m.Quantity),
+                g.Where(m => m.Status == HandoverStatuses.Pending && m.MovementType == PieceMovementTypes.Retrieval).Sum(m => m.Quantity)))
+            .ToPagedAsync(query, ct);
+        return Result<PagedResult<WorkerAllocationSummaryDto>>.Success(page);
+    }
+
     public async Task<Result<WorkAllocationBoardDto>> GetBoardAsync(int teamId, int? orderId, CancellationToken ct)
     {
         var operations = await (
@@ -143,7 +170,8 @@ public sealed partial class WorkAllocationService : IWorkAllocationService
 
         var worker = await _uow.Repository<Employee>().Query().AsNoTracking()
             .FirstOrDefaultAsync(e => e.EmployeeId == dto.WorkerId, ct);
-        if (worker is null || worker.TeamId != teamId || worker.Status != RecordStatus.Active)
+        // QA/QC thuộc tổ may nhưng không được giao / thu hồi việc công đoạn (DEV-ALL-184).
+        if (worker is null || worker.TeamId != teamId || worker.Status != RecordStatus.Active || worker.Role?.RoleCode == RoleCodes.QaQc)
             return new AllocationRefs(Result<int>.Failure(ErrorCodes.WarehouseTeamMismatch, WarehouseMessages.WorkerNotInTeam,
                 ResultKind.Forbidden));
 

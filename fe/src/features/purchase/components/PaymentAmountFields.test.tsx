@@ -10,6 +10,7 @@ const order = {
   totalAmount: 1_000_000,
   receivedAmount: 800_000,
   actualAmount: null,
+  actualAmountSetAt: null,
 } as PurchaseOrderDetail;
 
 function Harness({
@@ -19,25 +20,34 @@ function Harness({
 }: {
   closedShort: boolean;
   paid: number;
+  /** Giá trị thực tế đã nhập ở nút riêng; bỏ trống = chưa nhập. */
   actual?: number;
 }) {
   const [form] = Form.useForm();
+  const entered =
+    actual === undefined
+      ? order
+      : { ...order, actualAmount: actual, actualAmountSetAt: '2026-11-25T08:00:00' };
   return (
-    <Form form={form} initialValues={{ paidAmount: paid, actualAmount: actual }}>
-      <PaymentAmountFields order={order} form={form} closedShort={closedShort} />
+    <Form form={form} initialValues={{ paidAmount: paid }}>
+      <PaymentAmountFields order={entered} form={form} closedShort={closedShort} />
     </Form>
   );
 }
 
 describe('PaymentAmountFields', () => {
-  it('đơn thường: không có ô Tổng giá trị thực tế', () => {
-    render(<Harness closedShort={false} paid={1_000_000} />);
+  it('không còn ô nhập giá trị thực tế trong form thanh toán (nhập ở nút riêng)', () => {
+    render(<Harness closedShort paid={800_000} actual={800_000} />);
     expect(screen.queryByText(text.actualAmount)).not.toBeInTheDocument();
+  });
+
+  it('Chốt không bù chưa nhập giá trị thực tế: báo phải nhập trước', () => {
+    render(<Harness closedShort paid={500_000} />);
+    expect(screen.getByText(text.actualMissing)).toBeInTheDocument();
   });
 
   it('Chốt không bù: trả đủ thực tế báo Đã thanh toán', async () => {
     render(<Harness closedShort paid={800_000} actual={800_000} />);
-    expect(screen.getByText(text.actualAmount)).toBeInTheDocument();
     expect(await screen.findByText(text.willBePaid)).toBeInTheDocument();
   });
 

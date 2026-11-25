@@ -52,6 +52,12 @@ public sealed class ConfirmWorkAllocationBatchDtoValidator : AbstractValidator<C
     }
 }
 
+public sealed class ConfirmWorkerOnBehalfDtoValidator : AbstractValidator<ConfirmWorkerOnBehalfDto>
+{
+    public ConfirmWorkerOnBehalfDtoValidator() =>
+        RuleFor(x => x.OnBehalfReason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(TextLimits.Reason);
+}
+
 public sealed class ConfirmOnBehalfDtoValidator : AbstractValidator<ConfirmOnBehalfDto>
 {
     public ConfirmOnBehalfDtoValidator()

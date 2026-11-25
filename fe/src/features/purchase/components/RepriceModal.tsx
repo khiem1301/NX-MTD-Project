@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Alert, Form, Input, InputNumber, Modal, Space, Typography } from 'antd';
 import { MESSAGES } from '@/constants/messages';
+import { MoneyInput } from '@/components/common/MoneyInput';
 import { formatCurrency, formatQty } from '@/utils/format';
 import { PURCHASE_TEXT } from '../constants';
 import { useRepriceOrder } from '../hooks/usePurchase';
@@ -102,7 +103,7 @@ export function RepriceModal({ open, order, onClose }: Props) {
                       },
                     ]}
                   >
-                    <InputNumber min={0} precision={0} addonAfter="₫" style={{ width: 170 }} />
+                    <MoneyInput style={{ width: 170 }} />
                   </Form.Item>
                 </Space>
               );

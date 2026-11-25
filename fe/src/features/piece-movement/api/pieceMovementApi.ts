@@ -5,11 +5,13 @@ import type {
   ConfirmAllocationPayload,
   ConfirmBatchPayload,
   ConfirmOnBehalfPayload,
+  ConfirmWorkerOnBehalfPayload,
   DailyAllocationBoard,
   DailyAllocationResult,
   SaveDailyPayload,
   WorkAllocation,
   WorkAllocationBoard,
+  WorkerAllocationSummary,
 } from '../types';
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
@@ -24,6 +26,8 @@ export const WORKER_BASE = '/api/v1/worker/work-allocations';
 
 export const pieceMovementApi = {
   list: (base: string, q: AllocationQuery) => get<Paginated<WorkAllocation>>(base, q),
+  workers: (q: AllocationQuery) =>
+    get<Paginated<WorkerAllocationSummary>>(`${LEADER_BASE}/workers`, q),
   board: (orderId?: number) => get<WorkAllocationBoard>(`${LEADER_BASE}/board`, { orderId }),
   daily: (workDate: string, orderId: number, orderLineId: number) =>
     get<DailyAllocationBoard>(`${LEADER_BASE}/daily`, { workDate, orderId, orderLineId }),
@@ -34,6 +38,8 @@ export const pieceMovementApi = {
     post<null>(`${WORKER_BASE}/${id}/confirm`, body),
   confirmBatchByWorker: (body: ConfirmBatchPayload) =>
     post<null>(`${WORKER_BASE}/confirm-batch`, body),
+  confirmWorkerOnBehalf: (workerId: number, body: ConfirmWorkerOnBehalfPayload) =>
+    post<null>(`${LEADER_BASE}/workers/${workerId}/confirm-on-behalf`, body),
   rejectByWorker: (id: number, reason: string) =>
     post<null>(`${WORKER_BASE}/${id}/reject`, { reason }),
 };

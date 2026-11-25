@@ -1,9 +1,11 @@
+import { confirmAmount } from '@/utils/confirmAmount';
 import { useEffect } from 'react';
-import { Form, Input, InputNumber, Modal, Select } from 'antd';
+import { Form, Input, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { MESSAGES } from '@/constants/messages';
+import { MoneyInput } from '@/components/common/MoneyInput';
 import { formatCurrency, toApiDate } from '@/utils/format';
 import { PAYMENT_METHOD_OPTIONS, PURCHASE_TEXT } from '../constants';
 import { useUpdatePayment } from '../hooks/usePurchase';
@@ -47,20 +49,22 @@ export function EditPaymentModal({ order, payment, onClose }: Props) {
 
   const handleFinish = (values: FormValues) => {
     if (!payment) return;
-    update.mutate(
-      {
-        paymentId: payment.purchasePaymentId,
-        body: {
-          paymentDate: toApiDate(values.paymentDate),
-          amount: values.amount ?? 0,
-          paymentMethod: values.paymentMethod,
-          paymentNote: values.paymentNote?.trim() || null,
-          reason: values.reason.trim(),
-          rowVer: order.rowVer,
+    confirmAmount(text.amount, values.amount ?? 0, () => {
+      update.mutate(
+        {
+          paymentId: payment.purchasePaymentId,
+          body: {
+            paymentDate: toApiDate(values.paymentDate),
+            amount: values.amount ?? 0,
+            paymentMethod: values.paymentMethod,
+            paymentNote: values.paymentNote?.trim() || null,
+            reason: values.reason.trim(),
+            rowVer: order.rowVer,
+          },
         },
-      },
-      { onSuccess: onClose },
-    );
+        { onSuccess: onClose },
+      );
+    });
   };
 
   return (
@@ -97,7 +101,7 @@ export function EditPaymentModal({ order, payment, onClose }: Props) {
           ]}
           extra={`${text.maxForThis}: ${formatCurrency(maxAmount)}`}
         >
-          <InputNumber min={0} precision={0} addonAfter="₫" style={{ width: 240 }} />
+          <MoneyInput style={{ width: 240 }} />
         </Form.Item>
         <Form.Item
           name="paymentMethod"

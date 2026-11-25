@@ -26,8 +26,8 @@ INSERT @e VALUES
  ('QUANDOC', N'Lê Minh Tuấn',       'M', '1981-07-25', '0903111002', 'MANAGER',          'VP',   'MONTHLY', NULL, 2,   '2016-03-01', NULL),
  ('KETOAN',  N'Phạm Thị Hương',     'F', '1986-11-02', '0903111003', 'ACCOUNTANT',       'VP',   'MONTHLY', NULL, 3,   '2017-06-12', NULL),
  ('THUKHO',  N'Đỗ Văn Thắng',       'M', '1984-05-18', '0903111004', 'WAREHOUSE_KEEPER', 'VP',   'MONTHLY', NULL, 4,   '2018-02-19', NULL),
- ('QAQC1',   N'Nguyễn Thị Lụa',     'F', '1990-09-09', '0903111005', 'QAQC',             'VP',   'DAILY',   NULL, 5,   '2019-04-08', NULL),
- ('QAQC2',   N'Bùi Văn Cường',      'M', '1992-01-30', '0903111006', 'QAQC',             'VP',   'DAILY',   NULL, 6,   '2021-08-16', NULL),
+ ('QAQC1',   N'Nguyễn Thị Lụa',     'F', '1990-09-09', '0903111005', 'QAQC',             'MAY1', 'DAILY',   NULL, 5,   '2019-04-08', NULL),
+ ('QAQC2',   N'Bùi Văn Cường',      'M', '1992-01-30', '0903111006', 'QAQC',             'MAY2', 'DAILY',   NULL, 6,   '2021-08-16', NULL),
  ('CODIEN',  N'Vũ Đình Công',       'M', '1988-12-14', '0903111007', 'ELECTRICIAN',      'VP',   'MONTHLY', NULL, 7,   '2018-10-01', NULL),
  -- Tổ cắt
  ('TTCAT',   N'Hoàng Văn Sơn',      'M', '1983-04-04', '0903222001', 'TEAM_LEADER',      'CAT',  'MONTHLY', NULL, 11,  '2016-05-09', NULL),

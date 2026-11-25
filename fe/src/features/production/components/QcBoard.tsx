@@ -38,7 +38,8 @@ export function QcBoard({ role }: { role: QcRole }) {
     { title: text.columns.date, dataIndex: 'workDate', render: (v: string) => formatDate(v) },
     { title: text.columns.shift, dataIndex: 'shiftCode', render: (v: string) => shiftText(v) },
     { title: text.columns.time, dataIndex: 'batchTime', render: (v: string) => v.slice(0, 5) },
-    { title: text.columns.team, dataIndex: 'sewingTeamCode' },
+    // QA/QC chỉ thấy đợt QC của tổ mình nên cột tổ chỉ cần ở màn Quản đốc.
+    ...(isManager ? [{ title: text.columns.team, dataIndex: 'sewingTeamCode' }] : []),
     { responsive: ['md'], title: text.columns.order, dataIndex: 'orderCode' },
     {
       title: text.columns.line,

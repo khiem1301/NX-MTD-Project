@@ -165,6 +165,7 @@ export const API = {
     payments: v1('accountant/purchase-payments'),
     payment: (id: number) => v1(`accountant/purchase-payments/${id}`),
     confirmPayment: (id: number) => v1(`accountant/purchase-payments/${id}/confirm`),
+    setActualAmount: (id: number) => v1(`accountant/purchase-payments/${id}/actual-amount`),
     updatePayment: (id: number, paymentId: number) =>
       v1(`accountant/purchase-payments/${id}/payments/${paymentId}`),
     returnPayment: (id: number) => v1(`accountant/purchase-payments/${id}/return`),
@@ -208,6 +209,8 @@ export const API = {
     template: '/api/v1/accountant/monthly-costs/template',
     importPreview: '/api/v1/accountant/monthly-costs/import/preview',
     import: '/api/v1/accountant/monthly-costs/import',
+    importRowsPreview: '/api/v1/accountant/monthly-costs/import/rows/preview',
+    importRows: '/api/v1/accountant/monthly-costs/import/rows',
   },
   lookups: {
     orders: v1('common/lookups/orders'),

@@ -18,7 +18,7 @@ public sealed class QcBatchesController : QaQcBaseController
 
     /// <summary>Hàng đang có trên chuyền của một tổ + dòng đơn (trần số đạt, MSG19).</summary>
     [HttpGet("on-line")]
-    public async Task<IActionResult> OnLine([FromQuery] int sewingTeamId, [FromQuery] int orderLineId, CancellationToken ct) =>
+    public async Task<IActionResult> OnLine([FromQuery] int? sewingTeamId, [FromQuery] int orderLineId, CancellationToken ct) =>
         this.ToResponse(await _qc.GetOnLineAsync(sewingTeamId, orderLineId, ct));
 
     [HttpPost]

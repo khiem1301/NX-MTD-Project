@@ -33,6 +33,29 @@ public sealed partial class WorkAllocationService
             return Result.Success(string.Format(WarehouseMessages.PieceMovementsBatchConfirmed, confirmed.Count));
         });
 
+    /// <summary>DEV-ALL-182: tổ trưởng xác nhận hộ cả công nhân - mọi phiếu đang chờ của công nhân trong tổ, mỗi phiếu đủ số, cùng một lý do.</summary>
+    public Task<Result> ConfirmWorkerOnBehalfAsync(int workerId, ConfirmWorkerOnBehalfDto dto, int teamId, CancellationToken ct) =>
+        _uow.InTransactionAsync(async () =>
+        {
+            var ids = await Allocations.Where(m => m.WorkerId == workerId && m.SewingTeamId == teamId && m.Status == HandoverStatuses.Pending)
+                .OrderBy(m => m.WorkAllocationId).Select(m => m.WorkAllocationId).ToListAsync(ct);
+            if (ids.Count == 0) return WarehouseFailures.NotFound();
+
+            var reason = dto.OnBehalfReason.Trim();
+            var confirmed = 0;
+            foreach (var id in ids)
+            {
+                var (allocation, failure) = await LoadPendingAsync(id, m => m.SewingTeamId == teamId, ct);
+                if (allocation is null) return LineFailure($"#{id}", failure!);
+                var result = await ApplyConfirmAsync(allocation, allocation.Quantity, null, ConfirmModes.OnBehalf, reason, ct);
+                if (!result.IsSuccess) return LineFailure(allocation.Operation.OperationName, result);
+                AuditDecision(allocation);
+                confirmed++;
+            }
+            await _uow.SaveChangesAsync();
+            return Result.Success(string.Format(WarehouseMessages.PieceMovementsBatchConfirmed, confirmed));
+        });
+
     private async Task NotifyBatchAsync(IReadOnlyList<WorkAllocation> confirmed, int workerId, CancellationToken ct)
     {
         var workerName = await _uow.Repository<Employee>().Query().AsNoTracking()

@@ -163,6 +163,9 @@
                  (usp_Attendance_RebuildTimesheet / ApplyAdjustment). Patch: SQL/patches/2026-11-22_workday_full_day.sql.
    - 24/11/2026  (DEV-ALL-169) Đơn từ loại MACHINE_REPAIR (Sửa máy): tổ trưởng / tổ phó tổ cắt và tổ may gửi, Cơ điện xử lý, không qua duyệt.
                  CK_Request_Type thêm MACHINE_REPAIR. Patch: SQL/patches/2026-11-24_request_machine_repair.sql.
+   - 25/11/2026  (DEV-ALL-185) Giá trị thực tế của đơn mua (PurchaseOrder.ActualAmount) và giá trị chốt của đơn hàng (CustomerOrder.FinalAmount):
+                 nhập một lần, sửa trong 24 giờ kể từ lần nhập đầu. Thêm PurchaseOrder.ActualAmountSetAt, CustomerOrder.FinalAmountSetAt.
+                 Patch: SQL/patches/2026-11-25_actual_amount_entered_at.sql.
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -555,6 +558,7 @@ CREATE TABLE dbo.CustomerOrder (
     StopReason       NVARCHAR(500)  NULL,
     FinalAmount      DECIMAL(18,2)  NULL,     -- giá trị chốt cả đơn do Kế toán nhập, có thể âm (mình phải đền hợp đồng); NULL = chưa chốt (18/11/2026, DEV-ALL-137)
     FinalAmountReason NVARCHAR(500) NULL,
+    FinalAmountSetAt DATETIME2(0)   NULL,     -- lúc nhập giá trị chốt lần đầu; sửa được trong 24 giờ kể từ lúc này (25/11/2026, DEV-ALL-185)
     DeliveryAddress  NVARCHAR(500)  NOT NULL CONSTRAINT DF_CustomerOrder_DeliveryAddress DEFAULT N'', -- địa chỉ giao hàng của đơn (DEV-ALL-147), BE bắt buộc nhập khi tạo / sửa đơn
     Note             NVARCHAR(1000) NULL,
     CustomerDeliveryCount  SMALLINT NULL,     -- số lần khách dự kiến giao NVL của cả đơn (11/11/2026, DEV-ALL-95); số lần đã nhận xem vw_OrderMaterialDelivery
@@ -871,7 +875,8 @@ CREATE TABLE dbo.PurchaseOrder (
     -- Thanh toán do Kế toán xác nhận (PAYMENT, UC34); ảnh chứng từ trong Attachment (OwnerType = PURCHASE_ORDER)
     PaymentDate           DATE           NULL,
     PaidAmount            DECIMAL(18,2)  NULL,
-    ActualAmount          DECIMAL(18,2)  NULL,  -- DEV-ALL-129: tổng giá trị thực tế đơn Chốt không bù, Kế toán nhập khi thanh toán
+    ActualAmount          DECIMAL(18,2)  NULL,  -- DEV-ALL-129: tổng giá trị thực tế đơn Chốt không bù (nhập riêng ở nút Giá trị thực tế, DEV-ALL-185)
+    ActualAmountSetAt     DATETIME2(0)   NULL,  -- DEV-ALL-185: lúc Kế toán nhập giá trị thực tế lần đầu; sửa được trong 24 giờ kể từ lúc này; NULL = chưa nhập
     PaymentMethod         VARCHAR(20)    NULL,
     PaymentNote           NVARCHAR(500)  NULL,
     Note                  NVARCHAR(1000) NULL,

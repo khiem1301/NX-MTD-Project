@@ -58,7 +58,7 @@ export const OPERATIONS_TEXT = {
   import: {
     title: 'Nhập công đoạn từ file Excel quy trình công nghệ',
     hint: 'Cột: STT, BƯỚC CÔNG VIỆC, BẬC, TGCT. Mã công đoạn sinh từ STT (7 thành OP07); nhập lại file thì cập nhật, không tạo trùng.',
-    chooseFile: 'Bấm hoặc kéo file .xlsx vào đây',
+    chooseFile: 'Chọn file Excel (.xlsx)',
     chooseFileHint:
       'Đọc cột STT, BƯỚC CÔNG VIỆC, BẬC, TGCT, THIẾT BỊ, TIỀN; thêm tùy chọn NHÓM CÔNG ĐOẠN, CHI TIẾT (cách nhau dấu ;), CUỐI (đánh x). Dòng tiêu đề nhóm, chỗ trống và "Dự phòng" được bỏ qua.',
     editHint: 'Sửa trực tiếp trong bảng; máy chủ kiểm lại sau mỗi lần sửa. Chưa lưu gì.',
@@ -82,8 +82,10 @@ export const OPERATIONS_TEXT = {
     resultTemplate:
       'Đã nhập công đoạn: thêm {0}, cập nhật {1}, không đổi {2}, bỏ qua {3} dòng lỗi.',
     rateResultTemplate: ' Đơn giá: thêm {0}, cập nhật {1}, không đổi {2}, bỏ qua {3}.',
-    withRates: 'Nhập kèm đơn giá từ cột TIỀN',
-    noRateColumn: 'File không có cột TIỀN nên không nhập được đơn giá.',
+    pickComponents: 'Chọn chi tiết của mã hàng',
+    noComponentOptions: 'Mã hàng chưa có chi tiết vải (PANEL). Khai ở màn Mã hàng trước.',
+    noRateColumn:
+      'File không có cột TIỀN: mọi dòng báo thiếu đơn giá. Nhập tay ở cột Đơn giá của bảng, hoặc thêm cột TIỀN vào file rồi chọn lại.',
     effectiveDate: 'Đơn giá hiệu lực từ',
     submitRates: 'Gửi Admin duyệt luôn (bỏ chọn thì lưu Nháp)',
     rateHint:
@@ -143,6 +145,11 @@ export const OPERATIONS_TEXT = {
     sequence: 'Thứ tự',
     skill: 'Bậc (1-9)',
     standardTime: 'TG chuẩn (giây)',
+    rate: 'Đơn giá (₫ / lần làm)',
+    rateRequired: 'Nhập đơn giá lớn hơn 0.',
+    rateHint:
+      'Bắt buộc khi thêm công đoạn. Lưu ở trạng thái Nháp, gửi Admin duyệt ở danh sách công đoạn.',
+    rateEffective: 'Đơn giá hiệu lực từ',
     isFinal: 'Là công đoạn cuối (tính hàng hoàn thiện)',
     isFinalMoves: 'Công đoạn cuối hiện tại sẽ chuyển sang công đoạn này.',
     codeFormat: 'Mã chỉ gồm chữ không dấu, số và các ký tự . _ -',

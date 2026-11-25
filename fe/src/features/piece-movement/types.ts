@@ -34,6 +34,21 @@ export type WorkAllocation = {
   rateApproved: boolean;
 };
 
+/** DEV-ALL-182: một dòng mỗi công nhân của tab phiếu giao / thu hồi (BE gộp và phân trang theo công nhân). */
+export type WorkerAllocationSummary = {
+  workerId: number;
+  workerCode: string;
+  workerName: string;
+  slipCount: number;
+  /** Tổng số lần giao / thu hồi của các phiếu chưa bị từ chối (thu hồi là số dương). */
+  handoverQty: number;
+  retrievalQty: number;
+  /** Phiếu đang chờ công nhân xác nhận: số phiếu và số lần theo loại. */
+  pendingCount: number;
+  pendingHandoverQty: number;
+  pendingRetrievalQty: number;
+};
+
 /** Tiến độ chia việc của một công đoạn × dòng đơn. */
 export type OperationProgress = {
   orderLineId: number;
@@ -82,6 +97,8 @@ export type ConfirmAllocationPayload = {
   discrepancyReason?: string;
 };
 export type ConfirmOnBehalfPayload = ConfirmAllocationPayload & { onBehalfReason: string };
+/** DEV-ALL-182: xác nhận hộ mọi phiếu đang chờ của một công nhân, đủ số trên phiếu. */
+export type ConfirmWorkerOnBehalfPayload = { onBehalfReason: string };
 
 /** DEV-ALL-126: công nhân xác nhận nhiều phiếu một lần. */
 export type ConfirmBatchItem = ConfirmAllocationPayload & { workAllocationId: number };

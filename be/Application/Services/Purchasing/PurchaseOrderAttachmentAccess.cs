@@ -11,7 +11,7 @@ namespace NX_MTD.Application.Services;
 /// </summary>
 public sealed class PurchaseOrderAttachmentAccess : IAttachmentOwnerAccess
 {
-    private const int MaxPhotos = 5;
+    private const int MaxPhotos = 20;   // mỗi lần thanh toán ít nhất một ảnh (DEV-ALL-189)
 
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUser _user;

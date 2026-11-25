@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import { AutoComplete, Col, Form, Input, Modal, Row, Select } from 'antd';
+import dayjs, { type Dayjs } from 'dayjs';
+import { AppDatePicker } from '@/components/common/DateInputs';
+import { MoneyInput } from '@/components/common/MoneyInput';
 import { QtyInput } from '@/components/common/QtyInput';
+import { toApiDate } from '@/utils/format';
 import { normalizeCode } from '@/utils/textInput';
 import { MESSAGES } from '@/constants/messages';
 import { useProductComponents } from '@/hooks/useOrderLookups';
@@ -21,8 +25,6 @@ type Props = {
   /** Thứ tự và mã gợi ý khi thêm mới. */
   defaults: { stationSequence: number; operationCode: string };
   onClose: () => void;
-  /** Gọi sau khi tạo mới công đoạn (không gọi khi sửa) — để mở tiếp ô nhập đơn giá. */
-  onCreated?: (operationId: number) => void;
 };
 
 type FormValues = {
@@ -34,6 +36,8 @@ type FormValues = {
   isFinalStep: boolean;
   groupName?: string;
   componentIds: number[];
+  rate?: number | null;
+  rateEffectiveDate?: Dayjs;
 };
 
 const text = PRODUCTION_TEXT.operations;
@@ -50,7 +54,6 @@ export function OperationFormModal({
   hasOtherFinal,
   defaults,
   onClose,
-  onCreated,
 }: Props) {
   const [form] = Form.useForm<FormValues>();
   const save = useSaveOperation(operation?.operationId ?? null);
@@ -71,7 +74,7 @@ export function OperationFormModal({
             groupName: operation.groupName ?? undefined,
             componentIds: operation.componentIds,
           }
-        : { ...defaults, isFinalStep: false, componentIds: [] },
+        : { ...defaults, isFinalStep: false, componentIds: [], rateEffectiveDate: dayjs() },
     );
     // Chỉ điền lúc mở hộp thoại; danh sách tải lại sau đó không được ghi đè chỗ đang nhập.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -90,12 +93,18 @@ export function OperationFormModal({
         isFinalStep: values.isFinalStep,
         groupName: values.groupName?.trim() || null,
         componentIds: values.componentIds,
+        // DEV-ALL-190: thêm công đoạn bằng tay cũng phải có đơn giá (lưu Nháp); sửa công đoạn thì đổi giá ở nút Đơn giá.
+        ...(operation
+          ? {}
+          : {
+              rate: values.rate ?? null,
+              rateEffectiveDate: values.rateEffectiveDate
+                ? toApiDate(values.rateEffectiveDate)
+                : null,
+            }),
       },
       {
-        onSuccess: (operationId) => {
-          onClose();
-          if (!operation) onCreated?.(operationId);
-        },
+        onSuccess: onClose,
       },
     );
   };
@@ -161,6 +170,27 @@ export function OperationFormModal({
             </Form.Item>
           </Col>
         </Row>
+        {!operation && (
+          <Row gutter={12}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="rate"
+                label={text.form.rate}
+                extra={text.form.rateHint}
+                rules={[
+                  { required: true, type: 'number', min: 0.01, message: text.form.rateRequired },
+                ]}
+              >
+                <MoneyInput style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="rateEffectiveDate" label={text.form.rateEffective}>
+                <AppDatePicker allowClear={false} />
+              </Form.Item>
+            </Col>
+          </Row>
+        )}
         <Form.Item name="groupName" label={text.form.group} extra={text.form.groupHint}>
           <AutoComplete
             allowClear

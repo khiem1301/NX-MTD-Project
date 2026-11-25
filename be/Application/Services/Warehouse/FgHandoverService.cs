@@ -122,6 +122,35 @@ public sealed class FgHandoverService : IFgHandoverService
         return Result<int>.Success(handover.FgHandoverId, WarehouseMessages.FgHandoverCreated);
     }
 
+    public async Task<Result<IReadOnlyList<FgTeamHandoverableLineDto>>> GetTeamHandoverableAsync(int? teamId, CancellationToken ct) =>
+        teamId is null
+            ? Result<IReadOnlyList<FgTeamHandoverableLineDto>>.Failure(ErrorCodes.ProductionForbidden, Messages.QcSewingTeamRequired, ResultKind.Forbidden)
+            : Result<IReadOnlyList<FgTeamHandoverableLineDto>>.Success(await TeamHandoverableAsync(teamId.Value, ct));
+
+    /// <summary>DEV-ALL-183: QA/QC của tổ bàn giao toàn bộ thành phẩm còn lại của tổ; mỗi đơn + mã hàng một phiếu (phiếu vẫn một đơn một mã hàng).</summary>
+    public Task<Result<FgHandoverAllResultDto>> CreateAllForTeamAsync(int? teamId, int inspectorId, CancellationToken ct) =>
+        _uow.InTransactionAsync(async () =>
+        {
+            if (teamId is null)
+                return Result<FgHandoverAllResultDto>.Failure(ErrorCodes.ProductionForbidden, Messages.QcSewingTeamRequired, ResultKind.Forbidden);
+            var lines = await TeamHandoverableAsync(teamId.Value, ct);
+            if (lines.Count == 0)
+                return Result<FgHandoverAllResultDto>.Failure(ErrorCodes.FgHandoverExceedsQc, WarehouseMessages.FgNothingToHandOver);
+
+            var codes = new List<string>();
+            foreach (var group in lines.GroupBy(l => (l.OrderId, l.ProductId)))
+            {
+                var dto = new CreateFgHandoverDto(group.Key.OrderId, group.Key.ProductId,
+                    group.Select(l => new CreateHandoverLineDto(l.OrderLineId, l.RemainingQty)).ToList());
+                var stored = await StoreHandoverAsync(dto, inspectorId, ct);
+                if (!stored.IsSuccess) return WarehouseFailures.From<FgHandoverAllResultDto>(stored);
+                codes.Add(await Handovers.AsNoTracking().Where(h => h.FgHandoverId == stored.Data).Select(h => h.HandoverCode).FirstAsync(ct));
+            }
+            var total = lines.Sum(l => l.RemainingQty);
+            return Result<FgHandoverAllResultDto>.Success(new FgHandoverAllResultDto(codes.Count, total, codes),
+                string.Format(WarehouseMessages.FgHandoverAllCreated, codes.Count, total));
+        });
+
     public Task<Result> ConfirmAsync(int handoverId, ConfirmFgHandoverDto dto, int employeeId, CancellationToken ct) =>
         _uow.InTransactionAsync(async () =>
         {
@@ -230,6 +259,47 @@ public sealed class FgHandoverService : IFgHandoverService
         handover.Status = HandoverStatuses.Cancelled;
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.FgHandoverCancelled);
+    }
+
+    /// <summary>
+    /// Số còn bàn giao của tổ: với mỗi dòng đơn chưa đóng mà tổ có QC đạt, = min(QC đạt của tổ, QC đạt mọi tổ − đã bàn giao). Dòng đơn
+    /// thường chỉ thuộc một tổ (chia đơn theo tổ) nên hai số này trùng nhau.
+    /// </summary>
+    private async Task<IReadOnlyList<FgTeamHandoverableLineDto>> TeamHandoverableAsync(int teamId, CancellationToken ct)
+    {
+        var closed = OrderStatuses.Closed.ToArray();
+        var teamQc = await _uow.Repository<QcBatch>().Query().AsNoTracking()
+            .Where(b => b.SewingTeamId == teamId && !closed.Contains(b.OrderLine.Order.Status))
+            .GroupBy(b => b.OrderLineId).Select(g => new { OrderLineId = g.Key, Qty = g.Sum(b => b.FinishedQty) })
+            .ToDictionaryAsync(x => x.OrderLineId, x => x.Qty, ct);
+        if (teamQc.Count == 0) return [];
+
+        var ids = teamQc.Keys.ToList();
+        var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .Where(l => ids.Contains(l.OrderLineId))
+            .OrderBy(l => l.Order.OrderCode).ThenBy(l => l.ProductVariant.Product.ProductCode)
+            .ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
+            .Select(l => new { l.OrderLineId, l.OrderId, l.Order.OrderCode, l.ProductId, l.ProductVariant.Product.ProductCode,
+                l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode })
+            .ToListAsync(ct);
+        var qcAll = await _output.GetQcFinishedByOrderLineAsync(ids, ct);
+        var handed = await _uow.Repository<FgHandoverLine>().Query()
+            .Where(l => ids.Contains(l.OrderLineId)
+                        && (l.FgHandover.Status == HandoverStatuses.Pending || l.FgHandover.Status == HandoverStatuses.Confirmed))
+            .GroupBy(l => l.OrderLineId).Select(g => new { g.Key, Qty = g.Sum(l => l.HandedQty) })
+            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+
+        return lines
+            .Select(l =>
+            {
+                var own = teamQc[l.OrderLineId];
+                var h = handed.GetValueOrDefault(l.OrderLineId);
+                var remaining = Math.Max(0, Math.Min(own, qcAll.GetValueOrDefault(l.OrderLineId) - h));
+                return new FgTeamHandoverableLineDto(l.OrderId, l.OrderCode, l.OrderLineId, l.ProductId, l.ProductCode, l.Color,
+                    l.SizeCode, own, h, remaining);
+            })
+            .Where(l => l.RemainingQty > 0)
+            .ToList();
     }
 
     /// <summary>Số QC đạt − đã bàn giao (phiếu chờ nhận + đã nhận, tính theo số QA/QC giao) của từng dòng đơn.</summary>

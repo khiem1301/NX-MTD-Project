@@ -1,5 +1,6 @@
 import { Form, InputNumber, Space, Typography } from 'antd';
 import { QtyInput } from '@/components/common/QtyInput';
+import { MoneyInput } from '@/components/common/MoneyInput';
 import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { PURCHASE_TEXT } from '../constants';
 import type { PurchaseOrderDetail } from '../types';
@@ -43,13 +44,7 @@ export function PlaceOrderLines({ orderLines }: PlaceOrderLinesProps) {
                 name={[field.name, 'unitPrice']}
                 rules={[{ required: true, type: 'number', min: 0.01, message: text.priceRequired }]}
               >
-                <InputNumber
-                  min={0}
-                  precision={0}
-                  addonAfter="₫"
-                  placeholder={PURCHASE_TEXT.detail.unitPrice}
-                  style={{ width: 170 }}
-                />
+                <MoneyInput placeholder={PURCHASE_TEXT.detail.unitPrice} style={{ width: 170 }} />
               </Form.Item>
             </Space>
           );

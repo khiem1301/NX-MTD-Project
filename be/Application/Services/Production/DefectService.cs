@@ -207,7 +207,8 @@ public sealed class DefectService : IDefectService
             return new DefectRefs(Result<int>.Failure(ErrorCodes.OperationProductMismatch, Messages.OperationProductMismatch));
 
         var worker = await _uow.Repository<Employee>().Query().AsNoTracking().FirstOrDefaultAsync(
-            e => e.EmployeeId == workerId && e.TeamId == teamId && e.Status == RecordStatus.Active, ct);
+            e => e.EmployeeId == workerId && e.TeamId == teamId && e.Status == RecordStatus.Active
+                 && (e.Role == null || e.Role.RoleCode != RoleCodes.QaQc), ct);   // QA/QC không phải người làm ra hàng hỏng (DEV-ALL-184)
         return worker is null
             ? new DefectRefs(Result<int>.Failure(ErrorCodes.AssignmentWorkerInvalid, Messages.AssignmentWorkerInvalid))
             : new DefectRefs(null, operation, worker);

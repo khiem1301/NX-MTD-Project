@@ -35,6 +35,8 @@ public class FgHandoverServiceTests
     private readonly Employee _qa = new() { EmployeeId = Inspector, FullName = "QA Một" };
     private readonly CustomerOrder _order = new() { OrderId = 7, OrderCode = "DH-1", Status = OrderStatuses.InProduction };
     private readonly Dictionary<int, int> _qc = new();
+    private readonly List<QcBatch> _batches = new();
+    private const int TeamId = 5;
 
     public FgHandoverServiceTests()
     {
@@ -46,7 +48,7 @@ public class FgHandoverServiceTests
         _output.GetQcFinishedByOrderLineAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
             .Returns(_ => (IReadOnlyDictionary<int, int>)new Dictionary<int, int>(_qc));
         _orders.Add(_order);
-        Setup(_orders); Setup(_orderLines); Setup(_handovers); Setup(_handoverLines); Setup(_kpis);
+        Setup(_orders); Setup(_orderLines); Setup(_handovers); Setup(_handoverLines); Setup(_kpis); Setup(_batches);
         _uow.SaveChangesAsync().Returns(Task.FromResult(1));
         AddLine(101, "Đen", "M", qc: 100);
         AddLine(102, "Đen", "L", qc: 60);
@@ -64,7 +66,7 @@ public class FgHandoverServiceTests
 
     private OrderLine AddLine(int id, string color, string size, int qc)
     {
-        var line = new OrderLine { OrderLineId = id, OrderId = 7, ProductId = 3, ProductVariant = TestVariant.Make(_product, color, size) };
+        var line = new OrderLine { OrderLineId = id, OrderId = 7, Order = _order, ProductId = 3, ProductVariant = TestVariant.Make(_product, color, size) };
         _orderLines.Add(line);
         _qc[id] = qc;
         return line;
@@ -104,6 +106,83 @@ public class FgHandoverServiceTests
             added.Add(h); _handovers.Add(h); _handoverLines.AddRange(h.FgHandoverLines);
         }));
         return added;
+    }
+
+    // ---------- Bàn giao toàn bộ thành phẩm của tổ (DEV-ALL-183) ----------
+
+    private void TeamQc(int lineId, int team, int qty) =>
+        _batches.Add(new QcBatch { QcBatchId = _batches.Count + 1, OrderLineId = lineId, OrderLine = _orderLines.First(l => l.OrderLineId == lineId),
+            SewingTeamId = team, FinishedQty = qty });
+
+    [Fact]
+    public async Task Team_handoverable_lists_only_lines_the_team_passed_and_subtracts_handed_over()
+    {
+        TeamQc(101, TeamId, 100);
+        TeamQc(102, 6, 60);                                  // tổ khác
+        Handover(HandoverStatuses.Confirmed, (101, 30));
+        Handover(HandoverStatuses.Rejected, (101, 40));      // không tính
+
+        var result = await Service().GetTeamHandoverableAsync(TeamId, default);
+
+        var line = result.Data!.Should().ContainSingle().Subject;
+        (line.OrderLineId, line.OrderCode, line.QcQty, line.HandedQty, line.RemainingQty).Should().Be((101, "DH-1", 100, 30, 70));
+    }
+
+    [Fact]
+    public async Task Team_handoverable_is_capped_by_what_is_left_of_the_whole_line()
+    {
+        TeamQc(101, TeamId, 100);
+        _qc[101] = 80;                                       // QC mọi tổ chỉ còn 80 sau khi một đợt bị sửa giảm
+
+        (await Service().GetTeamHandoverableAsync(TeamId, default)).Data!.Single().RemainingQty.Should().Be(80);
+    }
+
+    [Fact]
+    public async Task Team_handoverable_skips_closed_orders_and_QaQc_without_team_is_forbidden()
+    {
+        TeamQc(101, TeamId, 100);
+        _order.Status = OrderStatuses.Delivered;
+
+        (await Service().GetTeamHandoverableAsync(TeamId, default)).Data.Should().BeEmpty();
+        (await Service().GetTeamHandoverableAsync(null, default)).Kind.Should().Be(ResultKind.Forbidden);
+        (await Service().CreateAllForTeamAsync(null, Inspector, default)).Kind.Should().Be(ResultKind.Forbidden);
+    }
+
+    [Fact]
+    public async Task Handover_all_makes_one_slip_per_order_and_product_with_everything_left()
+    {
+        TeamQc(101, TeamId, 100);
+        TeamQc(102, TeamId, 60);
+        var order2 = new CustomerOrder { OrderId = 8, OrderCode = "DH-2", Status = OrderStatuses.InProduction };
+        var product2 = new Product { ProductId = 4, ProductCode = "AO-02" };
+        _orders.Add(order2);
+        _orderLines.Add(new OrderLine { OrderLineId = 201, OrderId = 8, Order = order2, ProductId = 4, ProductVariant = TestVariant.Make(product2, "Đỏ", "S") });
+        _qc[201] = 40;
+        TeamQc(201, TeamId, 40);
+        Handover(HandoverStatuses.Confirmed, (101, 30));
+        var added = CaptureAdds();
+
+        var result = await Service().CreateAllForTeamAsync(TeamId, Inspector, default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.HandoverCount.Should().Be(2);
+        result.Data.TotalQty.Should().Be(70 + 60 + 40);
+        added.Select(h => (h.OrderId, h.ProductId)).Should().BeEquivalentTo(new[] { (7, 3), (8, 4) });
+        added.Single(h => h.OrderId == 7).FgHandoverLines.Select(l => (l.OrderLineId, l.HandedQty))
+            .Should().BeEquivalentTo(new[] { (101, 70), (102, 60) });
+        added.Should().OnlyContain(h => h.InspectorId == Inspector && h.Status == HandoverStatuses.Pending);
+    }
+
+    [Fact]
+    public async Task Handover_all_with_nothing_left_is_refused()
+    {
+        TeamQc(101, TeamId, 100);
+        Handover(HandoverStatuses.Pending, (101, 100));
+
+        var result = await Service().CreateAllForTeamAsync(TeamId, Inspector, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("chờ bàn giao");
     }
 
     // ---------- Số còn được bàn giao ----------

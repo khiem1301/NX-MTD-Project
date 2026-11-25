@@ -30,17 +30,19 @@ public sealed class PayrollsController : AccountantBaseController
 
     /// <summary>Xem trước file Excel bảng lương đã tính (chưa ghi DB) — MSG24.</summary>
     [HttpPost("import/preview")]
-    public async Task<IActionResult> PreviewImport(IFormFile file, CancellationToken ct)
+    public async Task<IActionResult> PreviewImport(IFormFile? file, CancellationToken ct)
     {
-        await using var stream = file.OpenReadStream();
+        if (ExcelUploadGuard.Check(file) is { } invalid) return this.ToResponse(invalid);
+        await using var stream = file!.OpenReadStream();
         return this.ToResponse(await _payroll.PreviewImportAsync(stream, ct));
     }
 
     /// <summary>Nhập bảng lương từ Excel vào trạng thái Nháp cho một tháng (MSG24).</summary>
     [HttpPost("import")]
-    public async Task<IActionResult> Import(IFormFile file, [FromQuery] string periodMonth, CancellationToken ct)
+    public async Task<IActionResult> Import(IFormFile? file, [FromQuery] string periodMonth, CancellationToken ct)
     {
-        await using var stream = file.OpenReadStream();
+        if (ExcelUploadGuard.Check(file) is { } invalid) return this.ToResponse(invalid);
+        await using var stream = file!.OpenReadStream();
         return this.ToResponse(await _payroll.ImportAsync(stream, periodMonth, ct));
     }
 

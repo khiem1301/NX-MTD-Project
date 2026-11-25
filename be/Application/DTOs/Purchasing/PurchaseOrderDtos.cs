@@ -14,7 +14,8 @@ public sealed record PurchaseOrderLineDto(
 public sealed record PurchaseOrderDto(
     int PurchaseOrderId, string PoCode, int? OrderId, string? OrderCode, int? SupplierId, string? SupplierName,
     string GoodsStatus, string PaymentStatus, string? Note, DateTime CreatedAt,
-    IReadOnlyList<PurchaseOrderLineDto> Lines, short? ExpectedDeliveryCount = null, int ReceivedCount = 0);
+    IReadOnlyList<PurchaseOrderLineDto> Lines, short? ExpectedDeliveryCount = null, int ReceivedCount = 0,
+    bool CanEdit = false, DateOnly? OrderDate = null, IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null);
 
 /// <summary>
 /// Chọn NVL có sẵn (MaterialId) hoặc nhập NVL mới (NewMaterialName + NewMaterialUnit): NVL mới được thêm vào
@@ -28,6 +29,13 @@ public sealed record SavePurchaseOrderLineDto(int? MaterialId, string? NewMateri
 /// <summary>Tạo đơn mua = đặt hàng luôn: đã có nhà cung cấp, số lượng, đơn giá, ngày đặt và số lần giao dự kiến, đơn vào trạng thái đã đặt. ExpectedDeliveryDates: số lần giao = số ngày giao (DEV-ALL-113).</summary>
 public sealed record CreatePurchaseOrderDto(int? OrderId, int SupplierId, DateOnly OrderDate, short ExpectedDeliveryCount,
     string? Note, IReadOnlyList<SavePurchaseOrderLineDto> Lines, IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null);
+
+/// <summary>DEV-ALL-186: sửa số lượng / đơn giá một dòng của đơn mua (NVL của dòng không đổi).</summary>
+public sealed record UpdatePurchaseOrderLineDto(int PurchaseOrderLineId, decimal OrderedQty, decimal UnitPrice);
+
+/// <summary>DEV-ALL-186: Quản đốc sửa đơn mua trong 24 giờ kể từ lúc tạo, khi chưa nhận hàng và chưa thanh toán; bắt buộc lý do. Không đổi được nhà cung cấp (DEV-ALL-189).</summary>
+public sealed record UpdatePurchaseOrderDto(DateOnly OrderDate, short ExpectedDeliveryCount, string? Note,
+    IReadOnlyList<UpdatePurchaseOrderLineDto> Lines, string Reason, IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null);
 
 public sealed record PurchaseOrderQuery : PageQuery
 {

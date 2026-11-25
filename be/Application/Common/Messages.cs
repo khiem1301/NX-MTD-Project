@@ -301,6 +301,11 @@ public static class Messages
     public const string MonthlyCostExcelInvalid =
         "File Excel không đúng định dạng (cần cột: loại chi phí, kiểu, mã hàng, số tiền, số lượng, ghi chú).";
     public const string MonthlyCostExcelEmpty = "File Excel không có dòng dữ liệu nào.";
+    public const string MonthlyCostTooManyRows = "Bảng có {0} dòng, vượt giới hạn {1} dòng.";
+    public const string ImportFileMissing = "Chưa chọn file Excel.";
+    public const string ImportFileEmpty = "File rỗng (0 byte). Hãy chọn lại file Excel .xlsx.";
+    public const string ImportFileWrongType = "Chỉ nhận file Excel .xlsx (không nhận .xls, .csv hoặc định dạng khác).";
+    public const string ImportFileTooLarge = "File quá lớn (tối đa {0} MB).";
 
     // --- KPI tổ may (UC19 KPI tổ may — Quản đốc lập/sửa/hủy chỉ tiêu, khác UC19 lệnh cắt) ---
     public const string KpiNotFound = "Không tìm thấy chỉ tiêu KPI.";
@@ -474,7 +479,17 @@ public static class Messages
     public const string PaymentEditExpired = "Đã quá 24 giờ kể từ lúc nhập nên không sửa được lần thanh toán này.";
     public const string PaymentEditReasonRequired = "Phải nhập lý do khi sửa lần thanh toán.";
     // DEV-ALL-129: đơn Chốt không bù — Kế toán nhập Tổng giá trị thực tế
-    public const string PaymentActualAmountRequired = "Nhập tổng giá trị thực tế của đơn Chốt không bù (lớn hơn 0).";
+    public const string PaymentActualAmountRequired = "Nhập giá trị thực tế của đơn Chốt không bù (lớn hơn 0) trước khi thanh toán.";
+    public const string ActualAmountEditReasonRequired = "Phải nhập lý do khi sửa giá trị thực tế.";
+    public const string PurchaseOrderEditExpired = "Đơn mua chỉ sửa được trong 24 giờ kể từ lúc tạo.";
+    public const string PurchaseOrderEditLocked = "Đơn mua đã có phiếu nhập hoặc đã thanh toán nên không sửa được.";
+    public const string PurchaseOrderEditReasonRequired = "Phải nhập lý do khi sửa đơn mua.";
+    public const string PurchaseOrderUpdated = "Đã sửa đơn mua.";
+    public const string PaymentProofRequired = "Mỗi lần thanh toán phải đính kèm ít nhất một ảnh chứng từ mới (tải ảnh lên trước khi xác nhận).";
+    public const string ActualAmountSaved = "Đã lưu giá trị thực tế của đơn mua.";
+    public const string ActualAmountEditExpired = "Giá trị thực tế chỉ sửa được trong 24 giờ kể từ lần nhập đầu tiên.";
+    public const string FinalAmountFirstEntry = "Nhập lần đầu";   // lý do ghi sẵn khi chưa nhập lý do (CK_CustomerOrder_Final)
+    public const string FinalAmountEditExpired = "Giá trị chốt chỉ sửa được trong 24 giờ kể từ lần nhập đầu tiên.";
     public const string PaymentActualAmountExceedsTotal = "Tổng giá trị thực tế không được lớn hơn tổng giá trị đơn mua.";
     public const string PaymentActualBelowPaid = "Tổng giá trị thực tế không được nhỏ hơn số đã thanh toán.";
     public const string PaymentAmountExceedsActual = "Số tiền thanh toán không được lớn hơn tổng giá trị thực tế (trừ số đã thanh toán).";
@@ -495,6 +510,8 @@ public static class Messages
 
     // --- Công đoạn + đơn giá (UC25, UC26), phân công (UC52), sản lượng (UC55), QC (UC57), hàng hỏng (UC56) ---
     public const string ProductionSewingTeamOnly = "Chức năng này chỉ dành cho tổ trưởng / tổ phó tổ may.";
+    /// <summary>QA/QC thuộc một tổ may; tài khoản chưa gán tổ may thì không nhập QC / bàn giao thành phẩm được.</summary>
+    public const string QcSewingTeamRequired = "Tài khoản QA/QC chưa thuộc tổ may nào. Nhờ Admin gán QA/QC vào một tổ may rồi đăng nhập lại.";
     public const string OperationComponentInvalid = "Công đoạn chỉ gắn chi tiết vải (PANEL) của đúng mã hàng; phụ liệu không gắn công đoạn.";
     // ---- Khổ vải / khổ bìa (DEV-ALL-102); {0} là tên trường ----
     public const string WidthPositive = "{0} phải lớn hơn 0.";
@@ -530,6 +547,8 @@ public static class Messages
     public const string NotifyPieceRatesApprovedManyBody = "{0} đơn giá công đoạn đã được duyệt.";
     public const string OperationImportFinalNotFound = "Số thứ tự công đoạn cuối không có trong các dòng hợp lệ của file.";
     // DEV-ALL-116: cột NHÓM CÔNG ĐOẠN, CHI TIẾT, CUỐI khi nhập công đoạn
+    public const string OperationRateRequired = "Thiếu đơn giá (cột TIỀN). Mỗi công đoạn phải có đơn giá.";
+    public const string OperationRateMustBePositive = "Đơn giá (cột TIỀN) phải lớn hơn 0.";
     public const string OperationImportManyFinals = "Cột CUỐI chỉ được đánh x ở một công đoạn.";
     public const string OperationImportComponentUnknown = "\"{0}\" chưa có ở mã hàng";
     public const string OperationImportComponentNotPanel = "\"{0}\" là phụ liệu (TRIM), công đoạn chỉ gắn chi tiết cắt (PANEL)";

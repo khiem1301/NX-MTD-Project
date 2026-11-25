@@ -1,5 +1,7 @@
+import { confirmAmount } from '@/utils/confirmAmount';
 import { useEffect } from 'react';
-import { Form, Input, InputNumber, Modal, Select } from 'antd';
+import { Form, Input, Modal, Select } from 'antd';
+import { MoneyInput } from '@/components/common/MoneyInput';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { REASON_MAX_LENGTH } from '@/constants/limits';
@@ -59,14 +61,16 @@ export function PaymentFormModal({ order, open, editing, onClose }: Props) {
       paymentNote: values.paymentNote?.trim() || null,
       rowVer: order.rowVer,
     };
-    if (editing) {
-      update.mutate(
-        { paymentId: editing.orderPaymentId, body: { ...body, reason: values.reason.trim() } },
-        { onSuccess: onClose },
-      );
-    } else {
-      add.mutate(body, { onSuccess: onClose });
-    }
+    confirmAmount(text.amount, body.amount, () => {
+      if (editing) {
+        update.mutate(
+          { paymentId: editing.orderPaymentId, body: { ...body, reason: values.reason.trim() } },
+          { onSuccess: onClose },
+        );
+      } else {
+        add.mutate(body, { onSuccess: onClose });
+      }
+    });
   };
 
   return (
@@ -104,7 +108,7 @@ export function PaymentFormModal({ order, open, editing, onClose }: Props) {
           ]}
           extra={`${text.amountHint} ${text.allowed}: ${formatCurrency(range.min)} → ${formatCurrency(range.max)}`}
         >
-          <InputNumber precision={0} addonAfter="₫" style={{ width: 260 }} />
+          <MoneyInput allowNegative style={{ width: 260 }} />
         </Form.Item>
         <Form.Item
           name="paymentMethod"

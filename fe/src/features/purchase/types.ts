@@ -93,6 +93,10 @@ export type PurchaseOrderPermissions = {
   canReprice: boolean;
   canConfirmPayment: boolean;
   canReturnPayment: boolean;
+  /** DEV-ALL-185: nhập / sửa giá trị thực tế (đơn Chốt không bù; một lần, sửa trong 24 giờ kể từ lần đầu). */
+  canSetActualAmount: boolean;
+  /** DEV-ALL-186: Quản đốc sửa đơn trong 24 giờ kể từ lúc tạo (chưa nhận hàng, chưa thanh toán). */
+  canEditOrder: boolean;
 };
 
 /** Một lần thanh toán đơn mua; canEdit: Kế toán, trong 24 giờ kể từ lúc nhập. Không xóa được. */
@@ -135,6 +139,8 @@ export type PurchaseOrderDetail = {
   totalAmount: number;
   /** DEV-ALL-129: tổng giá trị thực tế đơn Chốt không bù (Kế toán nhập); receivedAmount = Σ số đã nhận × đơn giá (gợi ý). */
   actualAmount: number | null;
+  /** DEV-ALL-185: lúc Kế toán nhập giá trị thực tế lần đầu; null = chưa nhập (số tự tính theo số đã nhận không tính là đã nhập). */
+  actualAmountSetAt: string | null;
   receivedAmount: number;
   payments: PurchasePayment[];
   createdAt: string;
@@ -175,9 +181,10 @@ export type ConfirmPaymentPayload = {
   paymentMethod: PaymentMethod;
   paymentNote: string | null;
   rowVer: string;
-  /** Bắt buộc với đơn Chốt không bù (DEV-ALL-129). */
-  actualAmount?: number | null;
 };
+
+/** DEV-ALL-185: giá trị thực tế của đơn Chốt không bù; reason bắt buộc khi sửa (đã nhập lần đầu). */
+export type SetActualAmountPayload = { amount: number; reason?: string; rowVer: string };
 
 export type UpdatePaymentPayload = {
   paymentDate: string;
@@ -189,3 +196,13 @@ export type UpdatePaymentPayload = {
 };
 
 export type ReasonPayload = { reason: string; rowVer: string };
+
+/** DEV-ALL-186: sửa đơn mua trong 24 giờ; reason bắt buộc. */
+export type EditOrderPayload = {
+  orderDate: string;
+  expectedDeliveryCount: number;
+  expectedDeliveryDates: string[];
+  note: string | null;
+  reason: string;
+  lines: { purchaseOrderLineId: number; orderedQty: number; unitPrice: number }[];
+};

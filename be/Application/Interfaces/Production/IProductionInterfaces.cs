@@ -102,7 +102,7 @@ public interface IOutputService
 public interface IQcBatchService
 {
     Task<Result<PagedResult<QcBatchDto>>> ListAsync(QcBatchQuery query, CancellationToken ct);
-    Task<Result<OnLineQtyDto>> GetOnLineAsync(int sewingTeamId, int orderLineId, CancellationToken ct);
+    Task<Result<OnLineQtyDto>> GetOnLineAsync(int? sewingTeamId, int orderLineId, CancellationToken ct);
     Task<Result<int>> CreateAsync(CreateQcBatchDto dto, CancellationToken ct);
     Task<Result> UpdateAsync(int qcBatchId, UpdateQcBatchDto dto, CancellationToken ct);
     Task<Result> DeleteAsync(int qcBatchId, DeleteQcBatchDto dto, CancellationToken ct);

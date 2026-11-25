@@ -19,11 +19,11 @@ export const useQcBatches = (role: QcRole, query: QcBatchQuery) =>
     queryFn: () => productionApi.listQcBatches(role, query),
   });
 
-export const useOnLineQty = (sewingTeamId: number | null, orderLineId: number | null) =>
+export const useOnLineQty = (orderLineId: number | null) =>
   useQuery({
-    queryKey: [...qcKey, 'on-line', sewingTeamId, orderLineId],
-    queryFn: () => productionApi.getOnLine(sewingTeamId!, orderLineId!),
-    enabled: sewingTeamId !== null && orderLineId !== null,
+    queryKey: [...qcKey, 'on-line', orderLineId],
+    queryFn: () => productionApi.getOnLine(orderLineId!),
+    enabled: orderLineId !== null,
   });
 
 export const useCreateQcBatch = () =>

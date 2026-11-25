@@ -20,6 +20,13 @@ public sealed record FgHandoverDto(
 public sealed record FgHandoverableLineDto(int OrderLineId, int ProductId, string ProductCode, string Color,
     string SizeCode, int QcQty, int HandedQty, int RemainingQty);
 
+/// <summary>DEV-ALL-183: một dòng đơn còn bàn giao của tổ may mà QA/QC đăng nhập thuộc về (gộp mọi đơn của tổ). QcQty = số QC đạt của tổ.</summary>
+public sealed record FgTeamHandoverableLineDto(int OrderId, string OrderCode, int OrderLineId, int ProductId, string ProductCode,
+    string Color, string SizeCode, int QcQty, int HandedQty, int RemainingQty);
+
+/// <summary>DEV-ALL-183: kết quả bàn giao toàn bộ thành phẩm của tổ: mỗi đơn + mã hàng một phiếu.</summary>
+public sealed record FgHandoverAllResultDto(int HandoverCount, int TotalQty, IReadOnlyList<string> HandoverCodes);
+
 public sealed record CreateFgHandoverDto(int OrderId, int ProductId, IReadOnlyList<CreateHandoverLineDto> Lines);
 
 public sealed record ConfirmFgHandoverLineDto(int FgHandoverLineId, int ConfirmedQty, string? DiscrepancyReason);

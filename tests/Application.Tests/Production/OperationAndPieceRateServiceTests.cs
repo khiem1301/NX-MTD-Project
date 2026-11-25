@@ -60,7 +60,7 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
     }
 
     private static SaveOperationDto OpDto(string code = "OP20", bool final = false, int productId = 1) =>
-        new(productId, code, "May cổ", 2, null, null, null, final);
+        new(productId, code, "May cổ", 2, null, null, null, final, null, null, 1000m);
 
     // ========== Công đoạn ==========
 

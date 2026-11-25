@@ -127,6 +127,18 @@ export const PM_LABELS = {
   sharedReasonPlaceholder: 'Điền nhanh cho mọi phiếu lệch chưa có lý do',
   applySharedReason: 'Áp dụng',
   missingReasons: 'Còn {0} phiếu lệch số chưa có lý do.',
+  // DEV-ALL-182: phiếu của tổ trưởng gộp theo công nhân.
+  slipCount: 'Số phiếu',
+  totalHandover: 'Tổng giao',
+  totalRetrieval: 'Tổng thu hồi',
+  pendingConfirmTitle: 'Chờ CN xác nhận',
+  pendingSlips: '{0} phiếu',
+  pendingHandover: 'Giao {0}',
+  pendingRetrieval: 'Thu hồi {0}',
+  confirmWorkerOnBehalf: 'Xác nhận hộ cả công nhân',
+  workerOnBehalfHint:
+    'Xác nhận đủ số trên mọi phiếu đang chờ của công nhân này, cùng một lý do. Phiếu nhận khác số thì để công nhân tự xác nhận.',
+  workerOnBehalfSummary: '{0} phiếu: giao {1} lần, thu hồi {2} lần',
 } as const;
 
 export const PM_MESSAGES = {

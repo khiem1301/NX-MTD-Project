@@ -1,4 +1,5 @@
 import { Button, Input, InputNumber, Select, Space, Typography } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined } from '@ant-design/icons';
 import { ReasonHover } from '@/components/common/ReasonHover';
@@ -15,8 +16,12 @@ type Ctx = {
   data: OperationImportPreview;
   update: (rowNumber: number, patch: Partial<OperationDraftRow>) => void;
   remove: (rowNumber: number) => void;
+  /** Chi tiết vải (PANEL) của mã hàng trong DB để chọn; chưa tải xong thì rỗng. */
+  componentOptions: { value: string; label: string }[];
 };
 
+/** Khớp PieceRateLimits.MaxRate ở BE. */
+const RATE_MAX = 100_000_000;
 const textOf = (v: string | null | undefined) => v ?? '';
 const orNull = (v: string) => (v.trim() === '' ? null : v);
 
@@ -25,6 +30,7 @@ export const operationImportEditColumns = ({
   data,
   update,
   remove,
+  componentOptions,
 }: Ctx): ColumnsType<OperationDraftRow> => {
   const statusOf = (rowNumber: number) => data.rows.find((r) => r.rowNumber === rowNumber);
   return [
@@ -117,11 +123,14 @@ export const operationImportEditColumns = ({
             width: 220,
             render: (_: unknown, r: OperationDraftRow) => (
               <Select
-                mode="tags"
+                mode="multiple"
                 style={{ width: '100%' }}
-                tokenSeparators={[';']}
+                showSearch
+                optionFilterProp="label"
+                options={componentOptions}
+                notFoundContent={text.noComponentOptions}
+                placeholder={text.pickComponents}
                 value={r.componentNames ?? []}
-                open={false}
                 onChange={(names: string[]) =>
                   update(r.rowNumber, { componentNames: names.length > 0 ? names : null })
                 }
@@ -130,35 +139,33 @@ export const operationImportEditColumns = ({
           },
         ]
       : []),
-    ...(data.hasRateColumn
-      ? [
-          {
-            title: text.columns.rate,
-            key: 'rate',
-            width: 150,
-            render: (_: unknown, r: OperationDraftRow) => {
-              const status = statusOf(r.rowNumber);
-              return (
-                <Space direction="vertical" size={0} style={{ width: '100%' }}>
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    min={0}
-                    precision={2}
-                    value={r.rate}
-                    onChange={(v) => update(r.rowNumber, { rate: v })}
-                  />
-                  {status && status.rateAction !== 'None' && (
-                    <StatusTag status={status.rateAction} labels={text.rateAction} />
-                  )}
-                  {status?.rateNote && (
-                    <Typography.Text type="secondary">{status.rateNote}</Typography.Text>
-                  )}
-                </Space>
-              );
-            },
-          },
-        ]
-      : []),
+    // Đơn giá bắt buộc nên cột luôn hiện và sửa được (file thiếu cột TIỀN thì nhập tay ở đây).
+    {
+      title: text.columns.rate,
+      key: 'rate',
+      width: 170,
+      render: (_: unknown, r: OperationDraftRow) => {
+        const status = statusOf(r.rowNumber);
+        return (
+          <Space direction="vertical" size={0} style={{ width: '100%' }}>
+            <QtyInput
+              style={{ width: '100%' }}
+              decimals={2}
+              max={RATE_MAX}
+              status={r.rate === null || r.rate === 0 ? 'error' : undefined}
+              value={r.rate}
+              onChange={(v) => update(r.rowNumber, { rate: v })}
+            />
+            {status && status.rateAction !== 'None' && (
+              <StatusTag status={status.rateAction} labels={text.rateAction} />
+            )}
+            {status?.rateNote && (
+              <Typography.Text type="secondary">{status.rateNote}</Typography.Text>
+            )}
+          </Space>
+        );
+      },
+    },
     {
       title: text.columns.action,
       key: 'action',

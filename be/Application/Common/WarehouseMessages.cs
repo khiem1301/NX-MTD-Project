@@ -160,6 +160,8 @@ public static class WarehouseMessages
     public const string FgHandoverExceedsQc = "Số bàn giao vượt số QC đạt chưa bàn giao";
     public const string FgLineNotInOrder = "Dòng đơn không thuộc đơn hàng / mã hàng của phiếu bàn giao.";
     public const string FgHandoverCreated = "Đã lập phiếu bàn giao thành phẩm, chờ Thủ kho nhận.";
+    public const string FgNothingToHandOver = "Tổ chưa có thành phẩm đạt QC nào còn chờ bàn giao.";
+    public const string FgHandoverAllCreated = "Đã lập {0} phiếu bàn giao ({1} sản phẩm), chờ Thủ kho nhận.";
     public const string FgHandoverConfirmed = "Đã nhận thành phẩm vào kho.";
     public const string FgHandoverRejected = "Đã từ chối phiếu bàn giao thành phẩm.";
     public const string FgHandoverCancelled = "Đã rút phiếu bàn giao thành phẩm.";

@@ -54,18 +54,19 @@ export const ORDER_PAYMENT_TEXT = {
     edited: 'Đã sửa',
   },
   actions: {
-    setFinal: 'Chốt / đổi giá trị',
+    setFinal: 'Nhập giá trị thực tế',
+    editFinal: 'Sửa giá trị thực tế',
     addPayment: 'Thêm lần thanh toán',
     editPayment: 'Sửa lần thanh toán',
   },
   final: {
-    title: 'Chốt giá trị đơn hàng',
-    amount: 'Giá trị chốt',
+    title: 'Giá trị thực tế của đơn hàng',
+    amount: 'Giá trị thực tế',
     amountHint:
-      'Dương: khách trả mình. Âm: mình đền khách. Tổng đã thanh toán phải nằm giữa 0 và giá trị này.',
-    amountRequired: 'Nhập giá trị chốt.',
-    reason: 'Lý do',
-    reasonRequired: 'Vui lòng nhập lý do.',
+      'Nhập một lần; sau lần nhập đầu tiên chỉ sửa được trong 24 giờ và phải ghi lý do. Dương: khách trả mình. Âm: mình đền khách. Tổng đã thanh toán phải nằm giữa 0 và giá trị này.',
+    amountRequired: 'Nhập giá trị thực tế.',
+    reason: 'Lý do sửa',
+    reasonRequired: 'Vui lòng nhập lý do sửa.',
   },
   pay: {
     addTitle: 'Thêm lần thanh toán',

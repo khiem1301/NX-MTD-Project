@@ -135,8 +135,8 @@ export const productionApi = {
   // ---------- KI-06: QC ----------
   listQcBatches: (role: QcRole, query: QcBatchQuery) =>
     get<Paginated<QcBatch>>(P.qcBatches(role), query),
-  getOnLine: (sewingTeamId: number, orderLineId: number) =>
-    get<OnLineQty>(P.qcOnLine, { sewingTeamId, orderLineId }),
+  /** Hàng đang trên chuyền của tổ QA/QC đang đăng nhập (BE lấy tổ theo tài khoản). */
+  getOnLine: (orderLineId: number) => get<OnLineQty>(P.qcOnLine, { orderLineId }),
   createQcBatch: (body: CreateQcBatchPayload) => post<number>(P.qcBatches('qa-qc'), body),
   updateQcBatch: (role: QcRole, id: number, body: UpdateQcBatchPayload) =>
     put<void>(P.qcBatch(role, id), body),

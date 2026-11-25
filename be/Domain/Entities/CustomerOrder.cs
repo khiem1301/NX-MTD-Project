@@ -31,6 +31,9 @@ public partial class CustomerOrder
     /// <summary>Giá trị chốt cả đơn do Kế toán nhập (có thể âm = mình phải đền hợp đồng); null = chưa chốt (DEV-ALL-137).</summary>
     public decimal? FinalAmount { get; set; }
 
+    /// <summary>DEV-ALL-185: lúc Kế toán nhập giá trị chốt (giá trị thực tế của đơn) lần đầu; sửa được trong 24 giờ kể từ lúc này.</summary>
+    public DateTime? FinalAmountSetAt { get; set; }
+
     public string? FinalAmountReason { get; set; }
 
     /// <summary>Địa chỉ giao hàng của đơn (nhập lúc tạo đơn, mặc định theo địa chỉ khách; phiếu xuất lấy sẵn từ đây).</summary>

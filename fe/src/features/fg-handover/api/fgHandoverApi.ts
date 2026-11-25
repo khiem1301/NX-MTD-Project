@@ -2,11 +2,11 @@ import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import type {
   ConfirmFgHandoverPayload,
-  CreateFgHandoverPayload,
   FgHandover,
+  FgHandoverAllResult,
   FgHandoverListItem,
   FgHandoverQuery,
-  FgHandoverableLine,
+  FgTeamHandoverableLine,
 } from '../types';
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
@@ -21,9 +21,9 @@ export const WAREHOUSE_BASE = '/api/v1/warehouse-keeper/fg-handovers';
 export const fgHandoverApi = {
   list: (base: string, q: FgHandoverQuery) => get<Paginated<FgHandoverListItem>>(base, q),
   detail: (base: string, id: number) => get<FgHandover>(`${base}/${id}`),
-  handoverable: (orderId: number) =>
-    get<FgHandoverableLine[]>(`${QA_QC_BASE}/handoverable`, { orderId }),
-  create: (body: CreateFgHandoverPayload) => post<FgHandover>(QA_QC_BASE, body),
+  /** Thành phẩm còn bàn giao của tổ may mà QA/QC thuộc về (BE lấy tổ theo tài khoản). */
+  teamHandoverable: () => get<FgTeamHandoverableLine[]>(`${QA_QC_BASE}/team-handoverable`),
+  handoverAll: () => post<FgHandoverAllResult>(`${QA_QC_BASE}/handover-all`),
   cancel: (id: number) => post<null>(`${QA_QC_BASE}/${id}/cancel`),
   confirm: (id: number, body: ConfirmFgHandoverPayload) =>
     post<null>(`${WAREHOUSE_BASE}/${id}/confirm`, body),

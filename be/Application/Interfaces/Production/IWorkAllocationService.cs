@@ -11,6 +11,9 @@ public interface IWorkAllocationService
     Task<Result<PagedResult<WorkAllocationDto>>> GetPagedAsync(WorkAllocationQuery query, int? teamId, int? workerId,
         CancellationToken ct);
 
+    /// <summary>DEV-ALL-182: phiếu của tổ gộp theo công nhân, phân trang theo công nhân (cùng bộ lọc với danh sách phiếu).</summary>
+    Task<Result<PagedResult<WorkerAllocationSummaryDto>>> GetWorkerSummariesAsync(WorkAllocationQuery query, int teamId, CancellationToken ct);
+
     /// <summary>Bảng chia việc: BTP tổ giữ, tiến độ từng công đoạn, số lần từng công nhân đang giữ.</summary>
     Task<Result<WorkAllocationBoardDto>> GetBoardAsync(int teamId, int? orderId, CancellationToken ct);
 
@@ -26,6 +29,9 @@ public interface IWorkAllocationService
 
     /// <summary>Tổ trưởng xác nhận hộ (UC54): bắt buộc lý do.</summary>
     Task<Result> ConfirmOnBehalfAsync(int allocationId, ConfirmOnBehalfDto dto, int teamId, CancellationToken ct);
+
+    /// <summary>DEV-ALL-182: xác nhận hộ mọi phiếu đang chờ của một công nhân trong tổ, đủ số trên phiếu (một transaction).</summary>
+    Task<Result> ConfirmWorkerOnBehalfAsync(int workerId, ConfirmWorkerOnBehalfDto dto, int teamId, CancellationToken ct);
 }
 
 /// <summary>DEV-ALL-101: tự xác nhận phiếu giao việc công nhân để quá hạn không xác nhận (chạy theo chu kỳ ở job nền).</summary>

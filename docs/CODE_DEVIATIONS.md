@@ -3492,3 +3492,105 @@
 - **Ảnh hưởng người khác:** Khiêm (kho, mã hàng).
 - **Cần sửa trong tài liệu:** không.
 - **Trạng thái:** Mở
+
+### DEV-ALL-182 · Tab Phiếu giao / thu hồi của tổ trưởng gộp theo công nhân
+
+- **Ngày / Người / Task / PR:** 25/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC53 / UC54; FE `AllocationHistory`, `WorkerSlipsTable`, `ConfirmWorkerOnBehalfModal`, `workerSlipColumns`; BE `GetWorkerSummariesAsync`
+- **Tài liệu gốc ghi:** danh sách phiếu giao / thu hồi liệt kê từng phiếu một dòng.
+- **Code đang làm:** tab của tổ trưởng hiện một dòng mỗi công nhân (số phiếu, tổng giao, tổng thu hồi, thẻ "Chờ CN xác nhận N" cộng cả phiếu giao lẫn thu hồi còn chờ); bấm mở rộng để xem từng phiếu (chỉ xem). Xác nhận hộ làm ở dòng công nhân: một nút, một lý do, BE (`POST /team-leader/work-allocations/workers/{workerId}/confirm-on-behalf`, `ConfirmWorkerOnBehalfAsync`) xác nhận đủ số mọi phiếu đang chờ của công nhân trong tổ trong một transaction; lỗi một phiếu thì không lưu phiếu nào. Không còn xác nhận hộ từng phiếu ở màn này (API từng phiếu giữ nguyên). Danh sách lấy từ `GET /team-leader/work-allocations/workers` (`GetWorkerSummariesAsync`): BE gộp và phân trang theo công nhân (cùng bộ lọc loại / trạng thái), nên mỗi trang đủ số công nhân; phiếu của công nhân chỉ tải khi mở dòng. Số lần thu hồi hiển thị số âm (chỉ hiển thị, dữ liệu và API vẫn lưu số dương). Trang công nhân (UC60) giữ nguyên.
+- **Lý do:** người dùng yêu cầu gộp phiếu theo công nhân, hiện số chờ xác nhận và xác nhận hộ theo công nhân thay vì từng dòng.
+- **Ảnh hưởng người khác:** Thái (giao việc công đoạn).
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-ALL-183 · QA/QC thuộc tổ may: bỏ chọn tổ, bàn giao toàn bộ thành phẩm của tổ
+
+- **Ngày / Người / Task / PR:** 25/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC57 (nhập QC), UC22, UC44 (bàn giao thành phẩm); BE `QcBatchService`, `ProductionGuard.ResolveQcTeam`, `FgHandoverService` (`GetTeamHandoverableAsync`, `CreateAllForTeamAsync`), `QaQc/FgHandoversController` (`GET team-handoverable`, `POST handover-all`); FE `QcCreateModal`, `QcBoard`, `FgHandoverAllModal`; seed `01_people.sql`
+- **Tài liệu gốc ghi:** QA/QC là nhân viên văn phòng, khi nhập đợt QC phải chọn tổ may; khi bàn giao thành phẩm phải chọn đơn + mã hàng rồi gom số QC đạt chưa bàn giao.
+- **Code đang làm:**
+  - QA/QC thuộc một tổ may (`Employee.TeamId` là tổ may). Nhập đợt QC không chọn tổ: BE lấy tổ theo tài khoản, bỏ qua tổ gửi lên; `GET qc-batches/on-line` không cần tổ; danh sách đợt QC của QA/QC chỉ gồm tổ mình, QA/QC chỉ sửa / xóa đợt của tổ mình (đợt tổ khác trả "không tìm thấy"). Quản đốc / Admin vẫn chọn tổ và thấy mọi tổ. QA/QC chưa thuộc tổ may thì bị chặn (403) kèm thông báo nhờ Admin gán tổ.
+  - Bàn giao thành phẩm: một nút "Bàn giao toàn bộ" lập phiếu cho toàn bộ thành phẩm đã đạt QC còn chờ bàn giao của tổ mình, trên mọi đơn chưa đóng. Phiếu vẫn một đơn + một mã hàng nên mỗi đơn + mã hàng một phiếu, cùng một transaction (lỗi một phiếu thì không lưu phiếu nào). Số còn bàn giao của dòng đơn = min(QC đạt của tổ, QC đạt mọi tổ − đã bàn giao chờ nhận + đã nhận); dòng đơn thường chỉ thuộc một tổ (chia đơn theo tổ) nên hai số này trùng nhau. Không còn bàn giao một phần / chọn đơn ở giao diện; API cũ `GET handoverable` và `POST fg-handovers` giữ nguyên nhưng giao diện không dùng.
+  - Dữ liệu: seed đặt QAQC1 vào MAY1, QAQC2 vào MAY2 (trước là VP); DB đang chạy đã chuyển QAQC1 sang MAY1.
+- **Lý do:** người dùng yêu cầu: QA/QC nằm trong tổ may, bỏ chỗ QA/QC phải chọn tổ may; QA/QC của tổ nào bàn giao toàn bộ sản phẩm hoàn thiện của tổ đó vào kho.
+- **Ảnh hưởng người khác:** Thái (giao việc, QC), Khiêm (kho thành phẩm).
+- **Cần sửa trong tài liệu:** có: UC44, UC57 (QA/QC thuộc tổ may; bàn giao toàn bộ theo tổ).
+- **Trạng thái:** Mở
+
+### DEV-ALL-184 · QA/QC thuộc tổ may nhưng không được phân công công đoạn / giao việc / ghi hàng hỏng
+
+- **Ngày / Người / Task / PR:** 25/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC53 / UC54 (giao việc), giao việc theo ngày, UC56 (hàng hỏng); BE `WorkAllocationService.ValidateReferencesAsync`, `DailyWorkAllocationService` (lưu giao việc theo ngày), `DefectService`
+- **Tài liệu gốc ghi:** công nhân của tổ là người được giao việc; không nói rõ vai trò QA/QC (trước đây QA/QC ở tổ văn phòng nên không lẫn vào tổ may).
+- **Code đang làm:** QA/QC nay thuộc tổ may (DEV-ALL-183) nên BE chặn gán QA/QC làm người nhận việc (giao / thu hồi việc từng phiếu, giao việc theo ngày) và làm người chịu trách nhiệm hàng hỏng, dù gọi API trực tiếp. Giao diện đã sẵn chỉ hiện công nhân vai trò Worker ở phân công công đoạn, giao việc theo ngày, sản lượng cuối ca và hàng hỏng. Phân công công đoạn (`OperationAssignmentService`) vốn đã chỉ nhận vai trò Worker.
+- **Lý do:** người dùng yêu cầu QA/QC không phân công công đoạn, không hiện ở phân công công đoạn và sản lượng.
+- **Ảnh hưởng người khác:** Thái (giao việc, sản lượng).
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-ALL-185 · Giá trị thực tế của đơn mua / đơn hàng: nút riêng, nhập một lần, sửa trong 24 giờ; ô tiền có dấu chấm ngăn nghìn
+
+- **Ngày / Người / Task / PR:** 25/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC34 (thanh toán đơn mua), DEV-ALL-129/137; BE `PurchaseOrderFlowService.SetActualAmountAsync` (`PUT accountant/purchase-payments/{id}/actual-amount`), `OrderPaymentService.SetFinalAmountAsync`; DB `PurchaseOrder.ActualAmountSetAt`, `CustomerOrder.FinalAmountSetAt` (patch `SQL/patches/2026-11-25_actual_amount_entered_at.sql`); FE `ActualAmountModal`, `FinalAmountModal`, `components/common/MoneyInput`
+- **Tài liệu gốc ghi:** Kế toán nhập tổng giá trị thực tế của đơn Chốt không bù ngay trong form thanh toán; giá trị chốt đơn hàng bắt buộc lý do mỗi lần đổi.
+- **Code đang làm:** giá trị thực tế (đơn mua Chốt không bù) và giá trị chốt (đơn hàng) thành một nút riêng. Nhập lần đầu không cần lý do; sau đó chỉ sửa được trong 24 giờ kể từ lần nhập đầu (không gia hạn khi sửa), bắt buộc lý do; quá 24 giờ khóa. Đơn mua chưa nhập giá trị thực tế thì chưa thanh toán được; form thanh toán không còn ô này. `ConfirmPaymentDto.ActualAmount` bỏ. Mọi ô nhập tiền dùng `MoneyInput` (dấu chấm ngăn nghìn khi quá 3 chữ số, số nguyên VND); ô số lượng đã có `QtyInput`.
+- **Lý do:** người dùng yêu cầu.
+- **Ảnh hưởng người khác:** Khiêm (kho, mua hàng).
+- **Cần sửa trong tài liệu:** có (UC34, công nợ đơn hàng).
+- **Trạng thái:** Mở
+
+### DEV-ALL-186 · Đơn mua NVL: xác nhận khi lưu, sửa trong 24 giờ
+
+- **Ngày / Người / Task / PR:** 26/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC23 (tạo / đặt đơn mua); BE `PurchaseOrderService.UpdateAsync` (`PUT manager/purchase-orders/{id}`), `PurchaseOrderDto.CanEdit`, `PurchaseOrderPermissionsDto.CanEditOrder`; FE `PurchaseOrderFormModal`, `EditOrderModal`
+- **Tài liệu gốc ghi:** đơn mua đã đặt hàng thì khóa số lượng, đơn giá, nhà cung cấp (GBR-18).
+- **Code đang làm:** bấm lưu khi tạo đơn mua thì hỏi xác nhận kèm tổng tiền. Quản đốc sửa được đơn (nhà cung cấp, ngày đặt, số lần / ngày giao, ghi chú, số lượng, đơn giá) trong 24 giờ kể từ lúc tạo, chỉ khi đơn còn "Đã đặt hàng", chưa thanh toán và chưa có phiếu nhập; bắt buộc lý do, ghi nhật ký, báo Kế toán; bấm lưu cũng hỏi xác nhận. NVL của dòng không đổi. Quá 24 giờ, hoặc đã nhận hàng / thanh toán thì khóa như cũ. Đơn do luồng NVL lỗi (chờ chốt) vẫn đặt qua nút "Chọn NCC và đặt hàng".
+- **Lý do:** người dùng yêu cầu.
+- **Ảnh hưởng người khác:** Khiêm (kho, mua hàng).
+- **Cần sửa trong tài liệu:** có (GBR-18, UC23).
+- **Trạng thái:** Mở
+
+### DEV-ALL-187 · Nhập Excel tài chính của Kế toán: báo lỗi sai file rõ ràng, popup như nhập đơn / mã hàng
+
+- **Ngày / Người / Task / PR:** 26/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC12 (chi phí tháng), UC31 (bảng lương); BE `ClosedXmlMonthlyCostParser`, `MonthlyCostService` (`PreviewRowsAsync`, `ImportRowsAsync`; `POST accountant/monthly-costs/import/rows[/preview]`), `API/Common/ExcelUploadGuard`; FE `MonthlyCostImportModal`, `PayrollImportModal`
+- **Tài liệu gốc ghi:** file chi phí tháng có đúng 6 cột theo thứ tự ở dòng 1 của sheet đầu; nhập qua panel trong trang (chọn file, bấm xem trước, bấm nhập).
+- **Code đang làm:** (1) Kiểm file tải lên trước khi đọc (cả chi phí tháng và bảng lương): chưa chọn file, file rỗng, đuôi khác .xlsx (.xls, .csv), quá 10 MB đều báo tiếng Việt; file hỏng báo "không đọc được file .xlsx hợp lệ". (2) Chi phí tháng: cột nhận theo TÊN (đảo thứ tự được, tiêu đề ở 10 dòng đầu, không phân biệt hoa thường / dấu), bỏ sheet ẩn, báo rõ thiếu cột nào; tối đa 500 dòng; kiểm thêm số tiền tối đa 100 tỷ và 2 số lẻ, số lượng 0 đến 1.000.000 và là số nguyên, ghi chú tối đa 300 ký tự (khớp cột DB, trước đây vượt thì lỗi SQL thô). (3) Giao diện: panel đổi thành nút "Nhập từ Excel" mở popup; chọn file là xem trước ngay, chi phí tháng sửa được từng ô, thêm / xóa dòng, máy chủ kiểm lại sau mỗi lần sửa, nhập từ bảng đã sửa. Bảng lương xem trước theo nhân viên, lọc dòng lỗi, lý do hiện khi đưa chuột; không sửa ô vì bảng lương do xưởng tính sẵn (GBR-12).
+- **Lý do:** người dùng yêu cầu rà báo lỗi sai định dạng và thiết kế lại import tài chính giống import đơn / mã hàng.
+- **Ảnh hưởng người khác:** Khiêm (tài chính).
+- **Cần sửa trong tài liệu:** có (UC12 định dạng file, UC31).
+- **Trạng thái:** Mở
+
+### DEV-ALL-188 · Nhập công đoạn luôn kèm đơn giá từ cột TIỀN; cột Đơn giá hiện bản chờ duyệt
+
+- **Ngày / Người / Task / PR:** 26/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC25 (nhập công đoạn), màn Công đoạn và đơn giá; FE `OperationImportRateOptions`, `useOperationImport`, `operationColumns`; cột Chi tiết của popup chọn từ chi tiết vải (PANEL) của mã hàng trong DB
+- **Tài liệu gốc ghi:** nhập kèm đơn giá từ cột TIỀN là tùy chọn (ô chọn); cột Đơn giá chỉ hiện giá đã duyệt.
+- **Code đang làm:** bỏ ô chọn "Nhập kèm đơn giá từ cột TIỀN": file có cột TIỀN thì luôn nhập đơn giá (chỉ chọn ngày hiệu lực và có gửi Admin duyệt luôn không); file không có cột TIỀN thì báo không nhập được đơn giá. Cột Đơn giá của công đoạn chưa có giá được duyệt hiện giá chờ duyệt (hoặc Nháp) gần nhất kèm trạng thái và ngày hiệu lực; bản bị từ chối vẫn không hiện.
+- **Lý do:** người dùng yêu cầu.
+- **Ảnh hưởng người khác:** Khiêm (công đoạn, đơn giá).
+- **Cần sửa trong tài liệu:** có (UC25).
+- **Trạng thái:** Mở
+
+### DEV-ALL-189 · Đơn mua: không đổi nhà cung cấp sau khi tạo; mỗi lần thanh toán bắt buộc ảnh chứng từ
+
+- **Ngày / Người / Task / PR:** 26/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC34 (xác nhận thanh toán đơn mua), DEV-ALL-186; BE `PurchaseOrderService.UpdateAsync` (bỏ `SupplierId`), `PurchaseOrderFlowService.ConfirmPaymentAsync`, `PurchaseOrderAttachmentAccess`; FE `EditOrderModal`, `ConfirmPaymentModal`, `utils/paymentProofs`
+- **Tài liệu gốc ghi:** ảnh chứng từ thanh toán không bắt buộc (KH-07), tối đa 5 ảnh mỗi đơn mua; Quản đốc sửa được nhà cung cấp trong 24 giờ (DEV-ALL-186).
+- **Code đang làm:** sửa đơn mua trong 24 giờ không còn đổi được nhà cung cấp (hiện tên, chỉ xem). Xác nhận thanh toán bắt buộc có ít nhất một ảnh chứng từ tải lên SAU lần thanh toán gần nhất (lần đầu: bất kỳ ảnh nào chưa gỡ), nếu không báo lỗi; ảnh nằm ở đơn mua chứ không gắn riêng từng lần thanh toán (không đổi schema). Khung ảnh nằm ngay trong hộp xác nhận, nút Xác nhận khóa đến khi có ảnh mới. Sửa lần thanh toán đã có không đòi ảnh mới. Trần ảnh nâng từ 5 lên 20 mỗi đơn để đủ cho nhiều lần thanh toán.
+- **Lý do:** người dùng yêu cầu.
+- **Ảnh hưởng người khác:** Khiêm (mua hàng, thanh toán).
+- **Cần sửa trong tài liệu:** có (KH-07, UC34).
+- **Trạng thái:** Mở
+
+### DEV-ALL-190 · Công đoạn bắt buộc đơn giá (nhập Excel và thêm tay); gọn bố cục các popup nhập Excel
+
+- **Ngày / Người / Task / PR:** 26/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC25 (công đoạn và đơn giá); BE `OperationService` (`CreateAsync`, `EditedRowProblem`, `PlanRows`), `SaveOperationDto.Rate / RateEffectiveDate`; FE `OperationFormModal`, `OperationImportModal`, `ImportFileBar` (dùng chung cho nhập công đoạn, chi phí tháng, bảng lương)
+- **Tài liệu gốc ghi:** đơn giá công đoạn là tùy chọn khi nhập, đặt riêng ở nút Đơn giá.
+- **Code đang làm:** mỗi công đoạn phải có đơn giá lớn hơn 0. Nhập Excel: dòng thiếu hoặc bằng 0 ở cột TIỀN báo lỗi từng dòng ("Thiếu đơn giá (cột TIỀN)"); file không có cột TIỀN thì mọi dòng báo lỗi, nhập tay ở cột Đơn giá của bảng sửa được; ngày hiệu lực mặc định hôm nay khi không chọn. Thêm tay: form có ô Đơn giá bắt buộc (và ngày hiệu lực), BE tạo công đoạn kèm đơn giá Nháp trong cùng giao dịch, thiếu / 0 / âm / quá 2 số lẻ / vượt trần thì từ chối. Sau khi tạo không còn tự mở form đơn giá. Sửa công đoạn đã có không đòi đơn giá (đổi giá ở nút Đơn giá). Bố cục: khung kéo thả cao thay bằng một hàng chọn file gọn kèm tên file và liên kết file mẫu.
+- **Lý do:** người dùng yêu cầu.
+- **Ảnh hưởng người khác:** Khiêm (công đoạn, đơn giá).
+- **Cần sửa trong tài liệu:** có (UC25).
+- **Trạng thái:** Mở
