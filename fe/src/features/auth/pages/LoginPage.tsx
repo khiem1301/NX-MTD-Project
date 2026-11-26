@@ -1,5 +1,5 @@
 import { Alert, Button, Card, Form, Input, Typography } from 'antd';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { MESSAGES } from '@/constants/messages';
 import { ROUTES } from '@/constants/routes';
@@ -25,18 +25,9 @@ const zodRule = (field: keyof LoginRequest) => ({
 
 const LOGIN_FIELDS = ['username', 'password'] as const;
 
-const readFrom = (state: unknown): string => {
-  if (typeof state === 'object' && state !== null && 'from' in state) {
-    const from = (state as { from?: { pathname?: unknown } }).from;
-    if (typeof from?.pathname === 'string') return from.pathname;
-  }
-  return ROUTES.home;
-};
-
 export function LoginPage() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [form] = Form.useForm<LoginRequest>();
   const login = useLogin();
 
@@ -46,7 +37,7 @@ export function LoginPage() {
     login.mutate(
       { username: values.username.trim(), password: values.password },
       {
-        onSuccess: () => navigate(readFrom(location.state), { replace: true }),
+        onSuccess: () => navigate(ROUTES.home, { replace: true }),
         onError: (error) => {
           const { errors } = error;
           if (errors) {
