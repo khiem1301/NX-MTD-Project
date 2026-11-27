@@ -92,8 +92,15 @@ export const REQUIRED_RULES = [{ required: true, message: MESSAGES.common.requir
 // ---------- AI gợi ý bậc cho cả tổ (DEV-ALL-148) ----------
 
 /** Bộ lọc dòng trong modal AI gợi ý. */
+/** Hướng đổi bậc của dòng gợi ý (khớp BE GradeChangeDirections). */
+export const GRADE_DIRECTION = { UP: 'Up', DOWN: 'Down', SAME: 'Same' } as const;
+
+export type GradeDirection = (typeof GRADE_DIRECTION)[keyof typeof GRADE_DIRECTION];
+
 export const AI_FILTER = {
   CHANGED: 'changed',
+  UP: 'up',
+  DOWN: 'down',
   UNCHANGED: 'unchanged',
   EDITED: 'edited',
   PENDING: 'pending',
@@ -103,6 +110,8 @@ export type AiFilter = (typeof AI_FILTER)[keyof typeof AI_FILTER];
 
 export const AI_FILTER_OPTIONS: { value: AiFilter; label: string }[] = [
   { value: AI_FILTER.CHANGED, label: 'Đổi bậc' },
+  { value: AI_FILTER.UP, label: 'Tăng bậc' },
+  { value: AI_FILTER.DOWN, label: 'Giảm bậc' },
   { value: AI_FILTER.UNCHANGED, label: 'Giữ nguyên bậc' },
   { value: AI_FILTER.EDITED, label: 'Tổ trưởng đã sửa' },
   { value: AI_FILTER.PENDING, label: 'Đang có đề xuất chờ' },
@@ -137,8 +146,10 @@ export const AI_LABELS = {
   filterGrade: 'Bậc đề xuất',
   metrics: 'Số liệu kỳ',
   aiGrade: 'AI gợi ý',
-  change: 'Thay đổi',
+  change: 'Trạng thái',
   changed: 'Đổi bậc',
+  up: 'Tăng bậc',
+  down: 'Giảm bậc',
   unchanged: 'Giữ nguyên',
   edited: 'Đã sửa',
   pendingTag: 'Đang chờ: {0}',

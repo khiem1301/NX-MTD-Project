@@ -5,7 +5,7 @@ import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { fill } from '@/utils/format';
-import { AI_LABELS, GR_LABELS } from '../constants';
+import { AI_LABELS, GR_LABELS, GRADE_DIRECTION } from '../constants';
 import type { GradeSuggestionItem, UpdateSuggestionItemPayload } from '../types';
 import { isChanged } from '../utils/gradeSuggestion';
 import { SuggestionMetrics } from './SuggestionMetrics';
@@ -22,6 +22,28 @@ type Args = {
 const STACK = { display: 'flex', flexDirection: 'column', gap: 4, width: '100%' } as const;
 const SMALL = { fontSize: 12 } as const;
 const TAG = { marginInlineEnd: 0 } as const;
+
+/** Trạng thái dòng: tăng / giảm bậc (xanh lá / đỏ), đổi bậc khi chưa biết hướng, hoặc giữ nguyên. */
+const changeTag = (item: GradeSuggestionItem) => {
+  if (!isChanged(item)) return <Tag style={TAG}>{AI_LABELS.unchanged}</Tag>;
+  if (item.direction === GRADE_DIRECTION.UP)
+    return (
+      <Tag color="green" style={TAG}>
+        {AI_LABELS.up}
+      </Tag>
+    );
+  if (item.direction === GRADE_DIRECTION.DOWN)
+    return (
+      <Tag color="red" style={TAG}>
+        {AI_LABELS.down}
+      </Tag>
+    );
+  return (
+    <Tag color="blue" style={TAG}>
+      {AI_LABELS.changed}
+    </Tag>
+  );
+};
 
 const saveReason = (item: GradeSuggestionItem, text: string, onSave: Args['onSave']) => {
   const reason = text.trim();
@@ -133,13 +155,7 @@ export const aiSuggestionColumns = ({
     align: 'center',
     render: (_, i) => (
       <div style={{ ...STACK, alignItems: 'center' }}>
-        {isChanged(i) ? (
-          <Tag color="blue" style={TAG}>
-            {AI_LABELS.changed}
-          </Tag>
-        ) : (
-          <Tag style={TAG}>{AI_LABELS.unchanged}</Tag>
-        )}
+        {changeTag(i)}
         {i.isEdited && (
           <Tag color="orange" style={TAG}>
             {AI_LABELS.edited}

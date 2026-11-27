@@ -19,10 +19,12 @@ public sealed record GradeWorkerMetricsDto(
 /// <summary>
 /// Một dòng gợi ý. <c>AiGradeCode</c> / <c>AiReason</c> là bản AI trả; <c>ProposedGradeCode</c> / <c>Reason</c> là bản tổ trưởng
 /// sẽ gửi (ban đầu bằng bản AI, đổi khi tổ trưởng sửa). <c>PendingGradeCode</c>: bậc của đề xuất đang chờ quyết định (nếu có).
+/// <c>Direction</c>: Up / Down / Same của bậc đề xuất so với bậc hiện tại (null khi chưa so sánh được); tính lại mỗi lần đọc.
 /// </summary>
 public sealed record GradeSuggestionItemDto(
     int WorkerId, string WorkerCode, string FullName, string? CurrentGradeCode, string? PendingGradeCode,
-    GradeWorkerMetricsDto Metrics, string? AiGradeCode, string AiReason, string? ProposedGradeCode, string Reason, bool IsEdited);
+    GradeWorkerMetricsDto Metrics, string? AiGradeCode, string AiReason, string? ProposedGradeCode, string Reason, bool IsEdited,
+    string? Direction = null);
 
 /// <summary>Bản gợi ý AI của một tổ, lưu tạm đến <c>ExpiresAt</c> để tổ trưởng xem lại / sửa / xác nhận.</summary>
 public sealed record GradeSuggestionDto(

@@ -218,6 +218,33 @@ public class GradeSuggestionServiceTests
     public void GenerateValidator_LookbackDays_AllowsOnlySevenToNinetyDays(int days, bool valid) =>
         new GenerateGradeSuggestionDtoValidator().Validate(new GenerateGradeSuggestionDto(days)).IsValid.Should().Be(valid);
 
+    [Theory]
+    [InlineData("C", "A", GradeChangeDirections.Up)]
+    [InlineData("A", "C", GradeChangeDirections.Down)]
+    [InlineData("B", "B", GradeChangeDirections.Same)]
+    [InlineData(null, "B", GradeChangeDirections.Up)]
+    [InlineData("B", "X", null)]
+    [InlineData("B", null, null)]
+    public void DirectionOf_RanksByAmount_ReturnsUpDownOrSame(string? current, string? proposed, string? expected)
+    {
+        var ranks = new Dictionary<string, int> { ["A"] = 1, ["B"] = 2, ["C"] = 3 };
+
+        GradeSuggestionService.DirectionOf(current, proposed, ranks).Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task GetAsync_ProposedGradeHasHigherAmount_ItemDirectionIsUp()
+    {
+        _levels.Add(new GradeLevel { GradeCode = "A", MonthlyAmount = 6_000_000m, EffectiveDate = Today.AddMonths(-6) });
+        _levels.Add(new GradeLevel { GradeCode = "B", MonthlyAmount = 4_000_000m, EffectiveDate = Today.AddMonths(-6) });
+        _levels.Add(new GradeLevel { GradeCode = "C", MonthlyAmount = 2_000_000m, EffectiveDate = Today.AddMonths(-6) });
+        Draft(null, (40, "CN1", "C", "A"), (41, "CN2", "B", "C"));
+
+        var result = await Service().GetAsync(TeamId, default);
+
+        result.Data!.Items.Select(i => i.Direction).Should().Equal(GradeChangeDirections.Up, GradeChangeDirections.Down);
+    }
+
     private sealed class FakeStore : IGradeSuggestionStore
     {
         public Dictionary<int, GradeSuggestionDto> Saved { get; } = new();

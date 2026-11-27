@@ -1,4 +1,5 @@
 import type { PageParams } from '@/types/api';
+import type { GradeDirection } from './constants';
 
 export type GradeLevel = {
   gradeLevelId: number;
@@ -101,6 +102,8 @@ export type GradeSuggestionItem = {
   proposedGradeCode: string | null;
   reason: string;
   isEdited: boolean;
+  /** Hướng đổi bậc của bậc đề xuất so với bậc hiện tại (xếp theo tiền bậc); null khi chưa so sánh được. */
+  direction: GradeDirection | null;
 };
 
 export type GradeSuggestion = {

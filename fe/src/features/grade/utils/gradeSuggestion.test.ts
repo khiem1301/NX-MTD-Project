@@ -32,19 +32,30 @@ const item = (
   proposedGradeCode,
   reason: 'AI',
   isEdited: false,
+  direction: null,
   ...extra,
 });
 
 const items = [
-  item(1, 'C', 'B', { pendingGradeCode: 'A' }),
-  item(2, 'B', 'B'),
-  item(3, null, 'D', { isEdited: true }),
+  item(1, 'C', 'B', { pendingGradeCode: 'A', direction: 'Up' }),
+  item(2, 'B', 'B', { direction: 'Same' }),
+  item(3, null, 'D', { isEdited: true, direction: 'Up' }),
+  item(4, 'A', 'C', { direction: 'Down' }),
 ];
 
 describe('filterSuggestions', () => {
   it('filterSuggestions_ChangedFilter_ReturnsOnlyRowsWithNewGrade', () => {
     expect(filterSuggestions(items, { change: AI_FILTER.CHANGED }).map((i) => i.workerId)).toEqual([
+      1, 3, 4,
+    ]);
+  });
+
+  it('filterSuggestions_UpAndDownFilters_ReturnOnlyMatchingDirection', () => {
+    expect(filterSuggestions(items, { change: AI_FILTER.UP }).map((i) => i.workerId)).toEqual([
       1, 3,
+    ]);
+    expect(filterSuggestions(items, { change: AI_FILTER.DOWN }).map((i) => i.workerId)).toEqual([
+      4,
     ]);
   });
 
@@ -63,7 +74,7 @@ describe('filterSuggestions', () => {
 
 describe('confirmCounts', () => {
   it('confirmCounts_MixedRows_CountsChangedAndReplacedPending', () => {
-    expect(confirmCounts(items)).toEqual({ sent: 2, replaced: 1 });
+    expect(confirmCounts(items)).toEqual({ sent: 3, replaced: 1 });
   });
 });
 

@@ -82,6 +82,14 @@ public static class GradeSuggestionLimits
 }
 
 /// <summary>GradeEvaluation.Status (CK_GradeEval_Status). Dòng APPLIED là lịch sử bậc.</summary>
+/// <summary>Hướng đổi bậc của một dòng gợi ý AI so với bậc hiện tại (xếp theo tiền bậc hiện hành).</summary>
+public static class GradeChangeDirections
+{
+    public const string Up = "Up";
+    public const string Down = "Down";
+    public const string Same = "Same";
+}
+
 public static class GradeEvaluationStatuses
 {
     public const string Submitted = "SUBMITTED";
