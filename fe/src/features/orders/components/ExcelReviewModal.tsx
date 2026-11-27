@@ -28,6 +28,7 @@ const presentTables = (b: ExcelBundle): ReviewTable[] => {
     norms: b.spec.hasNorms,
     groups: b.spec.hasMarkerGroups,
     markers: b.spec.hasOrderMarkers,
+    materials: b.hasMaterials,
     orderMaterials: b.hasOrderMaterials,
   };
   return REVIEW_TABLES.filter((t) => has[t]);
@@ -41,7 +42,7 @@ type ExcelReviewModalProps = {
   /** Đơn đang tạo / sửa: máy chủ kiểm bìa, NVL theo size và NVL đã có của đơn. */
   orderId?: number | null;
   /** Chỉ hiện các bảng này (chọn file cho một mục); bỏ trống = mọi bảng có trong file. */
-  only?: ReviewTable[];
+  only?: readonly ReviewTable[];
   /** DEV-ALL-155: form sửa mã hàng — hiện ô thay thế và giữ trạng thái khi xem lại. */
   allowReplace?: boolean;
   initialReplace?: boolean;
@@ -77,6 +78,11 @@ export function ExcelReviewModal({
   const [replace, setReplace] = useState(initialReplace);
   const review = useExcelReview(bundle, productId, tables, orderId, allowReplace && replace, scope);
   const { draft, counts, newMaterials } = review;
+  // NVL khai đủ ở sheet NVL tự được thêm khi lưu; khung cảnh báo chỉ gồm NVL mà sheet NVL không có.
+  const warnMissing = (review.data?.missingMaterials ?? []).filter((m) => !m.fromSheet);
+  const warnMaterials = newMaterials.filter((m) =>
+    warnMissing.some((w) => w.materialCode === m.materialCode),
+  );
   const [active, setActive] = useState<ReviewTable | undefined>(tables[0]);
   const dbOptions = useReviewDbOptions(productId, scope);
   // Mở lại NVL ngừng sử dụng ngay trên dòng lỗi (chỉ Admin), rồi kiểm lại.
@@ -205,10 +211,10 @@ export function ExcelReviewModal({
             ))}
           />
         )}
-        {newMaterials.length > 0 && (
+        {warnMaterials.length > 0 && (
           <MissingMaterialsPanel
-            missing={review.data?.missingMaterials ?? []}
-            materials={newMaterials}
+            missing={warnMissing}
+            materials={warnMaterials}
             onChange={review.updateMaterial}
           />
         )}

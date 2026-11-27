@@ -14,7 +14,7 @@ const col = MESSAGES.orders.excelReview.columns;
 
 /** DEV-ALL-122: bảng sửa được trong popup kiểm tra Excel (products = sheet Mã hàng). */
 export type ReviewTable =
-  'products' | 'components' | 'norms' | 'groups' | 'markers' | 'orderMaterials';
+  'products' | 'components' | 'norms' | 'groups' | 'markers' | 'materials' | 'orderMaterials';
 
 export const REVIEW_TABLES: readonly ReviewTable[] = [
   'products',
@@ -22,6 +22,7 @@ export const REVIEW_TABLES: readonly ReviewTable[] = [
   'norms',
   'groups',
   'markers',
+  'materials',
   'orderMaterials',
 ];
 
@@ -38,6 +39,7 @@ export type RowsOf = {
   norms: ExcelBundle['spec']['norms'];
   groups: ExcelBundle['spec']['markerGroups'];
   markers: ExcelBundle['spec']['orderMarkers'];
+  materials: ExcelBundle['materials'];
   orderMaterials: ExcelBundle['orderMaterials'];
 };
 export type RowOf<T extends ReviewTable> = RowsOf[T][number];
@@ -48,6 +50,7 @@ const GETTERS: { [K in ReviewTable]: (b: ExcelBundle) => RowsOf[K] } = {
   norms: (b) => b.spec.norms,
   groups: (b) => b.spec.markerGroups,
   markers: (b) => b.spec.orderMarkers,
+  materials: (b) => b.materials,
   orderMaterials: (b) => b.orderMaterials,
 };
 
@@ -57,6 +60,7 @@ const SETTERS: { [K in ReviewTable]: (b: ExcelBundle, rows: RowsOf[K]) => ExcelB
   norms: (b, rows) => ({ ...b, spec: { ...b.spec, norms: rows } }),
   groups: (b, rows) => ({ ...b, spec: { ...b.spec, markerGroups: rows } }),
   markers: (b, rows) => ({ ...b, spec: { ...b.spec, orderMarkers: rows } }),
+  materials: (b, rows) => ({ ...b, materials: rows }),
   orderMaterials: (b, rows) => ({ ...b, orderMaterials: rows }),
 };
 
@@ -64,7 +68,10 @@ const SETTERS: { [K in ReviewTable]: (b: ExcelBundle, rows: RowsOf[K]) => ExcelB
  * Chỉ giữ các bảng đang nhập (bảng khác coi như không có trong file: cờ Has… tắt, không dòng). Dùng khi gửi kiểm và nhập để mỗi nơi
  * nhập Excel chỉ đụng dữ liệu của mình (vd nhập Bìa cắt không kiểm, không ghi định mức / NVL của đơn dù file có các sheet đó).
  */
-export const restrictBundle = (bundle: ExcelBundle, tables: readonly ReviewTable[]): ExcelBundle => {
+export const restrictBundle = (
+  bundle: ExcelBundle,
+  tables: readonly ReviewTable[],
+): ExcelBundle => {
   const keep = (t: ReviewTable) => tables.includes(t);
   return {
     hasProducts: bundle.hasProducts && keep('products'),
@@ -82,6 +89,8 @@ export const restrictBundle = (bundle: ExcelBundle, tables: readonly ReviewTable
     },
     hasOrderMaterials: bundle.hasOrderMaterials && keep('orderMaterials'),
     orderMaterials: keep('orderMaterials') ? bundle.orderMaterials : [],
+    hasMaterials: bundle.hasMaterials && keep('materials'),
+    materials: keep('materials') ? bundle.materials : [],
   };
 };
 
@@ -119,6 +128,16 @@ const BLANK: { [K in ReviewTable]: (rowNumber: number) => RowOf<K> } = {
     widthM: null,
     status: EXCEL_MARKER_STATUS.ACTIVE,
     ratios: [],
+    parseError: null,
+  }),
+  materials: (rowNumber) => ({
+    rowNumber,
+    materialCode: '',
+    materialName: null,
+    materialType: MATERIAL_TYPE.TRIM,
+    unit: null,
+    color: null,
+    widthM: null,
     parseError: null,
   }),
   orderMaterials: (rowNumber) => ({
@@ -185,6 +204,7 @@ export const statusMaps = (
     norms: toMap(check?.spec.norms ?? []),
     groups: toMap(check?.spec.markerGroups ?? []),
     markers: toMap(check?.spec.orderMarkers ?? []),
+    materials: toMap(check?.materials ?? []),
     orderMaterials: toMap(check?.orderMaterials?.rows ?? []),
   };
 };
@@ -217,6 +237,15 @@ const REQUIRED: { [K in ReviewTable]: (r: RowOf<K>) => [string, boolean][] } = {
     [col.width, blank(r.widthM)],
     [col.markerStatus, blank(r.status)],
     [col.sizeRatios, r.ratios.length === 0],
+  ],
+  materials: (r) => [
+    [col.material, blank(r.materialCode)],
+    [col.materialName, blank(r.materialName)],
+    [col.type, blank(r.materialType)],
+    // Vải bắt buộc khổ; phụ liệu bắt buộc đơn vị (khớp form thêm NVL).
+    r.materialType === MATERIAL_TYPE.FABRIC
+      ? [col.fabricWidth, blank(r.widthM)]
+      : [col.unit, blank(r.unit)],
   ],
   orderMaterials: (r) => [
     [col.material, blank(r.materialCode)],
@@ -296,7 +325,9 @@ export const defaultMaterial = (m: MissingMaterial): SaveMaterialPayload => {
     materialCode: m.materialCode,
     materialName: m.suggestedName ?? '',
     unit: fabric ? base.unit : m.suggestedUnit || base.unit,
-    color: fabric ? (m.colors[0] ?? '') : '',
+    // Sheet NVL đủ thông tin: màu, khổ lấy theo sheet; gợi ý từ định mức thì vải lấy màu áo đầu tiên.
+    color: m.suggestedColor ?? (fabric ? (m.colors[0] ?? '') : ''),
+    widthM: fabric ? (m.suggestedWidthM ?? base.widthM) : null,
   };
 };
 

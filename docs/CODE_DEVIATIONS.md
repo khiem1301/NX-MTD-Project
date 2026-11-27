@@ -237,6 +237,7 @@
 | DEV-ALL-12 | 25/10/2026 | Claude (AI) | UC37, UC45–UC47, swimlane III.1–III.5 | Đối chiếu màn hình luồng chính với swimlane; còn lệch: Thủ kho không nhập thiếu / lỗi, chưa có bước Quản đốc duyệt phiếu xuất (database chưa có trạng thái) | Mở |
 | DEV-ALL-168 | 23/11/2026 | Claude (AI) | Bộ UC v26 (73 UC), UC21 / UC33 / UC35 / UC39 / UC45 / UC61 | Bộ Use Case v26 đổi từ 67 lên 73 UC và đánh số lại; thêm 6 UC cho các chức năng code đã có (nhật ký thay đổi, bìa cắt theo đơn, thanh toán đơn hàng khách, giờ suất ăn, xem xe, AI gợi ý bậc). Số UC trong các mục cũ của file này không đổi | Mở |
 | DEV-ALL-191 | 27/11/2026 | AI theo yêu cầu của người dùng | UC19 (lệnh cắt), `WorkOrderService.CreateAsync` | Lập lệnh cắt thường khi thiếu vải chỉ cảnh báo, không chặn lưu | Mở |
+| DEV-ALL-192 | 27/11/2026 | AI theo yêu cầu của người dùng | UC09, UC10, `ExcelBundleService`, `MaterialSheetChecker`, `ImportTemplateService`, form đơn hàng | File Excel có thêm sheet NVL (đủ thông tin NVL) nhập cùng; mã trùng hệ thống mà khác thông tin thì báo lỗi; form đơn đổi thứ tự NVL của đơn lên trước Bìa của đơn, NVL của đơn bắt buộc khi tạo đơn mới | Mở |
 
 ---
 
@@ -3618,4 +3619,14 @@
 - **Lý do:** người dùng yêu cầu: không đủ vải chỉ cảnh báo, không cho phép chặn lưu (khớp các mục DEV trước).
 - **Ảnh hưởng người khác:** Thái (lệnh cắt); test `UTCID347` (khiem1301 thêm ở 99dd618, lệnh chặn do Thai-TTT thêm ở c4508f7 để khớp case này) đã đổi kỳ vọng; QA / Thái cần cập nhật case UTCID347 trong bảng test.
 - **Cần sửa trong tài liệu:** có (UC19: luồng lập lệnh cắt, không còn lỗi chặn khi thiếu vải; bảng test case UTCID347).
+- **Trạng thái:** Mở
+### DEV-ALL-192 · Sheet NVL (đủ thông tin) trong file Excel, kiểm trùng mã; NVL của đơn bắt buộc khi tạo đơn
+
+- **Ngày / Người / Task / PR:** 27/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC09, UC10; BE `ExcelBundleDto` (thêm `HasMaterials`, `Materials`), `ExcelBundleCheckResultDto.Materials`, `MissingMaterialDto` (thêm khổ, màu gợi ý), `IExcelMaterialParser` / `ClosedXmlMaterialParser`, `MaterialSheetChecker`, `ExcelBundleService`, `ImportTemplateService` (file mẫu NVL của đơn, Form mã hàng, Định mức + bìa có thêm sheet NVL); FE popup kiểm tra Excel (thêm tab NVL), form tạo / sửa đơn (`OrderExcelImports`, `useOrderForm`, `orderExcelImports`). Không đổi DB.
+- **Tài liệu gốc ghi:** DEV-ALL-123: sheet NVL của đơn chỉ có thêm cột tùy chọn Tên NVL, Đơn vị để gợi ý khi thêm NVL chưa có; DEV-ALL-150: Bìa của đơn, NVL của đơn ở form đơn đều không bắt buộc, Bìa đứng trước NVL.
+- **Code đang làm:** (1) file Excel nhận thêm sheet NVL (cột Mã NVL, Tên NVL, Loại FABRIC/TRIM, Đơn vị, Màu, Khổ vải (m)). Mã đã có trong hệ thống mà tên, loại, đơn vị (phụ liệu), màu hoặc khổ (vải) khác thì dòng báo lỗi "NVL trùng mã nhưng khác thông tin" kèm tên các thông tin khác; mã trùng ngay trong sheet cũng lỗi. Mã chưa có thì kiểm như thêm NVL tay (tên bắt buộc, vải cần khổ, phụ liệu cần đơn vị, không trùng tên + loại + màu) và được thêm vào danh mục khi lưu, thông tin điền sẵn vào bảng "NVL chưa có" (Admin vẫn sửa được). NVL ở Định mức / NVL của đơn mà không có trong sheet NVL vẫn là cảnh báo NVL mới như trước (Admin tự điền). (2) Form tạo / sửa đơn: NVL của đơn đứng trước Bìa của đơn, popup NVL của đơn có thêm tab NVL; NVL mới của sheet NVL được thêm vào danh mục rồi mới nhập NVL của đơn khi Lưu đơn (trước đây form đơn bỏ qua NVL mới). (3) Tạo đơn mới bắt buộc đã chọn file NVL của đơn, thiếu thì không cho Lưu đơn; sửa đơn vẫn không bắt buộc.
+- **Lý do:** người dùng yêu cầu: NVL nhập cùng file, phát hiện NVL trùng mã nhưng khác thông tin, NVL của đơn là bắt buộc lúc tạo đơn.
+- **Ảnh hưởng người khác:** Thái (kho, NVL của đơn); Khiêm (mã hàng, định mức). File mẫu Excel đã đổi, cần tải lại file mẫu.
+- **Cần sửa trong tài liệu:** có (UC09: form đơn, NVL của đơn bắt buộc khi tạo; UC10: sheet NVL trong file nhập định mức; mô tả file mẫu Excel).
 - **Trạng thái:** Mở

@@ -6,7 +6,9 @@ import { MESSAGES } from '@/constants/messages';
 import { EXCEL_COMPONENT_TYPE, EXCEL_ROW_ACTION } from '../constants';
 import type { RowStatus } from '../utils/excelReview';
 import { ExcelReviewStatusCell } from './ExcelReviewStatusCell';
+import { MATERIAL_TYPE } from '@/constants/warehouse';
 import type {
+  MaterialExcelRow,
   OrderMaterialExcelRow,
   ProductExcelRow,
   SpecComponentExcelRow,
@@ -482,6 +484,106 @@ export const orderMaterialColumns = (
         <Input
           value={text$(r.note)}
           onChange={(e) => ctx.update(r.rowNumber, { note: e.target.value || null })}
+        />,
+      ),
+  },
+  ...tail(ctx),
+];
+
+/** Vải luôn tính theo mét; chỉ vải có khổ. */
+const FABRIC_UNIT = 'm';
+
+/** DEV-ALL-192: sheet NVL — mã, tên, loại, đơn vị, màu, khổ vải (khớp file mẫu); mã đã có trong hệ thống thì thông tin phải trùng. */
+export const materialSheetColumns = (
+  ctx: ReviewColumnsCtx<MaterialExcelRow>,
+): ColumnsType<MaterialExcelRow> => [
+  rowCol,
+  {
+    title: col.material,
+    key: 'code',
+    width: 160,
+    render: (_, r) =>
+      withWarn(
+        rowError(ctx, r),
+        <Input
+          value={r.materialCode}
+          onChange={(e) => ctx.update(r.rowNumber, { materialCode: e.target.value.toUpperCase() })}
+        />,
+      ),
+  },
+  {
+    title: col.materialName,
+    key: 'name',
+    render: (_, r) =>
+      withWarn(
+        rowError(ctx, r),
+        <Input
+          value={text$(r.materialName)}
+          onChange={(e) => ctx.update(r.rowNumber, { materialName: e.target.value || null })}
+        />,
+      ),
+  },
+  {
+    title: col.type,
+    key: 'type',
+    width: 130,
+    render: (_, r) => (
+      <Select
+        style={{ width: '100%' }}
+        value={r.materialType ?? undefined}
+        options={[
+          { value: MATERIAL_TYPE.FABRIC, label: text.materialTypes.FABRIC },
+          { value: MATERIAL_TYPE.TRIM, label: text.materialTypes.TRIM },
+        ]}
+        onChange={(materialType: string) =>
+          ctx.update(r.rowNumber, {
+            materialType,
+            ...(materialType === MATERIAL_TYPE.FABRIC ? { unit: FABRIC_UNIT } : { widthM: null }),
+          })
+        }
+      />
+    ),
+  },
+  {
+    title: col.unit,
+    key: 'unit',
+    width: 100,
+    render: (_, r) =>
+      withWarn(
+        rowError(ctx, r),
+        <Input
+          disabled={r.materialType === MATERIAL_TYPE.FABRIC}
+          value={r.materialType === MATERIAL_TYPE.FABRIC ? FABRIC_UNIT : text$(r.unit)}
+          onChange={(e) => ctx.update(r.rowNumber, { unit: e.target.value || null })}
+        />,
+      ),
+  },
+  {
+    title: col.materialColor,
+    key: 'color',
+    width: 130,
+    render: (_, r) =>
+      withWarn(
+        rowError(ctx, r),
+        <Input
+          value={text$(r.color)}
+          onChange={(e) => ctx.update(r.rowNumber, { color: e.target.value || null })}
+        />,
+      ),
+  },
+  {
+    title: col.fabricWidth,
+    key: 'width',
+    width: 120,
+    render: (_, r) =>
+      withWarn(
+        rowError(ctx, r),
+        <InputNumber
+          min={0}
+          step={0.1}
+          disabled={r.materialType !== MATERIAL_TYPE.FABRIC}
+          value={r.widthM}
+          onChange={(v) => ctx.update(r.rowNumber, { widthM: v })}
         />,
       ),
   },

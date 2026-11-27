@@ -8,28 +8,39 @@ import { ExcelReviewModal } from './ExcelReviewModal';
 
 const text = MESSAGES.orders.orderExcel;
 const kinds = MESSAGES.orders.productExcel.kinds;
-const KINDS: readonly OrderImportKind[] = ['markers', 'orderMaterials'];
+// DEV-ALL-192: NVL của đơn đứng trước Bìa của đơn (NVL là bắt buộc khi tạo đơn).
+const KINDS: readonly OrderImportKind[] = ['orderMaterials', 'markers'];
 
 type OrderExcelImportsProps = {
   orderId: number | null;
   imports: ReturnType<typeof useOrderExcelImports>;
   disabled?: boolean;
+  /** Tạo đơn mới: NVL của đơn bắt buộc (dấu * đỏ). */
+  materialsRequired?: boolean;
+  /** Đã bấm Lưu mà chưa có file NVL của đơn (viền đỏ). */
+  materialsMissing?: boolean;
 };
 
 /** DEV-ALL-150/154: khung nhập Bìa của đơn, NVL của đơn ở form đơn — chọn file mở popup kiểm tra / sửa rồi Xác nhận. */
-export function OrderExcelImports({ orderId, imports, disabled }: OrderExcelImportsProps) {
+export function OrderExcelImports({
+  orderId,
+  imports,
+  disabled,
+  materialsRequired,
+  materialsMissing,
+}: OrderExcelImportsProps) {
   const { selection, reading, reviewing } = imports;
   return (
     <div style={{ marginTop: 4, marginBottom: 16 }}>
       <Flex justify="space-between" align="center" wrap gap={8}>
         <Typography.Text strong>{text.section}</Typography.Text>
         <Space size={16} wrap>
-          <ImportTemplateLink kind="order-markers" orderId={orderId} label={text.markerTemplate} />
           <ImportTemplateLink
             kind="order-materials"
             orderId={orderId}
             label={text.materialTemplate}
           />
+          <ImportTemplateLink kind="order-markers" orderId={orderId} label={text.markerTemplate} />
         </Space>
       </Flex>
       <Row gutter={[8, 8]} style={{ marginTop: 8 }}>
@@ -39,6 +50,8 @@ export function OrderExcelImports({ orderId, imports, disabled }: OrderExcelImpo
               label={kinds[kind]}
               rows={orderRowCount(selection, kind)}
               disabled={disabled}
+              required={kind === 'orderMaterials' && materialsRequired}
+              missing={kind === 'orderMaterials' && materialsMissing}
               loading={reading === kind}
               onFile={(file) => imports.choose(kind, file)}
               onClear={() => imports.clear(kind)}

@@ -55,10 +55,10 @@ export function useOrderExcelImports(onChange: () => void) {
     });
   };
 
-  const confirm = (edited: ExcelBundle, _materials: SaveMaterialPayload[], _replace: boolean) => {
+  const confirm = (edited: ExcelBundle, newMaterials: SaveMaterialPayload[], _replace: boolean) => {
     if (!reviewing) return;
     const { kind, fileName } = reviewing;
-    setSelection((s) => takeOrderKind(s, kind, fileName, edited));
+    setSelection((s) => takeOrderKind(s, kind, fileName, edited, newMaterials));
     setReviewing(null);
     onChange();
   };
@@ -75,7 +75,7 @@ export function useOrderExcelImports(onChange: () => void) {
     setReviewing({ bundle, fileName, kind });
   };
 
-  const onlyTables = (kind: OrderImportKind): ReviewTable[] => [ORDER_IMPORT_TABLE[kind]];
+  const onlyTables = (kind: OrderImportKind): readonly ReviewTable[] => ORDER_IMPORT_TABLE[kind];
 
   return {
     selection,

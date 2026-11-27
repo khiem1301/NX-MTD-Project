@@ -17,6 +17,8 @@ const emptyBundle: ExcelBundle = {
   },
   hasOrderMaterials: false,
   orderMaterials: [],
+  hasMaterials: false,
+  materials: [],
 };
 
 const spec: ProductSpec = {

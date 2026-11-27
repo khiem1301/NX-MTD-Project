@@ -435,7 +435,17 @@ public static class Messages
     public const string OrderMaterialPendingOrder = "Kiểm đầy đủ khi Lưu đơn (cần đơn).";
     public const string MaterialNotInCatalog =
         "NVL \"{0}\" chưa có trong danh mục NVL. Khi Xác nhận sẽ hỏi có thêm vào danh mục không; không thêm thì dòng này bị bỏ qua khi lưu.";
-    public const string ExcelBundleEmpty = "File không có bảng nào nhận được (Mã hàng, Thành phần, Định mức NVL, Nhóm bìa, Bìa của đơn, NVL của đơn). Hãy dùng file mẫu.";
+    public const string ExcelBundleEmpty = "File không có bảng nào nhận được (Mã hàng, Thành phần, Định mức NVL, Nhóm bìa, Bìa của đơn, NVL của đơn, NVL). Hãy dùng file mẫu.";
+    // DEV-ALL-192: sheet NVL (thông tin đầy đủ của NVL) đi kèm file nhập.
+    public const string MaterialSheetMissing = "File Excel sai mẫu: không có bảng có cột 'Mã NVL', 'Tên NVL' và 'Loại'. Hãy dùng file mẫu của hệ thống.";
+    public const string MaterialSheetTypeInvalid = "Loại NVL phải là FABRIC (vải) hoặc TRIM (phụ liệu).";
+    public const string MaterialSheetConflict = "NVL \"{0}\" trùng mã với NVL trong hệ thống nhưng khác thông tin ({1}). Sửa cho giống hệ thống hoặc đổi mã.";
+    public const string MaterialSheetNew = "NVL \"{0}\" chưa có trong danh mục: sẽ được thêm vào danh mục khi lưu.";
+    public const string MaterialFieldName = "tên";
+    public const string MaterialFieldType = "loại";
+    public const string MaterialFieldUnit = "đơn vị";
+    public const string MaterialFieldColor = "màu";
+    public const string MaterialFieldWidth = "khổ vải";
     public const string SpecImportGroupColorsSkipped =
         "Nhóm bìa {0}: bỏ qua màu {1} (mã hàng chưa có màu này trong đơn hàng nào).";
     public const string SpecImportPartMissing = "File không có bảng {0}. Kiểm tra tên cột trên dòng tiêu đề (dùng file mẫu).";

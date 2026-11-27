@@ -66,12 +66,14 @@ public sealed class ImportTemplateService : IImportTemplateService
             new("2 · Định mức NVL", "Mỗi dòng = một NVL của một chi tiết ở một màu áo. Dùng MÃ NVL, không gõ tên."),
             new("3 · Nhóm bìa", "Bìa loại 1, khai ở mã hàng: chi tiết trên nhóm và các màu áo dùng nhóm. Vải của nhóm lấy từ định mức."),
             new("4 · Bìa của đơn", "Bìa loại 2, khai theo đơn hàng. Ở màn Mã hàng phải chọn đơn thì bảng này mới được nhập."),
+            new("5 · NVL", "Thông tin đầy đủ của NVL dùng trong định mức. Mã đã có trong hệ thống thì thông tin phải trùng (khác là lỗi); mã chưa có thì được thêm vào danh mục khi lưu."),
             new("Giới hạn", "Màu áo phải là màu đã có trong đơn hàng của mã hàng (nhập Excel không tạo màu mới). Mã NVL phải có trong danh mục NVL đang dùng. Mỗi chi tiết PANEL chỉ một vải ở mỗi màu. Khổ bìa tối đa 3,5 m."),
             new("Dữ liệu trong file", DemoNote),
         ],
         [
             await ComponentsAsync(productId, "1 · ", ct), await NormsAsync(productId, "2 · ", ct),
             await GroupsAsync(productId, "3 · ", ct), await MarkersAsync(productId, orderId, "4 · ", ct),
+            await MaterialsTableAsync(productId, null, "5 · ", ct),
         ]);
 
     private async Task<ImportTemplateModel> OrderLinesAsync(int? orderId, CancellationToken ct) =>
@@ -90,15 +92,16 @@ public sealed class ImportTemplateService : IImportTemplateService
             new("Dùng ở đâu", "Chi tiết đơn hàng → tab 'NVL của đơn' → nút 'Nhập từ Excel' (Admin, Quản đốc; ẩn khi đơn đã đóng)."),
             new("Cách nhập", "Chọn file là xem trước ngay. NVL đã có trong đơn được cập nhật theo file, NVL không có trong file giữ nguyên."),
             new("Sheet cần có", "NVL của đơn: Mã NVL, Số cần, Khách cấp (tùy chọn), Ghi chú (tùy chọn). Phải mua = Số cần − Khách cấp, hệ thống tự tính."),
+            new("Sheet NVL (DEV-ALL-192)", "Thông tin đầy đủ của từng NVL (mã, tên, loại, đơn vị, màu, khổ vải) để nhập cùng lúc. Mã đã có trong hệ thống thì mọi thông tin phải trùng, khác là lỗi 'trùng mã nhưng khác thông tin'; mã chưa có thì được thêm vào danh mục khi lưu."),
             new("Dữ liệu trong file", DemoNote),
         ],
-        [await OrderMaterialsTableAsync(orderId, "", ct)]);
+        [await MaterialsTableAsync(null, orderId, "", ct), await OrderMaterialsTableAsync(orderId, "", ct)]);
 
     /// <summary>DEV-ALL-153: chỉ sheet Bìa của đơn — dùng ở form đơn và tab Bìa cắt, không kèm Thành phần / Định mức / Nhóm bìa.</summary>
     private async Task<ImportTemplateModel> OrderMarkersAsync(int? orderId, CancellationToken ct) =>
         new("Mau_Bia_Cua_Don" + XlsxName, "MẪU NHẬP BÌA CỦA ĐƠN",
         [
-            new("Dùng ở đâu", "Form tạo / sửa đơn → khung 'Bìa và NVL của đơn', hoặc chi tiết đơn → tab 'Bìa cắt' → Nhập từ Excel."),
+            new("Dùng ở đâu", "Form tạo / sửa đơn → khung 'NVL và bìa của đơn', hoặc chi tiết đơn → tab 'Bìa cắt' → Nhập từ Excel."),
             new("Cách nhập", "Chọn file là đọc ngay. Ở form đơn: bấm Lưu đơn mới ghi. Ở tab Bìa cắt: xem trước rồi nhập như trước."),
             new("Sheet cần có", "Chỉ một sheet 'Bìa của đơn'. Không cần Thành phần, Định mức NVL, Nhóm bìa."),
             new("Nhóm bìa", "Cột Nhóm bìa phải là nhóm đã khai ở định mức mã hàng. Mã hàng: để trống nếu đơn chỉ có một mã."),
@@ -121,14 +124,14 @@ public sealed class ImportTemplateService : IImportTemplateService
         var guide = new List<TemplateGuideRow>
         {
             new("Dùng ở đâu", "Form Thêm mới / Sửa mã hàng (màn Mã hàng hoặc form đơn hàng) → khung 'Nhập từ Excel' → nút 'Chọn 1 file chung cho tất cả'."),
-            new("Cách nhập", "File này gom 4 sheet cho một mã hàng. Sheet Mã hàng tự điền Mã hàng, Mô tả của form (nếu có nhiều dòng chỉ lấy dòng đầu); mỗi sheet còn lại được nhập vào mục cùng tên. Sheet nào file không có thì bỏ qua. Sau khi chọn file, hệ thống mở bảng kiểm tra để xem và sửa; bấm Lưu thì lưu mã hàng rồi nhập các bảng."),
+            new("Cách nhập", "File này gom 5 sheet cho một mã hàng. Sheet Mã hàng tự điền Mã hàng, Mô tả của form (nếu có nhiều dòng chỉ lấy dòng đầu); mỗi sheet còn lại được nhập vào mục cùng tên. Sheet NVL khai thông tin đầy đủ của NVL dùng trong định mức: mã đã có trong hệ thống thì thông tin phải trùng, mã chưa có thì được thêm vào danh mục khi lưu. Sheet nào file không có thì bỏ qua. Sau khi chọn file, hệ thống mở bảng kiểm tra để xem và sửa; bấm Lưu thì lưu mã hàng rồi nhập các bảng."),
             new("Bắt buộc khi thêm mới", "Thành phần, Định mức NVL, Nhóm bìa phải có dữ liệu (thiếu thì không cho Lưu). Bìa của đơn, NVL của đơn không nhập ở form mã hàng: nhập ở chi tiết đơn hàng."),
             new("Dữ liệu trong file", DemoNote),
         };
         var tables = new List<TemplateTable>
         {
             await ProductTableAsync(productId, ct), await ComponentsAsync(productId, "", ct),
-            await NormsAsync(productId, "", ct), await GroupsAsync(productId, "", ct),
+            await NormsAsync(productId, "", ct), await GroupsAsync(productId, "", ct), await MaterialsTableAsync(productId, null, "", ct),
         };
         return new ImportTemplateModel("Mau_Form_Ma_Hang" + XlsxName, "MẪU NHẬP MÃ HÀNG KÈM ĐỊNH MỨC (FORM MÃ HÀNG)", guide, tables);
     }
@@ -291,6 +294,35 @@ public sealed class ImportTemplateService : IImportTemplateService
             [new("Mã NVL", 'R', 18), new("Số cần", 'R', 12), new("Khách cấp", 'O', 12), new("Ghi chú", 'O', 34)], rows,
             [["V-KATE-TR", 1200, null, "Mua toàn bộ"], ["T-CHI-TR", 40, null, "Chỉ 40/2, tự mua"], ["T-NHAN-DET", 680, 680, "Khách cấp đủ"],
              ["T-NUT-4L", 6200, 2000, "Khách cấp 2.000, mua thêm phần còn lại"]]);
+    }
+
+    private static readonly string[] MaterialTypeOptions = [MaterialTypes.Fabric, MaterialTypes.Trim];
+
+    /// <summary>
+    /// DEV-ALL-192: sheet NVL — thông tin đầy đủ của các NVL file dùng. Có đơn: NVL của đơn; có mã hàng: NVL trong định mức; không có
+    /// thì dòng ví dụ. Mã đã có trong hệ thống thì mọi thông tin phải trùng, chưa có thì được thêm vào danh mục khi lưu.
+    /// </summary>
+    private async Task<TemplateTable> MaterialsTableAsync(int? productId, int? orderId, string no, CancellationToken ct)
+    {
+        IReadOnlyList<IReadOnlyList<object?>> rows = [];
+        IQueryable<Material>? used = null;
+        if (orderId is { } oid)
+            used = _uow.Repository<OrderMaterial>().Query().Where(m => m.OrderId == oid).Select(m => m.Material);
+        else if (productId is { } pid)
+            used = _uow.Repository<ProductComponentMaterial>().Query()
+                .Where(p => p.ProductId == pid && p.Status == RecordStatus.Active).Select(p => p.Material);
+        if (used is not null)
+            rows = (await used.AsNoTracking().Distinct().OrderBy(m => m.MaterialCode)
+                    .Select(m => new { m.MaterialCode, m.MaterialName, m.MaterialType, m.Unit, m.Color, m.WidthM }).ToListAsync(ct))
+                .Select(m => (IReadOnlyList<object?>)[m.MaterialCode, m.MaterialName, m.MaterialType, m.Unit,
+                    m.Color.Length > 0 ? m.Color : null, m.WidthM is { } w ? (double)w : null]).ToList();
+        return Pick("NVL", no + "THÔNG TIN NVL (mã đã có trong hệ thống phải trùng thông tin)",
+            "Mã NVL: chữ, số và . _ -, tối đa 30 ký tự. Tên NVL: ≤ 200 ký tự, không trùng (tên, loại, màu) với NVL khác. Loại: FABRIC (vải) hoặc TRIM (phụ liệu). Đơn vị: vải luôn là m, phụ liệu bắt buộc (≤ 20 ký tự). Màu: tùy chọn (≤ 50 ký tự). Khổ vải (m): bắt buộc với vải, để trống với phụ liệu. Mã NVL đã có trong hệ thống thì tên, loại, đơn vị, màu, khổ vải phải giống hệ thống (khác là lỗi 'trùng mã nhưng khác thông tin'); mã chưa có thì được thêm vào danh mục khi lưu.",
+            [new("Mã NVL", 'R', 18), new("Tên NVL", 'R', 30), new("Loại", 'R', 12, MaterialTypeOptions), new("Đơn vị", 'O', 10),
+             new("Màu", 'O', 14), new("Khổ vải (m)", 'O', 14)], rows,
+            [["V-KATE-TR", "Vải kate trắng", MaterialTypes.Fabric, "m", "Trắng", 1.5], ["V-KATE-XN", "Vải kate xanh nhạt", MaterialTypes.Fabric, "m", "Xanh nhạt", 1.5],
+             ["T-CHI-TR", "Chỉ may trắng", MaterialTypes.Trim, "cuộn", "Trắng", null], ["T-NHAN-DET", "Nhãn dệt", MaterialTypes.Trim, "cái", null, null],
+             ["T-NUT-4L", "Nút 4 lỗ", MaterialTypes.Trim, "cái", null, null]]);
     }
 
     private async Task<TemplateTable> OperationsTableAsync(int? productId, string no, CancellationToken ct)

@@ -21,15 +21,16 @@ public sealed class ExcelBundleService : IExcelBundleService
     private readonly IExcelProductParser _products;
     private readonly IExcelSpecWorkbookParser _spec;
     private readonly IExcelOrderMaterialParser _orderMaterials;
+    private readonly IExcelMaterialParser _materials;
     private readonly IProductImportService _productImport;
     private readonly ISpecImportService _specImport;
     private readonly IOrderMaterialService _orderMaterialService;
 
     public ExcelBundleService(IUnitOfWork uow, IExcelProductParser products, IExcelSpecWorkbookParser spec,
-        IExcelOrderMaterialParser orderMaterials, IProductImportService productImport, ISpecImportService specImport,
-        IOrderMaterialService orderMaterialService)
+        IExcelOrderMaterialParser orderMaterials, IExcelMaterialParser materials, IProductImportService productImport,
+        ISpecImportService specImport, IOrderMaterialService orderMaterialService)
     {
-        _uow = uow; _products = products; _spec = spec; _orderMaterials = orderMaterials;
+        _uow = uow; _products = products; _spec = spec; _orderMaterials = orderMaterials; _materials = materials;
         _productImport = productImport; _specImport = specImport; _orderMaterialService = orderMaterialService;
     }
 
@@ -58,11 +59,13 @@ public sealed class ExcelBundleService : IExcelBundleService
         var products = Read(_products.Parse);
         var spec = Read(_spec.Parse);
         var orderMaterials = Read(_orderMaterials.Parse);
-        if (products is null && spec is null && orderMaterials is null)
+        var materials = Read(_materials.Parse);
+        if (products is null && spec is null && orderMaterials is null && materials is null)
             return Result<ExcelBundleDto>.Failure(ErrorCodes.SpecImportInvalid, Messages.ExcelBundleEmpty, ResultKind.Validation);
 
         return Result<ExcelBundleDto>.Success(new ExcelBundleDto(
-            products is not null, products ?? [], spec ?? EmptySpec, orderMaterials is not null, orderMaterials ?? []));
+            products is not null, products ?? [], spec ?? EmptySpec, orderMaterials is not null, orderMaterials ?? [],
+            materials is not null, materials ?? []));
     }
 
     public async Task<Result<ExcelBundleCheckResultDto>> CheckAsync(ExcelBundleCheckDto dto, CancellationToken ct)
@@ -92,9 +95,21 @@ public sealed class ExcelBundleService : IExcelBundleService
             else orderMaterials = await CheckOrderMaterialsWithoutOrderAsync(bundle.OrderMaterials, catalog, ct);
         }
 
-        return Result<ExcelBundleCheckResultDto>.Success(new ExcelBundleCheckResultDto(products, spec.Data!, orderMaterials,
-            MissingMaterials(bundle, spec.Data!, orderMaterials)));
+        var sheetRows = bundle.HasMaterials ? bundle.Materials ?? [] : [];
+        var sheet = await new MaterialSheetChecker(_uow).CheckAsync(sheetRows, ct);
+        var missing = MissingMaterials(bundle, spec.Data!, orderMaterials, sheet);
+        // NVL đã khai đủ ở sheet NVL thì không còn là cảnh báo "NVL chưa có": chỉ NVL dùng ở định mức / NVL của đơn mà sheet NVL không có mới cảnh báo.
+        var declared = missing.Where(m => m.FromSheet).Select(m => m.MaterialCode).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var specData = spec.Data! with { Norms = spec.Data!.Norms.Select(n => IsDeclared(n.Action, n.MaterialCode, declared) ? n with { Action = SpecImportBuilder.ActionNew, Error = null } : n).ToList() };
+        orderMaterials = orderMaterials is null ? null : orderMaterials with
+        {
+            Rows = orderMaterials.Rows.Select(r => IsDeclared(r.Action, r.MaterialCode, declared) ? r with { Action = SpecImportBuilder.ActionNew, Error = null } : r).ToList(),
+        };
+        return Result<ExcelBundleCheckResultDto>.Success(new ExcelBundleCheckResultDto(products, specData, orderMaterials, missing, sheet));
     }
+
+    private static bool IsDeclared(string action, string code, HashSet<string> declared) =>
+        action == SpecImportBuilder.ActionNewMaterial && declared.Contains(code.Trim());
 
     /// <summary>Mã NVL có trong danh mục, kể cả đã ngừng dùng (không phân biệt hoa thường).</summary>
     private async Task<HashSet<string>> CatalogAsync(IEnumerable<string> codes, CancellationToken ct)
@@ -129,13 +144,17 @@ public sealed class ExcelBundleService : IExcelBundleService
 
     /// <summary>Gom mã NVL chưa có (định mức + NVL của đơn), gợi ý loại theo chi tiết PANEL và màu áo đang dùng mã đó.</summary>
     private static List<MissingMaterialDto> MissingMaterials(ExcelBundleDto bundle, SpecImportPreviewDto spec,
-        OrderMaterialImportPreviewDto? orderMaterials)
+        OrderMaterialImportPreviewDto? orderMaterials, IReadOnlyList<MaterialCheckRowDto> sheet)
     {
         var panels = bundle.Spec.Components.Where(c => c.ComponentType == ComponentTypes.Panel)
             .Select(c => c.Name.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var normRows = spec.Norms.Where(n => n.Action == SpecImportBuilder.ActionNewMaterial).ToList();
+        // DEV-ALL-192: dòng sheet NVL hợp lệ mà mã chưa có trong danh mục cũng được thêm (đủ thông tin, không cần admin điền).
+        var sheetNew = (bundle.Materials ?? []).Where(r => sheet.Any(s => s.RowNumber == r.RowNumber && s.Action == SpecImportBuilder.ActionNew))
+            .GroupBy(r => r.MaterialCode, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         var codes = normRows.Select(n => n.MaterialCode)
             .Concat(orderMaterials?.Rows.Where(r => r.Action == SpecImportBuilder.ActionNewMaterial).Select(r => r.MaterialCode) ?? [])
+            .Concat(sheetNew.Keys)
             .Select(c => c.Trim().ToUpperInvariant()).Distinct().ToList();
         return codes.Select(code =>
         {
@@ -144,9 +163,11 @@ public sealed class ExcelBundleService : IExcelBundleService
             // Tên, đơn vị gợi ý lấy từ cột Tên NVL / Đơn vị của sheet NVL của đơn (nếu file có).
             var fileRow = bundle.OrderMaterials.FirstOrDefault(r =>
                 string.Equals(r.MaterialCode.Trim(), code, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(r.MaterialName));
-            return new MissingMaterialDto(code, fabric ? MaterialTypes.Fabric : MaterialTypes.Trim,
-                uses.Select(n => n.Color.Trim()).Where(c => c.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
-                fileRow?.MaterialName, fileRow?.Unit);
+            var colors = uses.Select(n => n.Color.Trim()).Where(c => c.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (sheetNew.TryGetValue(code, out var row))
+                return new MissingMaterialDto(code, row.MaterialType ?? MaterialTypes.Trim, colors, row.MaterialName, row.Unit, row.WidthM,
+                    row.Color ?? string.Empty, FromSheet: true);
+            return new MissingMaterialDto(code, fabric ? MaterialTypes.Fabric : MaterialTypes.Trim, colors, fileRow?.MaterialName, fileRow?.Unit);
         }).ToList();
     }
 

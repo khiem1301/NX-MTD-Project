@@ -8,6 +8,7 @@ import {
   componentColumns,
   groupColumns,
   markerColumns,
+  materialSheetColumns,
   normColumns,
   orderMaterialColumns,
   productColumns,
@@ -133,6 +134,15 @@ export function ExcelReviewTabs({
             {...props}
             rows={draft.spec.orderMarkers}
             columns={markerColumns(ctx(table), markerSizes)}
+            stateOf={common.stateOf(table)}
+          />
+        );
+      case 'materials':
+        return (
+          <ExcelReviewTable
+            {...props}
+            rows={draft.materials}
+            columns={materialSheetColumns(ctx(table))}
             stateOf={common.stateOf(table)}
           />
         );

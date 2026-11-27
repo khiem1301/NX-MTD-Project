@@ -18,6 +18,7 @@ import {
 } from '../utils/productExcelImports';
 import {
   hasOrderImports,
+  orderRowCount,
   runOrderImports,
   type OrderImportProduct,
   type OrderImportSelection,
@@ -80,6 +81,7 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
   >({});
   // DEV-ALL-150: Bìa của đơn, NVL của đơn đọc từ Excel; nhập vào đơn sau khi Lưu đơn.
   const orderImports = useOrderExcelImports(() => setDirty(true));
+  const [showOrderMaterialsRequired, setShowOrderMaterialsRequired] = useState(false);
   const locked = isEdit && detail !== undefined && detail.status !== 'New';
   const editable =
     !isEdit ||
@@ -261,6 +263,12 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
       setLineError(MESSAGES.orders.needLine);
       return;
     }
+    // DEV-ALL-192: tạo đơn mới bắt buộc đã chọn file NVL của đơn (ghi vào đơn khi Lưu).
+    if (!isEdit && orderRowCount(orderImports.selection, 'orderMaterials') === 0) {
+      setShowOrderMaterialsRequired(true);
+      void message.error(MESSAGES.orders.orderExcel.materialsRequired);
+      return;
+    }
     const used = new Set(blocks.map((b) => b.productId));
     const stagedProducts: StagedProductInput[] = staged
       .filter((s) => used.has(s.tempId))
@@ -396,6 +404,9 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
     updateStagedProduct,
     unstageProduct,
     orderImports,
+    /** Tạo đơn mới: NVL của đơn bắt buộc; true sau lần Lưu thiếu file (viền đỏ ô NVL của đơn). */
+    orderMaterialsMissing:
+      showOrderMaterialsRequired && orderRowCount(orderImports.selection, 'orderMaterials') === 0,
   };
 }
 

@@ -18,6 +18,7 @@ public static class WarehouseModule
         services.AddScoped<IMaterialService, MaterialService>();
         services.AddScoped<IOrderMaterialService, OrderMaterialService>();
         services.AddSingleton<IExcelOrderMaterialParser, ClosedXmlOrderMaterialParser>();
+        services.AddSingleton<IExcelMaterialParser, ClosedXmlMaterialParser>();   // sheet NVL: thông tin đầy đủ của NVL (DEV-ALL-192)
         services.AddScoped<IIncomingMaterialService, IncomingMaterialService>();   // màn NVL chờ nhận của Thủ kho
         services.AddScoped<MaterialSupplyUpdater>();
         services.AddScoped<DeliveryCountGuard>();   // số phiếu nhập không vượt số lần giao (DEV-ALL-94)
