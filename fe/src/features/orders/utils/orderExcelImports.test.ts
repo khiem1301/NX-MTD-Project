@@ -3,6 +3,9 @@ import { excelBundleApi } from '../api/orderApi';
 import { materialApi } from '@/services/materialApi';
 import {
   bundleOfOrderKind,
+  createOrderNewMaterials,
+  pendingMaterialsOf,
+  withoutOrderNewMaterials,
   groupMarkersByProduct,
   hasOrderImports,
   pickOrderData,
@@ -158,39 +161,41 @@ describe('orderExcelImports', () => {
       ['markers', 'QU-02', true],
     ]);
   });
-  it('runOrderImports thêm NVL mới của sheet NVL vào danh mục trước khi nhập NVL của đơn', async () => {
-    api.previewOrderMaterials.mockResolvedValue({
-      rows: [],
-      validCount: 1,
-      errorCount: 0,
-      duplicateCount: 0,
-      changeCount: 1,
-    });
-    api.importOrderMaterials.mockResolvedValue({ success: true, data: null, message: 'ok' });
-    const order: string[] = [];
-    (materialApi.create as jest.Mock).mockImplementation(async () => order.push('create'));
-    api.importOrderMaterials.mockImplementation(async () => {
-      order.push('import');
-      return { success: true, data: null, message: 'ok' } as never;
-    });
+  const withNewMaterial = {
+    orderMaterials: {
+      fileName: 'nvl.xlsx',
+      rows: [material],
+      materials: [],
+      newMaterials: [
+        { materialCode: 'V-9', materialName: 'Vải mới', materialType: 'TRIM', unit: 'cái' },
+      ],
+    },
+  };
 
-    const outcomes = await runOrderImports(
-      30,
-      {
-        orderMaterials: {
-          fileName: 'nvl.xlsx',
-          rows: [material],
-          materials: [],
-          newMaterials: [
-            { materialCode: 'V-9', materialName: 'Vải mới', materialType: 'TRIM', unit: 'cái' },
-          ],
-        },
-      },
-      [],
+  it('createOrderNewMaterials thêm NVL mới của NVL của đơn vào danh mục', async () => {
+    const outcomes = await createOrderNewMaterials(withNewMaterial);
+
+    expect(materialApi.create).toHaveBeenCalledWith(
+      'admin',
+      withNewMaterial.orderMaterials.newMaterials[0],
     );
+    expect(outcomes.map((o) => o.kind)).toEqual(['materials']);
+  });
 
-    expect(order).toEqual(['create', 'import']);
-    expect(outcomes.map((o) => o.kind)).toEqual(['materials', 'orderMaterials']);
+  it('pendingMaterialsOf đưa NVL mới của đơn cho bước kiểm file mã hàng', () => {
+    expect(pendingMaterialsOf(withNewMaterial)).toMatchObject([
+      { materialCode: 'V-9', materialName: 'Vải mới', color: null, widthM: null },
+    ]);
+    expect(pendingMaterialsOf({})).toEqual([]);
+  });
+
+  it('withoutOrderNewMaterials: file mã hàng không tạo lại NVL đã khai ở NVL của đơn', () => {
+    const other = { materialCode: 'T-1', materialName: 'Nút', materialType: 'TRIM', unit: 'cái' };
+    const product = {
+      newMaterials: [{ ...other, materialCode: 'v-9' }, other],
+    };
+
+    expect(withoutOrderNewMaterials(product, withNewMaterial).newMaterials).toEqual([other]);
   });
 
   it('bundleOfOrderKind mở lại cả sheet NVL cùng NVL của đơn', () => {

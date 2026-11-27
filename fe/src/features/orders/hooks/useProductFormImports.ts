@@ -13,6 +13,7 @@ import {
 } from '../utils/productExcelImports';
 import { excelBundleApi } from '../api/orderApi';
 import { bundleErrorCount, incompleteMaterials } from '../utils/excelReview';
+import { usePendingMaterials } from './usePendingMaterials';
 
 const text = MESSAGES.orders.productExcel;
 const NO_IMPORTS: ProductImportSelection = {};
@@ -42,6 +43,7 @@ export function useProductFormImports({
     initialImports && product === null ? initialImports : NO_IMPORTS,
   );
   const [importing, setImporting] = useState(false);
+  const pendingMaterials = usePendingMaterials();
   const [checking, setChecking] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
   const required = allowImports ? requiredKindsFor(product === null) : [];
@@ -71,7 +73,12 @@ export function useProductFormImports({
     if (product !== null || !allowImports || !bundle) return true;
     setChecking(true);
     try {
-      const result = await excelBundleApi.check({ productId: null, orderId: null, bundle });
+      const result = await excelBundleApi.check({
+        productId: null,
+        orderId: null,
+        bundle,
+        pendingMaterials,
+      });
       const { rows, cross } = bundleErrorCount(bundle, result);
       const incomplete = incompleteMaterials(imports.newMaterials ?? []);
       if (rows === 0 && cross === 0 && incomplete.length === 0) return true;

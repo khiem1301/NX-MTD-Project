@@ -18,6 +18,8 @@ import { OrderImportButton } from './OrderImportButton';
 import { OrderExcelImports } from './OrderExcelImports';
 import { OrderFormFooter } from './OrderFormFooter';
 import { ProductFormModal } from './ProductFormModal';
+import { PendingMaterialsContext } from '../hooks/usePendingMaterials';
+import { pendingMaterialsOf } from '../utils/orderExcelImports';
 import type { OrderDetail } from '../types';
 
 export type OrderFormProps = {
@@ -129,105 +131,109 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
             materialsMissing={orderMaterialsMissing}
           />
         )}
-        {blocks.map((block, index) => (
-          <Fragment key={block.key}>
-            <ProductBlockEditor
-              block={block}
-              locked={locked}
-              productLabels={labels}
-              errors={blockErrors[block.key]}
-              usedProductIds={blocks
-                .filter((b) => b.key !== block.key && b.productId !== null)
-                .map((b) => b.productId as number)}
-              onChange={(next) => changeBlocks(blocks.map((b, i) => (i === index ? next : b)))}
-              onRemove={() => changeBlocks(blocks.filter((_b, i) => i !== index))}
-              onCreateProduct={() => setProductBlock(block.key)}
-              onEditStagedProduct={() => setEditStagedBlock(block.key)}
-            />
-            <NormColorWarning
-              block={block}
-              productLabel={block.productId === null ? undefined : labels[block.productId]}
-              stagedNormColors={
-                block.productId === null ? undefined : stagedNormColors[block.productId]
-              }
-            />
-          </Fragment>
-        ))}
-        {editable && (
-          <Space.Compact block>
-            <Button
-              block
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={() => changeBlocks([...blocks, newBlock()])}
-            >
-              {MESSAGES.orders.addProductBlock}
-            </Button>
-            {/* DEV-ALL-118: đơn đã bắt đầu sản xuất thì khóa dòng hàng nên không nhập Excel. */}
-            {!locked && (
-              <OrderImportButton
-                orderId={orderId}
-                blocks={blocks}
-                onStageProduct={(body, selection) => stageProduct(body, selection)}
-                stagedProducts={stagedProducts}
-                onUnstageProduct={unstageProduct}
-                onApply={(next, newLabels) => {
-                  setLabels((l) => ({ ...l, ...newLabels }));
-                  changeBlocks(next);
-                }}
+        {/* Chỉ bọc phần tạo mã hàng: popup NVL của đơn ở trên không được so với chính nó. */}
+        <PendingMaterialsContext.Provider value={pendingMaterialsOf(orderImports.selection)}>
+          {blocks.map((block, index) => (
+            <Fragment key={block.key}>
+              <ProductBlockEditor
+                block={block}
+                locked={locked}
+                productLabels={labels}
+                errors={blockErrors[block.key]}
+                usedProductIds={blocks
+                  .filter((b) => b.key !== block.key && b.productId !== null)
+                  .map((b) => b.productId as number)}
+                onChange={(next) => changeBlocks(blocks.map((b, i) => (i === index ? next : b)))}
+                onRemove={() => changeBlocks(blocks.filter((_b, i) => i !== index))}
+                onCreateProduct={() => setProductBlock(block.key)}
+                onEditStagedProduct={() => setEditStagedBlock(block.key)}
               />
-            )}
-          </Space.Compact>
-        )}
-        <OrderFormFooter
-          saveError={saveError}
-          totals={totals}
-          editable={editable}
-          saving={saving}
-          onCancel={goBack}
-          onSave={handleSave}
-        />
+              <NormColorWarning
+                block={block}
+                productLabel={block.productId === null ? undefined : labels[block.productId]}
+                stagedNormColors={
+                  block.productId === null ? undefined : stagedNormColors[block.productId]
+                }
+              />
+            </Fragment>
+          ))}
+          {editable && (
+            <Space.Compact block>
+              <Button
+                block
+                type="dashed"
+                icon={<PlusOutlined />}
+                onClick={() => changeBlocks([...blocks, newBlock()])}
+              >
+                {MESSAGES.orders.addProductBlock}
+              </Button>
+              {/* DEV-ALL-118: đơn đã bắt đầu sản xuất thì khóa dòng hàng nên không nhập Excel. */}
+              {!locked && (
+                <OrderImportButton
+                  orderId={orderId}
+                  blocks={blocks}
+                  onStageProduct={(body, selection) => stageProduct(body, selection)}
+                  stagedProducts={stagedProducts}
+                  onUnstageProduct={unstageProduct}
+                  onApply={(next, newLabels) => {
+                    setLabels((l) => ({ ...l, ...newLabels }));
+                    changeBlocks(next);
+                  }}
+                />
+              )}
+            </Space.Compact>
+          )}
+          <OrderFormFooter
+            saveError={saveError}
+            totals={totals}
+            editable={editable}
+            saving={saving}
+            onCancel={goBack}
+            onSave={handleSave}
+          />
 
-        <UnsavedChangesModal
-          open={leaveGuard.open}
-          onLeave={leaveGuard.leave}
-          onStay={leaveGuard.stay}
-        />
-        <CustomerFormModal
-          open={customerOpen}
-          customer={null}
-          onClose={() => setCustomerOpen(false)}
-          onSaved={(customerId) => {
-            form.setFieldValue('customerId', customerId);
-            setDirty(true);
-          }}
-        />
-        {editingStaged && (
-          // Gắn riêng mỗi lần mở: form đọc dữ liệu đã khai (mã, mô tả, ảnh, file Excel) lúc gắn.
+          <UnsavedChangesModal
+            open={leaveGuard.open}
+            onLeave={leaveGuard.leave}
+            onStay={leaveGuard.stay}
+          />
+          <CustomerFormModal
+            open={customerOpen}
+            customer={null}
+            onClose={() => setCustomerOpen(false)}
+            onSaved={(customerId) => {
+              form.setFieldValue('customerId', customerId);
+              setDirty(true);
+            }}
+          />
+          {editingStaged && (
+            // Gắn riêng mỗi lần mở: form đọc dữ liệu đã khai (mã, mô tả, ảnh, file Excel) lúc gắn.
+            <ProductFormModal
+              key={editingStaged.tempId}
+              open
+              product={null}
+              allowImports
+              title={fill(MESSAGES.orders.editStagedTitle, editingStaged.body.productCode)}
+              initialValues={editingStaged.body}
+              initialImports={editingStaged.selection}
+              autoReviewImports={false}
+              onStage={(body, selection) =>
+                editStagedBlock !== undefined &&
+                updateStagedProduct(editStagedBlock, body, selection)
+              }
+              onClose={() => setEditStagedBlock(undefined)}
+            />
+          )}
           <ProductFormModal
-            key={editingStaged.tempId}
-            open
+            open={productBlock !== undefined}
             product={null}
             allowImports
-            title={fill(MESSAGES.orders.editStagedTitle, editingStaged.body.productCode)}
-            initialValues={editingStaged.body}
-            initialImports={editingStaged.selection}
-            autoReviewImports={false}
             onStage={(body, selection) =>
-              editStagedBlock !== undefined && updateStagedProduct(editStagedBlock, body, selection)
+              productBlock !== undefined && stageOntoBlock(productBlock, body, selection)
             }
-            onClose={() => setEditStagedBlock(undefined)}
+            onClose={() => setProductBlock(undefined)}
           />
-        )}
-        <ProductFormModal
-          open={productBlock !== undefined}
-          product={null}
-          allowImports
-          onStage={(body, selection) =>
-            productBlock !== undefined && stageOntoBlock(productBlock, body, selection)
-          }
-          onClose={() => setProductBlock(undefined)}
-        />
+        </PendingMaterialsContext.Provider>
       </div>
     </PageCard>
   );

@@ -7,6 +7,7 @@ import type {
   Customer,
   ExcelBundle,
   ExcelBundleCheck,
+  MaterialExcelRow,
   OrderMaterialCheck,
   OrderMaterialExcelRow,
   SpecImportPart,
@@ -135,6 +136,8 @@ export const excelBundleApi = {
       orderId: number | null;
       bundle: ExcelBundle;
       replace?: boolean;
+      /** DEV-ALL-193: NVL mới đang chờ ghi ở NVL của đơn. */
+      pendingMaterials?: MaterialExcelRow[];
     },
     scope: ReviewScope = 'admin',
   ) =>

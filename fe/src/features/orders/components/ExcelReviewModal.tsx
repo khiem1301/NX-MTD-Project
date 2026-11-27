@@ -9,6 +9,7 @@ import { materialApi } from '@/services/materialApi';
 import { fill } from '@/utils/format';
 import type { SaveMaterialPayload } from '@/types/material';
 import { useExcelReview } from '../hooks/useExcelReview';
+import { usePendingMaterials } from '../hooks/usePendingMaterials';
 import { useExistingData, useReviewDbOptions } from '../hooks/useExistingData';
 import type { ReviewScope } from '../api/orderApi';
 import type { ExcelBundle } from '../types';
@@ -115,7 +116,9 @@ export function ExcelReviewModal({
   };
   const [onlyErrors, setOnlyErrors] = useState(false);
   const materials = useMaterialOptions();
-  const materialOptions = (materials.data ?? []).map((m) => ({
+  // NVL đang chờ ghi ở NVL của đơn cũng chọn được ở bảng định mức.
+  const pendingMaterials = usePendingMaterials();
+  const materialOptions = [...(materials.data ?? []), ...pendingMaterials].map((m) => ({
     value: m.materialCode,
     label: `${m.materialCode} · ${m.materialName}${m.color ? ` (${m.color})` : ''}`,
   }));

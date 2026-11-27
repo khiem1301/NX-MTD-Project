@@ -440,6 +440,8 @@ public static class Messages
     public const string MaterialSheetMissing = "File Excel sai mẫu: không có bảng có cột 'Mã NVL', 'Tên NVL' và 'Loại'. Hãy dùng file mẫu của hệ thống.";
     public const string MaterialSheetTypeInvalid = "Loại NVL phải là FABRIC (vải) hoặc TRIM (phụ liệu).";
     public const string MaterialSheetConflict = "NVL \"{0}\" trùng mã với NVL trong hệ thống nhưng khác thông tin ({1}). Sửa cho giống hệ thống hoặc đổi mã.";
+    public const string MaterialSheetPendingConflict =
+        "NVL \"{0}\" trùng mã với NVL đã nhập ở NVL của đơn nhưng khác thông tin ({1}). Sửa cho giống hoặc đổi mã.";
     public const string MaterialSheetNew = "NVL \"{0}\" chưa có trong danh mục: sẽ được thêm vào danh mục khi lưu.";
     public const string MaterialFieldName = "tên";
     public const string MaterialFieldType = "loại";

@@ -17,9 +17,11 @@ import {
   type ProductImportSelection,
 } from '../utils/productExcelImports';
 import {
+  createOrderNewMaterials,
   hasOrderImports,
   orderRowCount,
   runOrderImports,
+  withoutOrderNewMaterials,
   type OrderImportProduct,
   type OrderImportSelection,
 } from '../utils/orderExcelImports';
@@ -413,7 +415,7 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
 type QueuedProductImport = { productId: number; code: string; selection: ProductImportSelection };
 
 /**
- * Sau khi Lưu đơn: nhập định mức của mã hàng tạo nhanh trước (nhóm bìa cần có trước bìa của đơn), rồi Bìa của đơn,
+ * Sau khi Lưu đơn: thêm NVL mới của NVL của đơn vào danh mục (DEV-ALL-193), rồi nhập định mức của mã hàng tạo nhanh trước (nhóm bìa cần có trước bìa của đơn), rồi Bìa của đơn,
  * NVL của đơn (DEV-ALL-150). Chạy nền, xong hiện kết quả.
  */
 async function runImportsAfterSave(
@@ -423,10 +425,12 @@ async function runImportsAfterSave(
   selection: OrderImportSelection,
   products: OrderImportProduct[],
 ) {
+  const created = await createOrderNewMaterials(selection);
   for (const q of queued) {
     const hide = message.loading(fill(MESSAGES.orders.productExcel.runningOrder, q.code), 0);
     try {
-      showProductImportResults(q.code, await runProductImports(q.productId, q.selection));
+      const productSelection = withoutOrderNewMaterials(q.selection, selection);
+      showProductImportResults(q.code, await runProductImports(q.productId, productSelection));
     } finally {
       hide();
     }
@@ -434,7 +438,7 @@ async function runImportsAfterSave(
   if (!hasOrderImports(selection)) return;
   const hide = message.loading(fill(MESSAGES.orders.orderExcel.running, orderCode), 0);
   try {
-    const outcomes = await runOrderImports(orderId, selection, products);
+    const outcomes = [...created, ...(await runOrderImports(orderId, selection, products))];
     showImportResults(fill(MESSAGES.orders.orderExcel.saved, orderCode), outcomes);
   } finally {
     hide();

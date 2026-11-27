@@ -25,7 +25,10 @@ public sealed record MaterialCheckRowDto(int RowNumber, string Action, string? E
 /// <param name="ProductId">Mã hàng đang sửa; null = đang thêm mới (chưa có màu, chưa có đơn).</param>
 /// <param name="OrderId">Đơn nhận bìa cắt, NVL của đơn; null = chưa có đơn (các dòng đó trả Pending).</param>
 /// <param name="Replace">DEV-ALL-155: thay thế — dòng cũ không có trong file sẽ bị xóa (trừ dòng đã dùng).</param>
-public sealed record ExcelBundleCheckDto(int? ProductId, int? OrderId, ExcelBundleDto Bundle, bool Replace = false);
+/// <param name="PendingMaterials">DEV-ALL-193: NVL mới đã khai ở "NVL của đơn" trên form đơn, chưa ghi (tạo khi Lưu đơn): coi như đã
+/// có khi kiểm file của mã hàng tạo trên cùng form.</param>
+public sealed record ExcelBundleCheckDto(int? ProductId, int? OrderId, ExcelBundleDto Bundle, bool Replace = false,
+    IReadOnlyList<MaterialExcelRow>? PendingMaterials = null);
 
 /// <summary>Kết quả kiểm từng bảng; Action thêm giá trị Pending (đúng định dạng, kiểm phần còn lại khi Lưu đơn).</summary>
 public sealed record ExcelBundleCheckResultDto(

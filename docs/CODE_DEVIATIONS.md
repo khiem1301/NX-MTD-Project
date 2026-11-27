@@ -238,6 +238,7 @@
 | DEV-ALL-168 | 23/11/2026 | Claude (AI) | Bộ UC v26 (73 UC), UC21 / UC33 / UC35 / UC39 / UC45 / UC61 | Bộ Use Case v26 đổi từ 67 lên 73 UC và đánh số lại; thêm 6 UC cho các chức năng code đã có (nhật ký thay đổi, bìa cắt theo đơn, thanh toán đơn hàng khách, giờ suất ăn, xem xe, AI gợi ý bậc). Số UC trong các mục cũ của file này không đổi | Mở |
 | DEV-ALL-191 | 27/11/2026 | AI theo yêu cầu của người dùng | UC19 (lệnh cắt), `WorkOrderService.CreateAsync` | Lập lệnh cắt thường khi thiếu vải chỉ cảnh báo, không chặn lưu | Mở |
 | DEV-ALL-192 | 27/11/2026 | AI theo yêu cầu của người dùng | UC09, UC10, `ExcelBundleService`, `MaterialSheetChecker`, `ImportTemplateService`, form đơn hàng | File Excel có thêm sheet NVL (đủ thông tin NVL) nhập cùng; mã trùng hệ thống mà khác thông tin thì báo lỗi; form đơn đổi thứ tự NVL của đơn lên trước Bìa của đơn, NVL của đơn bắt buộc khi tạo đơn mới | Mở |
+| DEV-ALL-193 | 27/11/2026 | AI theo yêu cầu của người dùng | UC09, UC10, form đơn hàng, `ExcelBundleService`, `MaterialSheetChecker` | Tạo mã hàng trên form đơn kiểm cả NVL đã nhập ở NVL của đơn (chưa lưu); khi Lưu đơn tạo NVL mới trước rồi mới nhập định mức | Mở |
 
 ---
 
@@ -3629,4 +3630,15 @@
 - **Lý do:** người dùng yêu cầu: NVL nhập cùng file, phát hiện NVL trùng mã nhưng khác thông tin, NVL của đơn là bắt buộc lúc tạo đơn.
 - **Ảnh hưởng người khác:** Thái (kho, NVL của đơn); Khiêm (mã hàng, định mức). File mẫu Excel đã đổi, cần tải lại file mẫu.
 - **Cần sửa trong tài liệu:** có (UC09: form đơn, NVL của đơn bắt buộc khi tạo; UC10: sheet NVL trong file nhập định mức; mô tả file mẫu Excel).
+- **Trạng thái:** Mở
+
+### DEV-ALL-193 · Tạo mã hàng trên form đơn kiểm cả NVL đã nhập ở NVL của đơn
+
+- **Ngày / Người / Task / PR:** 27/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC09, UC10; BE `ExcelBundleCheckDto.PendingMaterials`, `ExcelBundleService`, `MaterialSheetChecker`, `Messages.MaterialSheetPendingConflict`; FE `usePendingMaterials`, `OrderForm`, `useOrderForm`, `useExcelReview`, `useProductFormImports`, `ExcelReviewModal`, `orderExcelImports`. Không đổi DB.
+- **Tài liệu gốc ghi:** DEV-ALL-192: popup Excel chỉ so NVL với danh mục và sheet NVL của chính file đang nhập.
+- **Code đang làm:** trên form đơn, sau khi Xác nhận NVL của đơn, popup Excel của mã hàng tạo trên form coi NVL mới của đơn như đã có: định mức dùng mã đó không còn cảnh báo "NVL chưa có", chọn được trong ô Mã NVL; sheet NVL của mã hàng cùng mã mà khác thông tin thì lỗi "trùng mã với NVL đã nhập ở NVL của đơn". Khi Lưu đơn: tạo NVL mới của đơn trước, rồi nhập định mức mã hàng (trước đây NVL của đơn tạo sau nên định mức dùng NVL đó không nhập được), không tạo trùng. Chỉ kiểm theo chiều này: nhập NVL của đơn sau khi đã khai mã hàng thì không kiểm lại mã hàng; khi trùng mã, thông tin ở NVL của đơn được dùng.
+- **Lý do:** người dùng yêu cầu.
+- **Ảnh hưởng người khác:** Khiêm (mã hàng, định mức); Thái (NVL của đơn).
+- **Cần sửa trong tài liệu:** có (UC09: tạo mã hàng trên form đơn).
 - **Trạng thái:** Mở
