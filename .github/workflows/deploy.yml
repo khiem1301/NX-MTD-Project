@@ -20,6 +20,24 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     steps:
+      - name: Kiểm tra secret
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          missing=0
+          for name in DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS DEPLOY_HOST DEPLOY_USER DEPLOY_PATH; do
+            value="${!name}"
+            if [ -z "${value//[[:space:]]/}" ]; then
+              echo "::error::Thiếu secret $name (chưa tạo, rỗng, hoặc nằm ở Environment/repo khác). Vào Settings > Secrets and variables > Actions để thêm."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
       - name: Cấu hình SSH
         env:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
