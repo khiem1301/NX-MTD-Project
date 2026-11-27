@@ -19,7 +19,7 @@ const byBlockFirst = (items: HomeItem[]) =>
 export function SewingHome({ data: d }: { data: SewingHomeData }) {
   const navigate = useNavigate();
   const { token } = theme.useToken();
-  const percent = d.kpiTarget > 0 ? Math.round((100 * d.kpiActual) / d.kpiTarget) : null;
+  const percent = d.kpiTarget > 0 ? Math.floor((100 * d.kpiActual) / d.kpiTarget) : null;
   const meal = d.mealConfirmed ?? d.mealSuggested;
   const btpItems = byBlockFirst(d.btpIssues);
   const blocked = btpItems.filter((i) => i.tagColor === 'red').length;
@@ -118,9 +118,7 @@ export function SewingHome({ data: d }: { data: SewingHomeData }) {
                   showIcon
                   style={{ marginBottom: 8 }}
                   message={
-                    blocked > 0
-                      ? fill(T.btpBlockedHint, blocked)
-                      : fill(T.btpWaitingHint, waiting)
+                    blocked > 0 ? fill(T.btpBlockedHint, blocked) : fill(T.btpWaitingHint, waiting)
                   }
                   action={
                     <Button

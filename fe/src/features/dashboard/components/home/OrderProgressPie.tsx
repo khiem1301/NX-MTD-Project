@@ -6,7 +6,8 @@ import { orderDelayOf } from '../../utils/orderDelay';
 import { PIE_COLOR, orderPieSlices, pieGradient, type PieStage } from '../../utils/orderPie';
 
 const PIE_SIZE = 88;
-const LEGEND_STAGES: Exclude<PieStage, 'rest'>[] = ['cut', 'sew', 'qc', 'ship'];
+// Có cả 'Chưa cắt' để các phần trên chú thích cộng lại đúng 100%.
+const LEGEND_STAGES: PieStage[] = ['rest', 'cut', 'sew', 'qc', 'stock', 'ship'];
 
 /** Biểu đồ tròn tiến độ một đơn: vị trí hiện tại của hàng theo từng chặng, kèm cảnh báo trễ / nguy cơ trễ. */
 export function OrderProgressPie({

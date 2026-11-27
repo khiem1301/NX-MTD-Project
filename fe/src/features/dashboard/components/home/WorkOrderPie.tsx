@@ -4,7 +4,7 @@ import { ROUTES } from '@/constants/routes';
 import { fill } from '@/utils/format';
 import { HOME_ROLE_TEXT as T } from '../../constants';
 import type { HomeWorkOrder } from '../../types';
-import { PIE_COLOR, pieGradient } from '../../utils/orderPie';
+import { PIE_COLOR, pieGradient, sharePercents } from '../../utils/orderPie';
 
 const PIE_SIZE = 88;
 
@@ -12,10 +12,10 @@ const PIE_SIZE = 88;
 export function WorkOrderPie({ workOrder: w }: { workOrder: HomeWorkOrder }) {
   const navigate = useNavigate();
   const cut = Math.min(w.cutQty, w.plannedQty);
-  const percent = w.plannedQty > 0 ? Math.round((100 * cut) / w.plannedQty) : 0;
+  const [percent = 0, restPercent = 0] = sharePercents([cut, w.plannedQty - cut], w.plannedQty);
   const background = pieGradient([
     { stage: 'cut', qty: cut, percent },
-    { stage: 'rest', qty: Math.max(0, w.plannedQty - cut), percent: 100 - percent },
+    { stage: 'rest', qty: Math.max(0, w.plannedQty - cut), percent: restPercent },
   ]);
   return (
     <Card
