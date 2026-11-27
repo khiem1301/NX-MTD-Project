@@ -203,10 +203,10 @@ public sealed class GradeSuggestionService : IGradeSuggestionService
     }
 
     /// <summary>Bậc đang dùng xếp theo tiền bậc hiện hành giảm dần (bậc chưa có tiền xếp cuối), để AI biết thứ hạng khi chỉ có mã bậc.</summary>
-    private async Task<List<GradeAdvisorGrade>> RankedGradesAsync(DateOnly today, CancellationToken ct)
+    private async Task<List<GradeAdvisorGrade>> RankedGradesAsync(DateOnly today, CancellationToken ct, bool activeOnly = true)
     {
         var codes = await _uow.Repository<GradeLevelCode>().Query().AsNoTracking()
-            .Where(c => c.Status == GradeCodes.Active).Select(c => c.GradeCode).ToListAsync(ct);
+            .Where(c => !activeOnly || c.Status == GradeCodes.Active).Select(c => c.GradeCode).ToListAsync(ct);
         var amounts = (await _uow.Repository<GradeLevel>().Query().AsNoTracking()
                 .Where(l => codes.Contains(l.GradeCode) && l.EffectiveDate <= today).ToListAsync(ct))
             .GroupBy(l => l.GradeCode)
@@ -241,13 +241,32 @@ public sealed class GradeSuggestionService : IGradeSuggestionService
             .Select(e => new { e.EmployeeId, e.CurrentGradeCode }).ToDictionaryAsync(e => e.EmployeeId, e => e.CurrentGradeCode, ct);
         var pending = await Evaluations.AsNoTracking().Where(e => ids.Contains(e.WorkerId) && e.Status == GradeEvaluationStatuses.Submitted)
             .Select(e => new { e.WorkerId, e.ProposedGradeCode }).ToListAsync(ct);
+        var ranks = (await RankedGradesAsync(_clock.Today, ct, activeOnly: false)).ToDictionary(g => g.Code, g => g.Rank);
         return draft with
         {
-            Items = draft.Items.Select(i => i with
+            Items = draft.Items.Select(i =>
             {
-                CurrentGradeCode = current.TryGetValue(i.WorkerId, out var grade) ? grade : i.CurrentGradeCode,
-                PendingGradeCode = pending.FirstOrDefault(p => p.WorkerId == i.WorkerId)?.ProposedGradeCode,
+                var currentGrade = current.TryGetValue(i.WorkerId, out var grade) ? grade : i.CurrentGradeCode;
+                return i with
+                {
+                    CurrentGradeCode = currentGrade,
+                    PendingGradeCode = pending.FirstOrDefault(p => p.WorkerId == i.WorkerId)?.ProposedGradeCode,
+                    Direction = DirectionOf(currentGrade, i.ProposedGradeCode, ranks),
+                };
             }).ToList(),
         };
+    }
+
+    /// <summary>
+    /// Hướng đổi bậc theo thứ hạng tiền bậc (hạng 1 cao nhất): hạng nhỏ đi là Up, lớn lên là Down. Chưa có bậc hiện tại mà được
+    /// đề xuất bậc thì coi là Up; không so sánh được (bậc không có trong danh mục) thì null.
+    /// </summary>
+    public static string? DirectionOf(string? current, string? proposed, IReadOnlyDictionary<string, int> ranks)
+    {
+        if (proposed is null) return null;
+        if (proposed == current) return GradeChangeDirections.Same;
+        if (current is null) return ranks.ContainsKey(proposed) ? GradeChangeDirections.Up : null;
+        if (!ranks.TryGetValue(current, out var from) || !ranks.TryGetValue(proposed, out var to)) return null;
+        return to < from ? GradeChangeDirections.Up : to > from ? GradeChangeDirections.Down : GradeChangeDirections.Same;
     }
 }

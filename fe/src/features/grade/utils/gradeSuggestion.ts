@@ -1,4 +1,4 @@
-import { AI_FILTER, type AiFilter } from '../constants';
+import { AI_FILTER, GRADE_DIRECTION, type AiFilter } from '../constants';
 import type { GradeSuggestionItem } from '../types';
 
 /** Dòng sẽ thành đề xuất khi xác nhận: có bậc đề xuất và khác bậc hiện tại. */
@@ -11,6 +11,10 @@ const matchesChange = (item: GradeSuggestionItem, change?: AiFilter): boolean =>
   switch (change) {
     case AI_FILTER.CHANGED:
       return isChanged(item);
+    case AI_FILTER.UP:
+      return item.direction === GRADE_DIRECTION.UP;
+    case AI_FILTER.DOWN:
+      return item.direction === GRADE_DIRECTION.DOWN;
     case AI_FILTER.UNCHANGED:
       return !isChanged(item);
     case AI_FILTER.EDITED:
