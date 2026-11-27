@@ -10,18 +10,26 @@ const text = MESSAGES.orders.excelReview;
 
 type Look = { color: string; label: string; type?: 'danger' | 'secondary' | 'warning' };
 
-/** Nhãn theo kết quả kiểm; Mới / Cập nhật / Không đổi đều là "Hợp lệ" và không cần lý do. */
+// Hợp lệ nhưng cho biết dòng là mới, cập nhật hay đã có (không đổi) so với hệ thống.
+const VALID_NEW: Look = { color: 'blue', label: text.status.new };
+const VALID_UPDATE: Look = { color: 'geekblue', label: text.status.update };
+const VALID_UNCHANGED: Look = { color: 'green', label: text.status.unchanged };
+const VALID: Look = { color: 'green', label: text.status.valid };
+
+/** Nhãn theo kết quả kiểm; Mới / Cập nhật / Đã có (không đổi) đều hợp lệ và không cần lý do. */
 const LOOK: Record<string, Look> = {
   [EXCEL_ROW_ACTION.ERROR]: { color: 'red', label: text.status.error, type: 'danger' },
   [EXCEL_ROW_ACTION.PENDING]: { color: 'default', label: text.status.pending, type: 'secondary' },
   [EXCEL_ROW_ACTION.EXISTS]: { color: 'orange', label: text.status.exists, type: 'warning' },
+  [EXCEL_ROW_ACTION.NEW]: VALID_NEW,
+  [EXCEL_ROW_ACTION.UPDATE]: VALID_UPDATE,
+  [EXCEL_ROW_ACTION.UNCHANGED]: VALID_UNCHANGED,
   [EXCEL_ROW_ACTION.NEW_MATERIAL]: {
     color: 'orange',
     label: text.status.newMaterial,
     type: 'warning',
   },
 };
-const VALID: Look = { color: 'green', label: text.status.valid };
 
 type ExcelReviewStatusCellProps = {
   status: RowStatus | undefined;
@@ -57,7 +65,7 @@ export function ExcelReviewStatusCell({
   const reason =
     status.action === EXCEL_ROW_ACTION.EXISTS && creating
       ? text.existsCreate
-      : look === VALID
+      : look === VALID || look === VALID_NEW || look === VALID_UPDATE || look === VALID_UNCHANGED
         ? null
         : status.error;
   const tag = (

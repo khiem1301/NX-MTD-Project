@@ -479,12 +479,30 @@ export type OrderMaterialExcelRow = ExcelRowBase & {
   materialName?: string | null;
   unit?: string | null;
 };
+/** DEV-ALL-192: một dòng sheet NVL — thông tin đầy đủ của NVL (mã đã có trong hệ thống thì phải trùng, chưa có thì thêm khi lưu). */
+export type MaterialExcelRow = ExcelRowBase & {
+  materialCode: string;
+  materialName: string | null;
+  /** FABRIC | TRIM. */
+  materialType: string | null;
+  unit: string | null;
+  color: string | null;
+  widthM: number | null;
+};
 export type ExcelBundle = {
   hasProducts: boolean;
   products: ProductExcelRow[];
   spec: SpecWorkbook;
   hasOrderMaterials: boolean;
   orderMaterials: OrderMaterialExcelRow[];
+  hasMaterials: boolean;
+  materials: MaterialExcelRow[];
+};
+/** Kết quả kiểm một dòng sheet NVL (khớp MaterialCheckRowDto của BE): New | Unchanged | Error. */
+export type MaterialCheckRow = {
+  rowNumber: number;
+  action: SpecImportAction;
+  error: string | null;
 };
 /** Kết quả kiểm / xem trước NVL của đơn (khớp OrderMaterialImportPreviewDto của BE). */
 export type OrderMaterialCheckRow = {
@@ -517,6 +535,8 @@ export type ExcelBundleCheck = {
   orderMaterials: OrderMaterialCheck | null;
   /** DEV-ALL-123: mã NVL trong file chưa có trong danh mục (gợi ý loại theo chi tiết PANEL, màu áo đang dùng). */
   missingMaterials: MissingMaterial[];
+  /** DEV-ALL-192: kết quả kiểm sheet NVL. */
+  materials?: MaterialCheckRow[] | null;
 };
 export type MissingMaterial = {
   materialCode: string;
@@ -526,4 +546,9 @@ export type MissingMaterial = {
   /** Từ cột Tên NVL / Đơn vị của sheet NVL của đơn (nếu có). */
   suggestedName?: string | null;
   suggestedUnit?: string | null;
+  /** DEV-ALL-192: từ sheet NVL (đủ thông tin). */
+  suggestedWidthM?: number | null;
+  suggestedColor?: string | null;
+  /** Đã khai đủ ở sheet NVL: tự thêm khi lưu, không hiện ở khung cảnh báo NVL chưa có. */
+  fromSheet?: boolean;
 };

@@ -543,9 +543,11 @@ export const MESSAGES = {
       rowError: 'Dòng {0}: {1}',
       moreErrors: '... và {0} dòng lỗi khác.',
     },
-    /** DEV-ALL-150: nhập Bìa của đơn, NVL của đơn ở form tạo / sửa đơn (không bắt buộc, ghi khi Lưu đơn). */
+    /** DEV-ALL-150/182: nhập NVL của đơn (bắt buộc khi tạo đơn mới) và Bìa của đơn ở form tạo / sửa đơn, ghi khi Lưu đơn. */
     orderExcel: {
-      section: 'Bìa và NVL của đơn',
+      section: 'NVL và bìa của đơn',
+      materialsRequired:
+        'Tạo đơn mới bắt buộc nhập NVL của đơn: chọn file Excel NVL của đơn rồi Lưu đơn.',
       hint: 'Chọn file để xem và sửa trong bảng kiểm tra, Xác nhận để giữ trên form. Chỉ lưu vào đơn khi Lưu đơn.',
       markerTemplate: 'File mẫu bìa cắt',
       materialTemplate: 'File mẫu NVL của đơn',
@@ -576,7 +578,8 @@ export const MESSAGES = {
       reopenMaterial: 'Mở lại NVL',
       reopenedMaterial: 'Đã mở lại NVL {0}; đang kiểm tra lại.',
       loadExisting: 'Nạp dữ liệu đang có',
-      loadExistingTip: 'Thêm vào bảng các dòng đang có trong hệ thống để sửa trực tiếp (dòng trùng khóa với file thì giữ dòng của file).',
+      loadExistingTip:
+        'Thêm vào bảng các dòng đang có trong hệ thống để sửa trực tiếp (dòng trùng khóa với file thì giữ dòng của file).',
       loadedExisting: 'Đã nạp dữ liệu đang có vào bảng; sửa rồi Xác nhận để lưu.',
       managerNewMaterial:
         'NVL chưa có trong danh mục: {0}. Chỉ Admin được thêm NVL mới, hãy nhờ Admin thêm trước rồi nhập lại.',
@@ -594,6 +597,9 @@ export const MESSAGES = {
       crossErrors: 'Sau khi gộp với dữ liệu đang có còn lỗi (sẽ không nhập được bảng định mức):',
       status: {
         valid: 'Hợp lệ',
+        new: 'Mới',
+        update: 'Cập nhật',
+        unchanged: 'Đã có',
         error: 'Lỗi',
         pending: 'Chờ kiểm',
         exists: 'Đã có',
@@ -607,6 +613,7 @@ export const MESSAGES = {
         norms: 'Định mức NVL',
         groups: 'Nhóm bìa',
         markers: 'Bìa cắt',
+        materials: 'NVL',
         orderMaterials: 'NVL của đơn',
       },
       columns: {
@@ -630,6 +637,8 @@ export const MESSAGES = {
         sizeRatios: 'Tỉ lệ size',
         materialName: 'Tên NVL',
         unit: 'Đơn vị',
+        materialColor: 'Màu',
+        fabricWidth: 'Khổ vải (m)',
         requiredQty: 'Số cần',
         customerQty: 'Khách cấp',
         note: 'Ghi chú',

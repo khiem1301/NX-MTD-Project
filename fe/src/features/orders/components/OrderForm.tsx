@@ -62,6 +62,7 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
     updateStagedProduct,
     unstageProduct,
     orderImports,
+    orderMaterialsMissing,
   } = useOrderForm({ orderId, detail, copyFrom });
   // Khối đang mở lại mã hàng mới khai (chưa lưu) để xem / sửa.
   const [editStagedBlock, setEditStagedBlock] = useState<string>();
@@ -120,7 +121,13 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
         </Form>
 
         {editable && (
-          <OrderExcelImports orderId={orderId} imports={orderImports} disabled={saving} />
+          <OrderExcelImports
+            orderId={orderId}
+            imports={orderImports}
+            disabled={saving}
+            materialsRequired={!isEdit}
+            materialsMissing={orderMaterialsMissing}
+          />
         )}
         {blocks.map((block, index) => (
           <Fragment key={block.key}>

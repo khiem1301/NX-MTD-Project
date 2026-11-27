@@ -37,6 +37,8 @@ const bundle = {
   products: [],
   spec: { components: [], norms: [], markerGroups: [], orderMarkers: [], sizeColumns: [] },
   orderMaterials: [],
+  hasMaterials: false,
+  materials: [],
 } as unknown as ExcelBundle;
 const row: ProductExcelRow = {
   rowNumber: 5,

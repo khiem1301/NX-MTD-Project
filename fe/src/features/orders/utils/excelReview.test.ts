@@ -4,6 +4,7 @@ import {
   defaultMaterial,
   incompleteMaterials,
   materialTypeDefaults,
+  missingFieldsError,
   patchRow,
   removeRow,
   rowStateOf,
@@ -80,5 +81,36 @@ describe('excelReview (DEV-ALL-122/123)', () => {
     });
     expect(incompleteMaterials([fabric, trim]).map((m) => m.materialCode)).toEqual(['CUC']);
     expect(materialTypeDefaults('TRIM', 2)).toMatchObject({ unit: 'cái', widthM: null });
+  });
+  it('defaultMaterial: NVL từ sheet NVL lấy đủ tên, đơn vị, màu, khổ theo sheet', () => {
+    const m = defaultMaterial({
+      materialCode: 'V-9',
+      suggestedType: 'FABRIC',
+      colors: ['Đỏ'],
+      suggestedName: 'Kate xanh',
+      suggestedColor: 'Xanh',
+      suggestedWidthM: 1.6,
+    });
+
+    expect(m).toMatchObject({ materialName: 'Kate xanh', color: 'Xanh', widthM: 1.6, unit: 'm' });
+  });
+
+  it('missingFieldsError (sheet NVL): vải thiếu khổ, phụ liệu thiếu đơn vị', () => {
+    const row = {
+      rowNumber: 2,
+      parseError: null,
+      materialCode: 'V-9',
+      materialName: 'Kate',
+      materialType: 'FABRIC',
+      unit: 'm',
+      color: null,
+      widthM: null,
+    };
+
+    expect(missingFieldsError('materials', row)).toContain('Khổ vải');
+    expect(missingFieldsError('materials', { ...row, materialType: 'TRIM', unit: null })).toContain(
+      'Đơn vị',
+    );
+    expect(missingFieldsError('materials', { ...row, widthM: 1.5 })).toBeNull();
   });
 });

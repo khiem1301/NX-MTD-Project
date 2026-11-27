@@ -37,6 +37,8 @@ const bundle: ExcelBundle = {
   },
   hasOrderMaterials: false,
   orderMaterials: [],
+  hasMaterials: false,
+  materials: [],
 };
 
 /** Bản không có dòng lỗi (Xác nhận được). */

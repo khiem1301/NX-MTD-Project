@@ -60,6 +60,8 @@ export const EMPTY_BUNDLE: ExcelBundle = {
   spec: EMPTY_WORKBOOK,
   hasOrderMaterials: false,
   orderMaterials: [],
+  hasMaterials: false,
+  materials: [],
 };
 
 /** Số dòng của từng mục trong bộ dữ liệu. */
@@ -131,7 +133,13 @@ export const takeKind = (
         spec: { ...spec, hasComponents: from.hasComponents, components: from.components },
       };
     case 'norms':
-      return { ...base, spec: { ...spec, hasNorms: from.hasNorms, norms: from.norms } };
+      // DEV-ALL-192: sheet NVL đi kèm định mức (thông tin NVL dùng trong định mức).
+      return {
+        ...base,
+        hasMaterials: incoming.hasMaterials,
+        materials: incoming.materials,
+        spec: { ...spec, hasNorms: from.hasNorms, norms: from.norms },
+      };
     case 'groups':
       return {
         ...base,
@@ -189,7 +197,9 @@ const importSpecPart = async (
 };
 
 /** DEV-ALL-123: tạo NVL mới vào danh mục (API Admin) trước khi nhập; NVL lỗi (vd mã vừa có người tạo) báo riêng, không chặn. */
-export const createMaterials = async (materials: SaveMaterialPayload[]): Promise<ProductImportOutcome> => {
+export const createMaterials = async (
+  materials: SaveMaterialPayload[],
+): Promise<ProductImportOutcome> => {
   const created: string[] = [];
   const failed: string[] = [];
   for (const m of materials) {

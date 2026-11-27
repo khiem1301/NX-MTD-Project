@@ -17,11 +17,20 @@ import {
   type ProductImportKind,
   type ProductImportSelection,
 } from '../utils/productExcelImports';
+import type { ReviewTable } from '../utils/excelReview';
 import { ExcelReviewModal } from './ExcelReviewModal';
 import { ExcelUploadButton } from './ExcelUploadButton';
 import { HintTip } from '@/components/common/HintTip';
 
 const text = MESSAGES.orders.productExcel;
+
+/** Chọn file cho một mục: chỉ bảng của mục đó (định mức kèm sheet NVL, DEV-ALL-192); file chung: mọi bảng có trong file. */
+const reviewTablesOf = (
+  kind: ProductImportKind | undefined,
+): readonly ReviewTable[] | undefined => {
+  if (!kind) return undefined;
+  return kind === 'norms' ? ['materials', 'norms'] : [kind];
+};
 const SPEC_KINDS: readonly ProductImportKind[] = ['components', 'norms', 'groups'];
 /** Ba ô Định mức chia 3 cột (lưới 24). */
 const SPEC_SPAN = 8;
@@ -190,7 +199,7 @@ export function ProductExcelImports({
           fileName={imports.reviewing.fileName}
           bundle={imports.reviewing.bundle}
           productId={productId ?? null}
-          only={imports.reviewing.kind ? [imports.reviewing.kind] : undefined}
+          only={reviewTablesOf(imports.reviewing.kind)}
           allowReplace={productId !== undefined}
           initialReplace={value.replace === true}
           onConfirm={imports.confirm}

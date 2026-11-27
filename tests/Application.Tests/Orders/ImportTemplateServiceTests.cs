@@ -239,18 +239,38 @@ public class ImportTemplateServiceTests : ProductionTestBase
     {
         _orders.Add(new CustomerOrder { OrderId = 3, OrderCode = "DH" });
         _orderMaterials.AddRange([
-            new OrderMaterial { OrderMaterialId = 1, OrderId = 3, RequiredQty = 100, CustomerQty = 0, Material = new Material { MaterialCode = "V1" } },
-            new OrderMaterial { OrderMaterialId = 2, OrderId = 3, RequiredQty = 50, CustomerQty = 20, Note = "n", Material = new Material { MaterialCode = "T1" } },
-            new OrderMaterial { OrderMaterialId = 3, OrderId = 9, RequiredQty = 1, CustomerQty = 0, Material = new Material { MaterialCode = "X" } }]);
+            new OrderMaterial { OrderMaterialId = 1, OrderId = 3, RequiredQty = 100, CustomerQty = 0,
+                Material = new Material { MaterialCode = "V1", MaterialName = "Vải 1", MaterialType = "FABRIC", Unit = "m", Color = "Trắng", WidthM = 1.5m } },
+            new OrderMaterial { OrderMaterialId = 2, OrderId = 3, RequiredQty = 50, CustomerQty = 20, Note = "n",
+                Material = new Material { MaterialCode = "T1", MaterialName = "Nút", MaterialType = "TRIM", Unit = "cái", Color = string.Empty } },
+            new OrderMaterial { OrderMaterialId = 3, OrderId = 9, RequiredQty = 1, CustomerQty = 0,
+                Material = new Material { MaterialCode = "X", MaterialName = "X", MaterialType = "TRIM", Unit = "cái", Color = string.Empty } }]);
         ImportTemplateModel? model = null;
 
         await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.OrderMaterials, null, 3, default);
 
-        var table = model!.Tables.Single();
+        var table = model!.Tables.Single(t => t.Sheet == "NVL của đơn");
         table.IsDemo.Should().BeFalse();
         table.Rows.Should().HaveCount(2);
         table.Rows[0].Should().Equal("V1", 100d, null, null);
         table.Rows[1].Should().Equal("T1", 50d, 20d, "n");
+    }
+
+    [Fact]
+    public async Task OrderMaterials_MaterialSheet_HasFullInfoOfOrderMaterials()
+    {
+        _orders.Add(new CustomerOrder { OrderId = 3, OrderCode = "DH" });
+        _orderMaterials.AddRange([
+            new OrderMaterial { OrderMaterialId = 1, OrderId = 3, RequiredQty = 100, CustomerQty = 0,
+                Material = new Material { MaterialCode = "V1", MaterialName = "Vải 1", MaterialType = "FABRIC", Unit = "m", Color = "Trắng", WidthM = 1.5m } }]);
+        ImportTemplateModel? model = null;
+
+        await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.OrderMaterials, null, 3, default);
+
+        var table = model!.Tables.Single(t => t.Sheet == "NVL");
+        table.IsDemo.Should().BeFalse();
+        table.Columns.Select(c => c.Name).Should().Equal("Mã NVL", "Tên NVL", "Loại", "Đơn vị", "Màu", "Khổ vải (m)");
+        table.Rows.Single().Should().Equal("V1", "Vải 1", "FABRIC", "m", "Trắng", 1.5d);
     }
 
     [Fact]

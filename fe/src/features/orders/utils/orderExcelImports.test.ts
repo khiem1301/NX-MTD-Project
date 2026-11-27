@@ -1,5 +1,6 @@
 import type { SpecOrderMarkerExcelRow } from '../types';
 import { excelBundleApi } from '../api/orderApi';
+import { materialApi } from '@/services/materialApi';
 import {
   bundleOfOrderKind,
   groupMarkersByProduct,
@@ -139,7 +140,7 @@ describe('orderExcelImports', () => {
     const outcomes = await runOrderImports(
       30,
       {
-        orderMaterials: { fileName: 'nvl.xlsx', rows: [material] },
+        orderMaterials: { fileName: 'nvl.xlsx', rows: [material], materials: [], newMaterials: [] },
         markers: { fileName: 'bia.xlsx', rows: [marker(5, 'QU-02')], sizeColumns: ['M'] },
       },
       products,
@@ -156,5 +157,70 @@ describe('orderExcelImports', () => {
       ['orderMaterials', undefined, true],
       ['markers', 'QU-02', true],
     ]);
+  });
+  it('runOrderImports thêm NVL mới của sheet NVL vào danh mục trước khi nhập NVL của đơn', async () => {
+    api.previewOrderMaterials.mockResolvedValue({
+      rows: [],
+      validCount: 1,
+      errorCount: 0,
+      duplicateCount: 0,
+      changeCount: 1,
+    });
+    api.importOrderMaterials.mockResolvedValue({ success: true, data: null, message: 'ok' });
+    const order: string[] = [];
+    (materialApi.create as jest.Mock).mockImplementation(async () => order.push('create'));
+    api.importOrderMaterials.mockImplementation(async () => {
+      order.push('import');
+      return { success: true, data: null, message: 'ok' } as never;
+    });
+
+    const outcomes = await runOrderImports(
+      30,
+      {
+        orderMaterials: {
+          fileName: 'nvl.xlsx',
+          rows: [material],
+          materials: [],
+          newMaterials: [
+            { materialCode: 'V-9', materialName: 'Vải mới', materialType: 'TRIM', unit: 'cái' },
+          ],
+        },
+      },
+      [],
+    );
+
+    expect(order).toEqual(['create', 'import']);
+    expect(outcomes.map((o) => o.kind)).toEqual(['materials', 'orderMaterials']);
+  });
+
+  it('bundleOfOrderKind mở lại cả sheet NVL cùng NVL của đơn', () => {
+    const row = {
+      rowNumber: 3,
+      parseError: null,
+      materialCode: 'V-9',
+      materialName: 'Vải mới',
+      materialType: 'FABRIC',
+      unit: 'm',
+      color: null,
+      widthM: 1.5,
+    };
+
+    const reopened = bundleOfOrderKind(
+      {
+        orderMaterials: {
+          fileName: 'nvl.xlsx',
+          rows: [material],
+          materials: [row],
+          newMaterials: [],
+        },
+      },
+      'orderMaterials',
+    );
+
+    expect(reopened).toMatchObject({
+      hasMaterials: true,
+      materials: [row],
+      hasOrderMaterials: true,
+    });
   });
 });

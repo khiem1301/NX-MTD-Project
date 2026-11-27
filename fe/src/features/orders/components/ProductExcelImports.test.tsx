@@ -23,6 +23,8 @@ const parsed: ExcelBundle = {
   },
   hasOrderMaterials: false,
   orderMaterials: [],
+  hasMaterials: false,
+  materials: [],
 };
 
 jest.mock('../api/orderApi', () => ({

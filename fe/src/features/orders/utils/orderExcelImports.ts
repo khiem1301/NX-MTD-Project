@@ -2,8 +2,10 @@ import { MESSAGES } from '@/constants/messages';
 import { isApiError } from '@/utils/apiError';
 import { fill } from '@/utils/format';
 import { excelBundleApi } from '../api/orderApi';
+import type { SaveMaterialPayload } from '@/types/material';
 import type {
   ExcelBundle,
+  MaterialExcelRow,
   OrderMaterialExcelRow,
   SpecOrderMarkerExcelRow,
   SpecWorkbook,
@@ -11,6 +13,7 @@ import type {
 import {
   EMPTY_BUNDLE,
   EMPTY_WORKBOOK,
+  createMaterials,
   refreshAfterImport,
   rowErrorsOf,
   type ProductImportOutcome,
@@ -23,16 +26,22 @@ const productText = MESSAGES.orders.productExcel;
 /** DEV-ALL-150: bảng theo đơn nhập ở form tạo / sửa đơn. */
 export type OrderImportKind = 'markers' | 'orderMaterials';
 
-/** Tab popup kiểm tra tương ứng từng mục form đơn (DEV-ALL-154). */
-export const ORDER_IMPORT_TABLE: Record<OrderImportKind, ReviewTable> = {
-  markers: 'markers',
-  orderMaterials: 'orderMaterials',
+/** Tab popup kiểm tra tương ứng từng mục form đơn (DEV-ALL-154). NVL của đơn đi kèm sheet NVL (DEV-ALL-192). */
+export const ORDER_IMPORT_TABLE: Record<OrderImportKind, readonly ReviewTable[]> = {
+  markers: ['markers'],
+  orderMaterials: ['materials', 'orderMaterials'],
 };
 
 /** Dữ liệu đã đọc từ file, giữ ở form đến khi bấm Lưu đơn (không ghi gì trước đó). */
 export type OrderImportSelection = {
   markers?: { fileName: string; rows: SpecOrderMarkerExcelRow[]; sizeColumns: string[] };
-  orderMaterials?: { fileName: string; rows: OrderMaterialExcelRow[] };
+  orderMaterials?: {
+    fileName: string;
+    rows: OrderMaterialExcelRow[];
+    /** DEV-ALL-192: sheet NVL (thông tin đầy đủ của NVL) và NVL mới sẽ thêm vào danh mục khi Lưu đơn. */
+    materials: MaterialExcelRow[];
+    newMaterials: SaveMaterialPayload[];
+  };
 };
 
 /** Mã hàng của đơn sau khi lưu (Id + mã) để gắn bìa theo cột Mã hàng. */
@@ -58,7 +67,15 @@ export const pickOrderData = (
         };
   return bundle.orderMaterials.length === 0
     ? null
-    : { ...current, orderMaterials: { fileName, rows: bundle.orderMaterials } };
+    : {
+        ...current,
+        orderMaterials: {
+          fileName,
+          rows: bundle.orderMaterials,
+          materials: bundle.materials,
+          newMaterials: [],
+        },
+      };
 };
 
 export const orderRowCount = (s: OrderImportSelection, kind: OrderImportKind) =>
@@ -87,7 +104,13 @@ export const bundleOfOrderKind = (
   }
   const materials = selection.orderMaterials;
   if (!materials?.rows.length) return null;
-  return { ...EMPTY_BUNDLE, hasOrderMaterials: true, orderMaterials: materials.rows };
+  return {
+    ...EMPTY_BUNDLE,
+    hasOrderMaterials: true,
+    orderMaterials: materials.rows,
+    hasMaterials: materials.materials.length > 0,
+    materials: materials.materials,
+  };
 };
 
 /** Lấy dữ liệu đã sửa trên popup vào selection của form đơn. */
@@ -96,6 +119,7 @@ export const takeOrderKind = (
   kind: OrderImportKind,
   fileName: string,
   bundle: ExcelBundle,
+  newMaterials: SaveMaterialPayload[] = [],
 ): OrderImportSelection => {
   if (kind === 'markers')
     return {
@@ -108,7 +132,12 @@ export const takeOrderKind = (
     };
   return {
     ...current,
-    orderMaterials: { fileName, rows: bundle.orderMaterials },
+    orderMaterials: {
+      fileName,
+      rows: bundle.orderMaterials,
+      materials: bundle.materials,
+      newMaterials,
+    },
   };
 };
 
@@ -201,6 +230,9 @@ export async function runOrderImports(
   products: OrderImportProduct[],
 ): Promise<ProductImportOutcome[]> {
   const outcomes: ProductImportOutcome[] = [];
+  // DEV-ALL-192: NVL mới của sheet NVL được thêm vào danh mục trước, rồi mới nhập NVL của đơn.
+  if (selection.orderMaterials?.newMaterials.length)
+    outcomes.push(await createMaterials(selection.orderMaterials.newMaterials));
   if (selection.orderMaterials?.rows.length)
     outcomes.push(await importOrderMaterials(orderId, selection.orderMaterials.rows));
   const markers = selection.markers;
