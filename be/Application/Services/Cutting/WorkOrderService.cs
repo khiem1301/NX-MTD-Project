@@ -9,7 +9,7 @@ using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Application.Services;
 
-/// <summary>UC19 (tổ cắt): Quản đốc lập lệnh cắt theo dòng đơn; lệnh cắt bù thiếu vải (ước tính) thì chặn và nêu rõ vải thiếu.</summary>
+/// <summary>UC19 (tổ cắt): Quản đốc lập lệnh cắt theo dòng đơn; thiếu vải (ước tính) chỉ cảnh báo ở màn lập lệnh, không chặn lưu.</summary>
 public sealed class WorkOrderService : IWorkOrderService
 {
     private readonly IUnitOfWork _uow;
@@ -175,12 +175,7 @@ public sealed class WorkOrderService : IWorkOrderService
         var check = await ValidateAsync(dto, ct);
         if (check is not null) return check;
 
-        var fabric = await CheckFabricAsync(new CheckWorkOrderFabricDto(dto.OrderId, dto.CuttingTeamId, dto.Lines), ct);
-        if (!fabric.IsSuccess)
-            return Result<WorkOrderDto>.Failure(fabric.ErrorCode!, fabric.Message!, fabric.Kind, fabric.Errors);
-        if (fabric.Data!.Any(c => c.Status == FabricCheckStatuses.Short))
-            return Fail(ErrorCodes.WarehouseInsufficientStock, WarehouseMessages.WorkOrderFabricShortage);
-
+        // Kiểm vải chỉ để cảnh báo ở màn lập lệnh (fabric-check): thiếu vải không chặn lưu (DEV-ALL-191).
         var created = await _uow.InTransactionAsync(async () =>
         {
             var wo = new WorkOrder
