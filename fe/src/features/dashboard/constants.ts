@@ -34,7 +34,7 @@ export const HOME_TEXT = {
   leaderAbsentNone: 'Tổ trưởng đều đã điểm danh',
   requestsLatest: 'Đơn từ chờ duyệt mới nhất',
   noRequests: 'Không có đơn từ nào chờ duyệt.',
-  stage: { cut: 'Cắt', sew: 'May', qc: 'QC', ship: 'Giao' },
+  stage: { cut: 'Cắt', sew: 'May', qc: 'QC', stock: 'Kho', ship: 'Giao', rest: 'Chưa cắt' },
   waitMaterial: 'Chờ NVL · chưa vào sản xuất',
 } as const;
 
