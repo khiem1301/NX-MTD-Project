@@ -17,6 +17,7 @@ import {
   refreshAfterImport,
   rowErrorsOf,
   type ProductImportOutcome,
+  type ProductImportSelection,
 } from './productExcelImports';
 import type { ReviewTable } from './excelReview';
 
@@ -46,6 +47,42 @@ export type OrderImportSelection = {
 
 /** Mã hàng của đơn sau khi lưu (Id + mã) để gắn bìa theo cột Mã hàng. */
 export type OrderImportProduct = { productId: number; productCode: string };
+
+/** DEV-ALL-193: NVL mới đã khai ở NVL của đơn, dạng dòng sheet NVL để máy chủ so khi kiểm file của mã hàng. */
+export const pendingMaterialsOf = (selection: OrderImportSelection): MaterialExcelRow[] =>
+  (selection.orderMaterials?.newMaterials ?? []).map((m, index) => ({
+    rowNumber: index + 1,
+    parseError: null,
+    materialCode: m.materialCode ?? '',
+    materialName: m.materialName,
+    materialType: m.materialType,
+    unit: m.unit,
+    color: m.color ?? null,
+    widthM: m.widthM ?? null,
+  }));
+
+/** Thêm NVL mới của NVL của đơn vào danh mục: phải chạy trước mọi lần nhập khác vì định mức mã hàng mới có thể dùng các NVL này. */
+export const createOrderNewMaterials = async (
+  selection: OrderImportSelection,
+): Promise<ProductImportOutcome[]> => {
+  const materials = selection.orderMaterials?.newMaterials ?? [];
+  return materials.length > 0 ? [await createMaterials(materials)] : [];
+};
+
+/** Bỏ khỏi file của mã hàng các NVL mới đã khai ở NVL của đơn (đã được tạo một lần). */
+export const withoutOrderNewMaterials = (
+  product: ProductImportSelection,
+  order: OrderImportSelection,
+): ProductImportSelection => {
+  const codes = new Set(pendingMaterialsOf(order).map((m) => m.materialCode.toUpperCase()));
+  if (codes.size === 0 || !product.newMaterials) return product;
+  return {
+    ...product,
+    newMaterials: product.newMaterials.filter(
+      (m) => !codes.has((m.materialCode ?? '').toUpperCase()),
+    ),
+  };
+};
 
 /** Lấy đúng bảng của mục từ file đã đọc; file không có bảng đó thì trả null. */
 export const pickOrderData = (
@@ -230,9 +267,6 @@ export async function runOrderImports(
   products: OrderImportProduct[],
 ): Promise<ProductImportOutcome[]> {
   const outcomes: ProductImportOutcome[] = [];
-  // DEV-ALL-192: NVL mới của sheet NVL được thêm vào danh mục trước, rồi mới nhập NVL của đơn.
-  if (selection.orderMaterials?.newMaterials.length)
-    outcomes.push(await createMaterials(selection.orderMaterials.newMaterials));
   if (selection.orderMaterials?.rows.length)
     outcomes.push(await importOrderMaterials(orderId, selection.orderMaterials.rows));
   const markers = selection.markers;

@@ -17,6 +17,7 @@ import {
   type RowOf,
   type RowState,
 } from '../utils/excelReview';
+import { usePendingMaterials } from './usePendingMaterials';
 import { mergeExisting, type ExistingData } from '../utils/excelReviewExisting';
 
 /** Chờ người dùng ngừng gõ rồi mới kiểm lại (ms). */
@@ -35,9 +36,11 @@ export function useExcelReview(
   scope: ReviewScope = 'admin',
 ) {
   const [draft, setDraft] = useState(initial);
+  const pendingMaterials = usePendingMaterials();
   const check = useApiMutation(
-    (bundle: ExcelBundle) => excelBundleApi.check(
-        { productId, orderId, bundle: restrictBundle(bundle, tables), replace },
+    (bundle: ExcelBundle) =>
+      excelBundleApi.check(
+        { productId, orderId, bundle: restrictBundle(bundle, tables), replace, pendingMaterials },
         scope,
       ),
     { invalidate: [] },

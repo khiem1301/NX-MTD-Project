@@ -11,7 +11,7 @@ namespace NX_MTD.Application.Services;
 /// <summary>
 /// DEV-ALL-192: kiểm sheet NVL (thông tin đầy đủ của NVL) với danh mục NVL. Mã đã có trong hệ thống: mọi thông tin (tên, loại, đơn vị,
 /// màu, khổ vải) phải trùng, khác thì lỗi "trùng mã nhưng khác thông tin". Mã chưa có: kiểm như tạo NVL tay, hợp lệ thì là NVL mới
-/// (thêm vào danh mục khi lưu). Không ghi gì.
+/// (thêm vào danh mục khi lưu). NVL đang chờ ghi ở "NVL của đơn" được so như NVL đã có (DEV-ALL-193). Không ghi gì.
 /// </summary>
 internal sealed class MaterialSheetChecker
 {
@@ -23,14 +23,17 @@ internal sealed class MaterialSheetChecker
 
     public MaterialSheetChecker(IUnitOfWork uow) => _uow = uow;
 
-    public async Task<IReadOnlyList<MaterialCheckRowDto>> CheckAsync(IReadOnlyList<MaterialExcelRow> rows, CancellationToken ct)
+    public async Task<IReadOnlyList<MaterialCheckRowDto>> CheckAsync(IReadOnlyList<MaterialExcelRow> rows,
+        IReadOnlyList<MaterialExcelRow> pending, CancellationToken ct)
     {
         var codes = rows.Select(r => r.MaterialCode).Where(c => c.Length > 0).Distinct().ToList();
         var names = rows.Select(r => r.MaterialName?.Trim() ?? string.Empty).Where(n => n.Length > 0).Distinct().ToList();
         var found = await _uow.Repository<Material>().Query().AsNoTracking()
             .Where(m => codes.Contains(m.MaterialCode) || names.Contains(m.MaterialName)).ToListAsync(ct);
-        var byCode = found.GroupBy(m => m.MaterialCode, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        var byCode = ByCode(found);
+        var waiting = pending.Where(p => !byCode.ContainsKey(p.MaterialCode)).Select(ToMaterial).ToList();
+        var pendingByCode = ByCode(waiting);
+        found.AddRange(waiting);
 
         var seen = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var result = new List<MaterialCheckRowDto>(rows.Count);
@@ -39,26 +42,44 @@ internal sealed class MaterialSheetChecker
             var duplicate = row.ParseError is null && seen.TryGetValue(row.MaterialCode, out var first)
                 ? string.Format(Messages.SpecImportDuplicateRow, first) : null;
             if (row.ParseError is null && duplicate is null) seen[row.MaterialCode] = row.RowNumber;
-            result.Add(CheckRow(row, duplicate, byCode, found));
+            result.Add(CheckRow(row, duplicate, byCode, pendingByCode, found));
         }
         return result;
     }
 
+    private static Dictionary<string, Material> ByCode(IEnumerable<Material> materials) =>
+        materials.GroupBy(m => m.MaterialCode, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+    private static Material ToMaterial(MaterialExcelRow p) => new()
+    {
+        MaterialCode = p.MaterialCode.Trim(),
+        MaterialName = p.MaterialName?.Trim() ?? string.Empty,
+        MaterialType = p.MaterialType ?? string.Empty,
+        Unit = p.Unit?.Trim() ?? string.Empty,
+        Color = p.Color?.Trim() ?? string.Empty,
+        WidthM = p.WidthM,
+    };
+
     private static MaterialCheckRowDto CheckRow(MaterialExcelRow row, string? duplicate, Dictionary<string, Material> byCode,
-        List<Material> found)
+        Dictionary<string, Material> pendingByCode, List<Material> found)
     {
         var error = row.ParseError ?? duplicate;
         if (error is not null) return Error(row, error);
-        if (byCode.TryGetValue(row.MaterialCode, out var existing))
-        {
-            var diffs = Differences(existing, row);
-            return diffs.Count > 0
-                ? Error(row, string.Format(Messages.MaterialSheetConflict, row.MaterialCode, string.Join(", ", diffs)))
-                : new MaterialCheckRowDto(row.RowNumber, ActionUnchanged, null);
-        }
+        if (byCode.TryGetValue(row.MaterialCode, out var existing)) return Compare(row, existing, Messages.MaterialSheetConflict);
+        if (pendingByCode.TryGetValue(row.MaterialCode, out var waiting))
+            return Compare(row, waiting, Messages.MaterialSheetPendingConflict);
         error = NewMaterialProblem(row, found);
         return error is not null ? Error(row, error)
             : new MaterialCheckRowDto(row.RowNumber, ActionNew, string.Format(Messages.MaterialSheetNew, row.MaterialCode));
+    }
+
+    private static MaterialCheckRowDto Compare(MaterialExcelRow row, Material material, string conflictMessage)
+    {
+        var diffs = Differences(material, row);
+        return diffs.Count > 0
+            ? Error(row, string.Format(conflictMessage, row.MaterialCode, string.Join(", ", diffs)))
+            : new MaterialCheckRowDto(row.RowNumber, ActionUnchanged, null);
     }
 
     private static MaterialCheckRowDto Error(MaterialExcelRow row, string error) => new(row.RowNumber, ActionError, error);

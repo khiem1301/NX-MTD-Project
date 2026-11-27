@@ -200,6 +200,36 @@ public class ExcelBundleServiceTests : ProductionTestBase
 
         result.Materials!.Select(r => r.Action).Should().Equal(SpecImportBuilder.ActionNew, SpecImportBuilder.ActionError);
     }
+    private static readonly MaterialExcelRow PendingFabric =
+        new(0, "V-0009", "Kate đỏ", MaterialTypes.Fabric, "m", "Đỏ", 1.5m, null);
+
+    [Fact]
+    public async Task CheckAsync_NormUsesPendingOrderMaterial_NotWarnedAndNotCreatedAgain()
+    {
+        _specImport.CheckAsync(Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<SpecWorkbookDto>(), Arg.Any<CancellationToken>())
+            .Returns(Result<SpecImportPreviewDto>.Success(SpecPreview(
+                new SpecImportNormRowDto(5, SpecImportBuilder.ActionNewMaterial, "x", "Đỏ", "Thân", "V-0009", null, null, null, null))));
+        var dto = new ExcelBundleCheckDto(null, null, new ExcelBundleDto(false, [], EmptySpec, false, []), false, [PendingFabric]);
+
+        var result = (await Sut().CheckAsync(dto, default)).Data!;
+
+        result.Spec.Norms.Single().Action.Should().Be(SpecImportBuilder.ActionNew);
+        result.MissingMaterials.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("Kate đỏ", SpecImportBuilder.ActionUnchanged)]
+    [InlineData("Kate hồng", SpecImportBuilder.ActionError)]
+    public async Task CheckAsync_SheetCodeSameAsPendingOrderMaterial_ComparesInfo(string name, string expected)
+    {
+        var bundle = new ExcelBundleDto(false, [], EmptySpec, false, [], true, [PendingFabric with { RowNumber = 2, MaterialName = name }]);
+
+        var result = (await Sut().CheckAsync(new ExcelBundleCheckDto(null, null, bundle, false, [PendingFabric]), default)).Data!;
+
+        result.Materials!.Single().Action.Should().Be(expected);
+        result.MissingMaterials.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task CheckAsync_MaterialDeclaredInSheet_NotWarnedAsMissing()
     {

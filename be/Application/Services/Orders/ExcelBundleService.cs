@@ -96,20 +96,35 @@ public sealed class ExcelBundleService : IExcelBundleService
         }
 
         var sheetRows = bundle.HasMaterials ? bundle.Materials ?? [] : [];
-        var sheet = await new MaterialSheetChecker(_uow).CheckAsync(sheetRows, ct);
-        var missing = MissingMaterials(bundle, spec.Data!, orderMaterials, sheet);
-        // NVL đã khai đủ ở sheet NVL thì không còn là cảnh báo "NVL chưa có": chỉ NVL dùng ở định mức / NVL của đơn mà sheet NVL không có mới cảnh báo.
-        var declared = missing.Where(m => m.FromSheet).Select(m => m.MaterialCode).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var specData = spec.Data! with { Norms = spec.Data!.Norms.Select(n => IsDeclared(n.Action, n.MaterialCode, declared) ? n with { Action = SpecImportBuilder.ActionNew, Error = null } : n).ToList() };
-        orderMaterials = orderMaterials is null ? null : orderMaterials with
-        {
-            Rows = orderMaterials.Rows.Select(r => IsDeclared(r.Action, r.MaterialCode, declared) ? r with { Action = SpecImportBuilder.ActionNew, Error = null } : r).ToList(),
-        };
-        return Result<ExcelBundleCheckResultDto>.Success(new ExcelBundleCheckResultDto(products, specData, orderMaterials, missing, sheet));
+        var pending = dto.PendingMaterials ?? [];
+        var sheet = await new MaterialSheetChecker(_uow).CheckAsync(sheetRows, pending, ct);
+        // NVL chờ ghi ở "NVL của đơn" được tạo cùng đơn: không liệt kê để mã hàng tạo lần nữa.
+        var waiting = pending.Select(p => p.MaterialCode.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missing = MissingMaterials(bundle, spec.Data!, orderMaterials, sheet).Where(m => !waiting.Contains(m.MaterialCode)).ToList();
+        return Result<ExcelBundleCheckResultDto>.Success(
+            WithDeclared(new ExcelBundleCheckResultDto(products, spec.Data!, orderMaterials, missing, sheet), waiting));
     }
 
-    private static bool IsDeclared(string action, string code, HashSet<string> declared) =>
-        action == SpecImportBuilder.ActionNewMaterial && declared.Contains(code.Trim());
+    /// <summary>
+    /// NVL đã khai đủ (sheet NVL, hoặc NVL của đơn đang chờ ghi) không còn là cảnh báo "NVL chưa có": dòng định mức / NVL của đơn
+    /// dùng mã đó thành dòng Mới.
+    /// </summary>
+    private static ExcelBundleCheckResultDto WithDeclared(ExcelBundleCheckResultDto result, HashSet<string> waiting)
+    {
+        var declared = result.MissingMaterials.Where(m => m.FromSheet).Select(m => m.MaterialCode)
+            .Concat(waiting).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        bool IsDeclared(string action, string code) => action == SpecImportBuilder.ActionNewMaterial && declared.Contains(code.Trim());
+        var norms = result.Spec.Norms
+            .Select(n => IsDeclared(n.Action, n.MaterialCode) ? n with { Action = SpecImportBuilder.ActionNew, Error = null } : n)
+            .ToList();
+        var orderMaterials = result.OrderMaterials is not { } preview ? null : preview with
+        {
+            Rows = preview.Rows
+                .Select(r => IsDeclared(r.Action, r.MaterialCode) ? r with { Action = SpecImportBuilder.ActionNew, Error = null } : r)
+                .ToList(),
+        };
+        return result with { Spec = result.Spec with { Norms = norms }, OrderMaterials = orderMaterials };
+    }
 
     /// <summary>Mã NVL có trong danh mục, kể cả đã ngừng dùng (không phân biệt hoa thường).</summary>
     private async Task<HashSet<string>> CatalogAsync(IEnumerable<string> codes, CancellationToken ct)
