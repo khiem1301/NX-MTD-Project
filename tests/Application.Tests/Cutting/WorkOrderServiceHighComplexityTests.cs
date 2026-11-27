@@ -698,7 +698,7 @@ public class WorkOrderServiceHighComplexityTests
     }
 
     [Fact]
-    public async Task UTCID347_CreateAsync_blocks_create_when_fabric_shortage()
+    public async Task UTCID347_CreateAsync_saves_work_order_when_fabric_shortage_only_warns()
     {
         // Arrange
         SeedOrder();
@@ -710,8 +710,8 @@ public class WorkOrderServiceHighComplexityTests
         var result = await Sut().CreateAsync(CreateDto(), default);
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        _workOrders.Should().BeEmpty();
+        result.IsSuccess.Should().BeTrue();
+        _workOrders.Should().ContainSingle().Which.Status.Should().Be(WorkOrderStatuses.Open);
     }
 
     [Fact]

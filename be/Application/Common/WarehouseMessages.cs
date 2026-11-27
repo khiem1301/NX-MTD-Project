@@ -108,7 +108,6 @@ public static class WarehouseMessages
     public const string WorkOrderCutNotHandedOver = "Còn BTP đã cắt chưa bàn giao và được kho xác nhận: {0}. Tổ cắt bàn giao hết rồi mới đóng lệnh.";
     public const string WorkOrderFinishShortReasonRequired = "Cắt chưa đủ kế hoạch ({0}/{1}). Nhập lý do cắt thiếu.";
     public const string WorkOrderAlreadyFullyCut = "Lệnh đã cắt đủ kế hoạch, không đóng cắt thiếu.";
-    public const string WorkOrderFabricShortage = "Vải không đủ để lập lệnh cắt.";
     public const string WorkOrderLineNotInOrder = "Có dòng đơn không thuộc đơn hàng đã chọn.";
     public const string ReceiptDuplicatePending = "NVL này đã có phiếu nhập chờ xác nhận ({0}). Chờ Quản đốc xác nhận hoặc trả lại rồi mới lập phiếu tiếp.";
     public const string ReceiptShortageClosed = "NVL này đã được Quản đốc chốt không bù (hủy giao phần thiếu), không thể lập thêm phiếu nhập.";

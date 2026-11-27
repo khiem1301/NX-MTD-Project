@@ -236,6 +236,7 @@
 | DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
 | DEV-ALL-12 | 25/10/2026 | Claude (AI) | UC37, UC45–UC47, swimlane III.1–III.5 | Đối chiếu màn hình luồng chính với swimlane; còn lệch: Thủ kho không nhập thiếu / lỗi, chưa có bước Quản đốc duyệt phiếu xuất (database chưa có trạng thái) | Mở |
 | DEV-ALL-168 | 23/11/2026 | Claude (AI) | Bộ UC v26 (73 UC), UC21 / UC33 / UC35 / UC39 / UC45 / UC61 | Bộ Use Case v26 đổi từ 67 lên 73 UC và đánh số lại; thêm 6 UC cho các chức năng code đã có (nhật ký thay đổi, bìa cắt theo đơn, thanh toán đơn hàng khách, giờ suất ăn, xem xe, AI gợi ý bậc). Số UC trong các mục cũ của file này không đổi | Mở |
+| DEV-ALL-191 | 27/11/2026 | AI theo yêu cầu của người dùng | UC19 (lệnh cắt), `WorkOrderService.CreateAsync` | Lập lệnh cắt thường khi thiếu vải chỉ cảnh báo, không chặn lưu | Mở |
 
 ---
 
@@ -3606,4 +3607,15 @@
 - **Lý do:** người dùng yêu cầu.
 - **Ảnh hưởng người khác:** Khiêm (công đoạn, đơn giá).
 - **Cần sửa trong tài liệu:** có (UC25).
+- **Trạng thái:** Mở
+
+### DEV-ALL-191 · Lập lệnh cắt thường khi thiếu vải chỉ cảnh báo, không chặn lưu
+
+- **Ngày / Người / Task / PR:** 27/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC19 (lập lệnh cắt); BE `WorkOrderService.CreateAsync` (bỏ kiểm vải chặn lưu), `WarehouseMessages.WorkOrderFabricShortage` (xóa, hết dùng); test `UTCID347` đổi tên thành `UTCID347_CreateAsync_saves_work_order_when_fabric_shortage_only_warns` và đổi kỳ vọng (thiếu vải thì vẫn lưu, lệnh OPEN) theo yêu cầu của người dùng ngày 27/11/2026.
+- **Tài liệu gốc ghi:** DEV-ALL-85, DEV-ALL-32, DEV-ALL-102: kiểm vải khi lập lệnh chỉ cảnh báo, không chặn lưu.
+- **Code đang làm:** từ commit c4508f7 (22/11/2026), `CreateAsync` trả lỗi `WAREHOUSE_INSUFFICIENT_STOCK` "Vải không đủ để lập lệnh cắt." khi có vải trạng thái Short. Nay bỏ bước đó: lệnh thường thiếu vải vẫn lưu, giống lệnh cắt bù. Kiểm vải vẫn chạy ở `POST .../work-orders/fabric-check` (form lập lệnh) và ở chi tiết lệnh đang OPEN, cảnh báo số mét cần, đủ / thiếu, bìa nên dùng.
+- **Lý do:** người dùng yêu cầu: không đủ vải chỉ cảnh báo, không cho phép chặn lưu (khớp các mục DEV trước).
+- **Ảnh hưởng người khác:** Thái (lệnh cắt); test `UTCID347` (khiem1301 thêm ở 99dd618, lệnh chặn do Thai-TTT thêm ở c4508f7 để khớp case này) đã đổi kỳ vọng; QA / Thái cần cập nhật case UTCID347 trong bảng test.
+- **Cần sửa trong tài liệu:** có (UC19: luồng lập lệnh cắt, không còn lỗi chặn khi thiếu vải; bảng test case UTCID347).
 - **Trạng thái:** Mở
