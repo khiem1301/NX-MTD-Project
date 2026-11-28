@@ -1,6 +1,5 @@
-import { EditOutlined } from '@ant-design/icons';
-import { Tag, Typography, type TableColumnsType } from 'antd';
-import { IconAction } from '@/components/common/IconAction';
+import { EditOutlined, EyeOutlined } from '@ant-design/icons';
+import { Button, Tag, Typography, type TableColumnsType } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import { PM_LABELS } from '../constants';
@@ -9,6 +8,7 @@ import type { DailyWorker } from '../utils/dailyBoard';
 /** Cột bảng công nhân của màn giao theo ngày; số giao trong ngày kèm phần còn chờ công nhân xác nhận. */
 export const dailyBoardColumns = (
   onEdit: (workerId: number) => void,
+  canGive: boolean,
 ): TableColumnsType<DailyWorker> => [
   {
     title: PM_LABELS.worker,
@@ -49,11 +49,14 @@ export const dailyBoardColumns = (
     title: MESSAGES.common.actions,
     key: 'actions',
     render: (_, w) => (
-      <IconAction
-        title={PM_LABELS.giveWork}
-        icon={<EditOutlined />}
+      <Button
+        type="primary"
+        ghost
+        icon={canGive ? <EditOutlined /> : <EyeOutlined />}
         onClick={() => onEdit(w.workerId)}
-      />
+      >
+        {canGive ? PM_LABELS.giveWork : PM_LABELS.viewWork}
+      </Button>
     ),
   },
 ];

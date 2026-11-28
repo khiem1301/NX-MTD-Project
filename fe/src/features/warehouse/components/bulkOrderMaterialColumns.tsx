@@ -63,7 +63,11 @@ export const bulkOrderMaterialColumns = ({
         size="small"
         style={{ width: '100%' }}
         suffix={unitOf(line)}
-        status={showErrors && qtyProblem(name, line.draft[field]) ? 'error' : undefined}
+        status={
+          (showErrors || isChanged(line)) && qtyProblem(name, line.draft[field])
+            ? 'error'
+            : undefined
+        }
         value={line.draft[field]}
         onChange={(v) => onPatch(line.key, { [field]: v ?? 0 })}
       />
@@ -88,7 +92,9 @@ export const bulkOrderMaterialColumns = ({
               optionFilterProp="label"
               placeholder={LABELS.material}
               style={{ width: '100%' }}
-              status={showErrors && line.materialId === null ? 'error' : undefined}
+              status={
+                (showErrors || isChanged(line)) && line.materialId === null ? 'error' : undefined
+              }
               value={line.materialId ?? undefined}
               options={materialOptions
                 .filter(
@@ -114,7 +120,7 @@ export const bulkOrderMaterialColumns = ({
       title: LABELS.note,
       key: 'note',
       render: (_, line) => {
-        const error = showErrors && isChanged(line) ? rowError(line) : null;
+        const error = isChanged(line) ? rowError(line) : null;
         return (
           <>
             <Input

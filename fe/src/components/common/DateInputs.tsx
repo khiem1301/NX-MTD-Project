@@ -80,7 +80,7 @@ export function AppDateRangeFields({
 
   const [from, to] = draft;
   return (
-    <Space size={8} wrap>
+    <Space size={8} wrap className="date-range-fields">
       <AppDatePicker
         aria-label={fromPlaceholder}
         placeholder={fromPlaceholder}

@@ -1,11 +1,12 @@
 import { Form, Input, Modal, Select } from 'antd';
 import { QtyInput } from '@/components/common/QtyInput';
+import { FORM_HINT_BELOW_CLASS } from '@/components/common/formHint';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { MAX_PAGE_SIZE } from '@/constants/pagination';
 import { VEHICLE_LIMITS, VL_LABELS } from '../constants';
 import { useStartTrip, useVehicles } from '../hooks/useVehicleLog';
-import { API_DATE } from '@/utils/format';
+import { API_DATE, fill, formatQty } from '@/utils/format';
 import { AppDatePicker } from '@/components/common/DateInputs';
 
 const required = [{ required: true, message: MESSAGES.common.required }];
@@ -18,11 +19,16 @@ type StartForm = {
   odometerStart: number;
 };
 
-/** UC35: ghi chuyến mới. Km đầu không liền với km cuối chuyến trước vẫn lưu được nhưng bị cảnh báo (MSG30). */
+/**
+ * UC35: ghi chuyến mới. Km cuối chuyến trước hiện thành gợi ý dưới ô km đầu, người dùng tự nhập số trên đồng hồ (DEV-ALL-194).
+ * Km đầu không liền với km cuối chuyến trước vẫn lưu được nhưng bị cảnh báo (MSG30).
+ */
 export function TripStartModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [form] = Form.useForm<StartForm>();
   const vehicles = useVehicles({ status: 'ACTIVE', page: 1, pageSize: MAX_PAGE_SIZE });
   const start = useStartTrip();
+  const vehicleId = Form.useWatch('vehicleId', form);
+  const lastOdometer = vehicles.data?.items.find((x) => x.vehicleId === vehicleId)?.lastOdometer;
 
   return (
     <Modal
@@ -57,11 +63,8 @@ export function TripStartModal({ open, onClose }: { open: boolean; onClose: () =
           <Select
             placeholder={VL_LABELS.selectVehicle}
             loading={vehicles.isLoading}
-            onChange={(id: number) => {
-              const last = vehicles.data?.items.find((x) => x.vehicleId === id)?.lastOdometer;
-              // Gợi ý km đầu = km hiện tại của xe để chuyến liền nhau, người dùng vẫn sửa được.
-              if (last !== null && last !== undefined) form.setFieldValue('odometerStart', last);
-            }}
+            // Đổi xe thì bỏ số đã gõ: số đó là của đồng hồ xe trước.
+            onChange={() => form.resetFields(['odometerStart'])}
             options={(vehicles.data?.items ?? []).map((x) => ({
               value: x.vehicleId,
               label: `${x.plateNumber} · ${x.vehicleType}`,
@@ -81,7 +84,17 @@ export function TripStartModal({ open, onClose }: { open: boolean; onClose: () =
         <Form.Item name="purpose" label={VL_LABELS.purpose}>
           <Input maxLength={300} />
         </Form.Item>
-        <Form.Item name="odometerStart" label={VL_LABELS.odometerStart} rules={required}>
+        <Form.Item
+          name="odometerStart"
+          label={VL_LABELS.odometerStart}
+          rules={required}
+          className={FORM_HINT_BELOW_CLASS}
+          extra={
+            lastOdometer === null || lastOdometer === undefined
+              ? undefined
+              : fill(VL_LABELS.odometerStartHint, formatQty(lastOdometer))
+          }
+        >
           <QtyInput min={0} max={VEHICLE_LIMITS.maxOdometer} style={{ width: 200 }} />
         </Form.Item>
       </Form>

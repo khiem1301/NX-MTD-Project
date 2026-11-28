@@ -1,5 +1,6 @@
 import { IconAction } from '@/components/common/IconAction';
 import { useMemo, useState } from 'react';
+import { useViewingId } from '@/hooks/useQueryId';
 import { REQUEST_TYPE } from '@/constants/requestTypes';
 import { useFromRequest } from '@/hooks/useFromRequest';
 import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
@@ -36,7 +37,7 @@ const TYPE_OPTIONS = [WAREHOUSE_TYPE.MATERIAL, WAREHOUSE_TYPE.SEMI_FINISHED].map
 export function MaterialIssueListPage() {
   const table = useTableQuery<Filters>({});
   const issues = useIssues(table.params);
-  const [viewingId, setViewingId] = useState<number>();
+  const [viewingId, setViewingId, closeViewing] = useViewingId();
   const from = useFromRequest();
   const preset = useMemo(
     () =>
@@ -133,7 +134,7 @@ export function MaterialIssueListPage() {
         pagination={table.pagination(issues.data?.totalItems)}
         scroll={{ x: true }}
       />
-      <IssueDetailModal issueId={viewingId} onClose={() => setViewingId(undefined)} />
+      <IssueDetailModal issueId={viewingId} onClose={closeViewing} />
       <IssueCreateModal
         open={createOpen}
         presetRequest={preset}

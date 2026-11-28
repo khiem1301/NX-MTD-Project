@@ -1,5 +1,6 @@
 import { IconAction } from '@/components/common/IconAction';
 import { useState } from 'react';
+import { useViewingId } from '@/hooks/useQueryId';
 import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
@@ -30,7 +31,7 @@ const STATUS_OPTIONS = Object.entries(FG_STATUS_LABEL).map(([value, l]) => ({
 export function FgHandoverPage() {
   const table = useTableQuery<Filters>({});
   const handovers = useFgHandovers(table.params);
-  const [viewingId, setViewingId] = useState<number>();
+  const [viewingId, setViewingId, closeViewing] = useViewingId();
   const [createOpen, setCreateOpen] = useState(false);
 
   const columns: TableColumnsType<FgHandoverListItem> = [
@@ -113,7 +114,7 @@ export function FgHandoverPage() {
         loading={handovers.isFetching}
         pagination={table.pagination(handovers.data?.totalItems)}
       />
-      <FgHandoverModal handoverId={viewingId} onClose={() => setViewingId(undefined)} />
+      <FgHandoverModal handoverId={viewingId} onClose={closeViewing} />
       <FgHandoverAllModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </Card>
   );

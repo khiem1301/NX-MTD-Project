@@ -204,8 +204,6 @@ public static class WarehouseMessages
     public const string AllocationExceedsRequired = "Số lần giao vượt số còn cần giao của công đoạn";
     public const string AllocationNoPiecesReceived = "Tổ chưa nhận BTP (bộ đủ) của màu × size này từ kho nên chưa giao việc được.";
     public const string PieceRetrievalExceedsHolding = "Số thu hồi vượt số lần công nhân còn giữ (đã trừ phần chờ thu hồi và sản lượng đã báo)";
-    public const string AllocationConfirmRange = "Số xác nhận phải từ 1 đến {0} (số ghi trên phiếu); không nhận gì thì bấm Từ chối.";
-    public const string AllocationConfirmZero = "Số xác nhận phải lớn hơn 0; không nhận gì thì bấm Từ chối.";
     public const string RetrievalReasonNotAllowed = "Phiếu giao việc không có lý do thu hồi.";
     public const string PieceMovementCreated = "Đã ghi phiếu, chờ công nhân xác nhận.";
     public const string PieceMovementConfirmed = "Đã xác nhận phiếu giao việc.";

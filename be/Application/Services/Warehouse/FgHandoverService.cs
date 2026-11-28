@@ -18,6 +18,8 @@ public sealed class FgHandoverService : IFgHandoverService
     private readonly IStockService _stock;
     private readonly IOutputQueryService _output;
     private readonly IDocumentCodeGenerator _codes;
+    private const string FgHandoverLink = "/warehouse/fg-handovers";
+
     private readonly INotificationService _notifier;
     private readonly IAppLock _locks;
     private readonly IClock _clock;
@@ -44,11 +46,10 @@ public sealed class FgHandoverService : IFgHandoverService
             .Where(h => string.IsNullOrEmpty(keyword) || h.HandoverCode.Contains(keyword)
                         || h.Order.OrderCode.Contains(keyword) || h.Product.ProductCode.Contains(keyword))
             .OrderByDescending(h => h.FgHandoverId)
-            .Select(h => new FgHandoverListItemDto(h.FgHandoverId, h.HandoverCode, h.OrderId, h.Order.OrderCode,
+            .ToPagedAsync(h => new FgHandoverListItemDto(h.FgHandoverId, h.HandoverCode, h.OrderId, h.Order.OrderCode,
                 h.ProductId, h.Product.ProductCode, h.InspectorId, h.Inspector.FullName, h.HandedAt, h.Status,
                 h.ConfirmedByNavigation == null ? null : h.ConfirmedByNavigation.FullName, h.ConfirmedAt,
-                h.FgHandoverLines.Sum(l => l.HandedQty)))
-            .ToPagedAsync(query, ct);
+                h.FgHandoverLines.Sum(l => l.HandedQty)), query, ct);
         return Result<PagedResult<FgHandoverListItemDto>>.Success(page);
     }
 
@@ -188,12 +189,25 @@ public sealed class FgHandoverService : IFgHandoverService
             _notifier.NotifyEmployees(new[] { handover.InspectorId }, new NotificationMessage(NotificationSources.Warehouse,
                 "Đã nhận thành phẩm", $"Thủ kho đã nhận phiếu bàn giao {handover.HandoverCode} vào kho.", null,
                 nameof(FgHandover), handover.FgHandoverId));
+            await NotifyShortfallAsync(handover, ct);
             await _uow.SaveChangesAsync();
             await CompareWithKpiAsync(handover, ct);
             await _uow.SaveChangesAsync();
             _logger.LogInformation("FG handover {HandoverCode} confirmed by employee {EmployeeId}", handover.HandoverCode, employeeId);
             return Result.Success(WarehouseMessages.FgHandoverConfirmed);
         });
+
+    /// <summary>Kho nhận ít hơn QA/QC bàn giao: báo QA/QC số giao, số nhận và lý do (DEV-ALL-196).</summary>
+    private async Task NotifyShortfallAsync(FgHandover handover, CancellationToken ct)
+    {
+        var reduced = handover.FgHandoverLines.Where(l => l.ConfirmedQty < l.HandedQty).ToList();
+        if (reduced.Count == 0) return;
+        var labels = await ShortfallNotice.LoadLabelsAsync(_uow, reduced.Select(l => (int?)l.OrderLineId), [], ct);
+        var text = ShortfallNotice.Build($"Phiếu bàn giao {handover.HandoverCode}",
+            reduced.Select(l => new ShortfallLine(labels.Of(l.OrderLineId, null), l.HandedQty, l.ConfirmedQty ?? 0, l.DiscrepancyReason)));
+        _notifier.NotifyEmployees(new[] { handover.InspectorId }, new NotificationMessage(NotificationSources.Warehouse,
+            ShortfallNotice.Title, text!, $"{FgHandoverLink}?id={handover.FgHandoverId}", nameof(FgHandover), handover.FgHandoverId));
+    }
 
     /// <summary>
     /// Swimlane "Compare & Notify KPI result": mỗi lần kho nhận thành phẩm, báo Quản đốc một lần cho mỗi đơn + mã hàng. Phiếu bàn

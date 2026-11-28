@@ -1,11 +1,12 @@
 import { Descriptions, Form, Input, Modal, Table } from 'antd';
+import { CARD_TABLE_CLASS, withCardLabels } from '@/components/common/cardTable';
 import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import { HintTip } from '@/components/common/HintTip';
 import { MOVEMENT_STATUS, MOVEMENT_TYPE_LABEL, PM_LABELS } from '../constants';
 import { useAllocations, useConfirmWorkerOnBehalf } from '../hooks/usePieceMovement';
-import type { WorkerAllocationSummary } from '../types';
+import type { WorkAllocation, WorkerAllocationSummary } from '../types';
 import { negated, signedQty } from '../utils/signedQty';
 
 type Props = { group: WorkerAllocationSummary | null; onClose: () => void };
@@ -87,7 +88,8 @@ export function ConfirmWorkerOnBehalfModal({ group, onClose }: Props) {
             loading={pending.isFetching}
             scroll={{ y: 240 }}
             style={{ marginBottom: 16 }}
-            columns={[
+            className={CARD_TABLE_CLASS}
+            columns={withCardLabels<WorkAllocation>([
               {
                 title: PM_LABELS.type,
                 dataIndex: 'movementType',
@@ -109,7 +111,7 @@ export function ConfirmWorkerOnBehalfModal({ group, onClose }: Props) {
                 align: 'right',
                 render: (v: number, m) => signedQty(m.movementType, v),
               },
-            ]}
+            ])}
           />
           <Form.Item
             name="onBehalfReason"

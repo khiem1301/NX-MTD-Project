@@ -30,10 +30,9 @@ public sealed class NotificationInboxService : INotificationInboxService
             .Where(n => query.Group != NotificationGroups.Manual || n.SourceType == NotificationSources.Announcement)
             .Where(n => query.Group != NotificationGroups.Auto || n.SourceType != NotificationSources.Announcement)
             .OrderByDescending(n => n.NotificationId)
-            .Select(n => new NotificationDto(n.NotificationId, n.SourceType, n.Title, n.Message, n.LinkUrl, n.ReadAt != null,
+            .ToPagedAsync(n => new NotificationDto(n.NotificationId, n.SourceType, n.Title, n.Message, n.LinkUrl, n.ReadAt != null,
                 n.RefTable == nameof(Announcement) && urgentIds.Contains(n.RefId!.Value),
-                n.SourceType == NotificationSources.Announcement, n.CreatedAt, n.RefTable, n.RefId))
-            .ToPagedAsync(query, ct);
+                n.SourceType == NotificationSources.Announcement, n.CreatedAt, n.RefTable, n.RefId), query, ct);
         return Result<PagedResult<NotificationDto>>.Success(page);
     }
 
@@ -85,14 +84,13 @@ public sealed class AnnouncementService : IAnnouncementService
         var page = await _uow.Repository<Announcement>().Query().AsNoTracking()
             .Where(a => string.IsNullOrEmpty(keyword) || a.Content.Contains(keyword))
             .OrderByDescending(a => a.AnnouncementId)
-            .Select(a => new
+            .ToPagedAsync(a => new
             {
                 a.AnnouncementId, a.Content, a.Priority, a.TargetScope, Sender = a.Sender.FullName, a.SentAt,
                 Recipients = notifications.Count(n => n.RefId == a.AnnouncementId),
                 Teams = a.AnnouncementTargets.Where(t => t.Team != null).Select(t => t.Team!.TeamCode).ToList(),
                 Roles = a.AnnouncementTargets.Where(t => t.Role != null).Select(t => t.Role!.RoleName).ToList(),
-            })
-            .ToPagedAsync(query, ct);
+            }, query, ct);
         return Result<PagedResult<AnnouncementDto>>.Success(new PagedResult<AnnouncementDto>(
             page.Items.Select(a => new AnnouncementDto(a.AnnouncementId, a.Content, a.Priority, a.TargetScope, a.Sender, a.SentAt,
                 a.Recipients, a.Teams.Concat(a.Roles).ToList())).ToList(), page.Page, page.PageSize, page.TotalItems));

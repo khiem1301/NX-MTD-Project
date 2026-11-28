@@ -53,11 +53,10 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
                 || (p.Order != null && p.Order.OrderCode.Contains(keyword))
                 || (p.Supplier != null && p.Supplier.SupplierName.Contains(keyword)))
             .OrderByDescending(p => p.PurchaseOrderId)
-            .Select(p => new PurchaseOrderFlowListItemDto(p.PurchaseOrderId, p.PoCode,
+            .ToPagedAsync(p => new PurchaseOrderFlowListItemDto(p.PurchaseOrderId, p.PoCode,
                 p.Order == null ? null : p.Order.OrderCode, p.Supplier == null ? null : p.Supplier.SupplierName,
                 p.GoodsStatus, p.PaymentStatus, p.OrderDate,
-                p.PurchaseOrderLines.Sum(l => l.OrderedQty * l.UnitPrice), p.PaidAmount, p.CreatedAt))
-            .ToPagedAsync(query, ct);
+                p.PurchaseOrderLines.Sum(l => l.OrderedQty * l.UnitPrice), p.PaidAmount, p.CreatedAt), query, ct);
 
         return Result<PagedResult<PurchaseOrderFlowListItemDto>>.Success(page with
         {

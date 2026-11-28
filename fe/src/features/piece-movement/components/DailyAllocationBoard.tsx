@@ -1,17 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Alert, Input, Select, Space } from 'antd';
+import { Alert, Empty, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
-import { AppDatePicker } from '@/components/common/DateInputs';
+import { STAT_CARD_CLASS } from '@/components/common/cardTable';
 import { DataTable } from '@/components/common/DataTable';
-import { OrderLinePicker } from '@/components/common/OrderLinePicker';
 import { useWorkDateRange } from '@/hooks/useLookups';
-import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
 import { useAuth } from '@/hooks/useAuth';
 import { useTeamMemberLookup } from '@/hooks/useHrLookups';
 import { useOrderLineLookup } from '@/hooks/useOrderLookups';
-import { fill, toApiDate } from '@/utils/format';
-import { DAILY_SEARCH_MAX_LENGTH, PM_LABELS } from '../constants';
+import { toApiDate } from '@/utils/format';
+import { PM_LABELS } from '../constants';
 import { useBoard, useDailyBoard } from '../hooks/usePieceMovement';
 import {
   buildDailyWorkers,
@@ -21,6 +19,8 @@ import {
   type DailyWorker,
 } from '../utils/dailyBoard';
 import { dailyBoardColumns } from './dailyBoardColumns';
+import { DailyBoardFilters, DailyWorkerFilters } from './DailyBoardFilters';
+import './dailyBoard.css';
 import { DailyWorkerModal } from './DailyWorkerModal';
 
 /**
@@ -64,85 +64,57 @@ export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
   const lines = orderLines.data ?? [];
   const operations = (board.data?.operations ?? []).filter((o) => o.orderLineId === orderLineId);
 
-  const columns = dailyBoardColumns(setEditingId);
+  const columns = dailyBoardColumns(setEditingId, canEdit && isToday);
+  // Đơn chưa chia cho tổ đã có cảnh báo riêng, không nhắc chọn tiếp.
+  const hasNoBoard = orderId !== undefined && orderLines.isSuccess && lines.length === 0;
 
   return (
     <Space direction="vertical" size={12} style={{ width: '100%' }}>
-      <Space wrap>
-        <AppDatePicker
-          allowClear={false}
-          aria-label={PM_LABELS.workDate}
-          value={workDate}
-          disabledDate={disabledWorkDate}
-          onChange={(v) => setWorkDate(v ?? dayjs())}
-        />
-        <OrderSelect
-          value={orderId}
-          onChange={(v) => {
-            setOrderId(v);
-            setOrderLineId(undefined);
-          }}
-          placeholder={PM_LABELS.selectOrder}
-          width={300}
-        />
-        <OrderLinePicker
-          lines={lines}
-          value={orderLineId}
-          onChange={setOrderLineId}
-          disabled={orderId === undefined}
-          disabledPlaceholder={PM_LABELS.selectFirst}
-          loading={orderLines.isLoading}
-        />
-        <Input.Search
-          allowClear
-          style={{ width: 220 }}
-          placeholder={PM_LABELS.searchWorker}
-          maxLength={DAILY_SEARCH_MAX_LENGTH}
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-        />
-        <Select<DailyState>
-          style={{ width: 200 }}
-          aria-label={PM_LABELS.stateLabel}
-          value={state}
-          onChange={setState}
-          options={[
-            { value: DAILY_STATE.ALL, label: fill(PM_LABELS.stateAll, workers.length) },
-            {
-              value: DAILY_STATE.IDLE,
-              label: fill(
-                PM_LABELS.stateIdle,
-                workers.filter((w) => w.operationCount === 0).length,
-              ),
-            },
-            {
-              value: DAILY_STATE.BUSY,
-              label: fill(PM_LABELS.stateBusy, workers.filter((w) => w.operationCount > 0).length),
-            },
-          ]}
-        />
-      </Space>
+      <DailyBoardFilters
+        workDate={workDate}
+        onWorkDateChange={setWorkDate}
+        disabledDate={disabledWorkDate}
+        orderId={orderId}
+        onOrderChange={(v) => {
+          setOrderId(v);
+          setOrderLineId(undefined);
+        }}
+        lines={lines}
+        linesLoading={orderLines.isLoading}
+        orderLineId={orderLineId}
+        onOrderLineChange={setOrderLineId}
+      />
       {!isToday && <Alert type="info" showIcon message={PM_LABELS.pastDayReadOnly} />}
       <QueryError error={daily.error} onRetry={() => void daily.refetch()} />
       <QueryError error={members.error} onRetry={() => void members.refetch()} />
       <QueryError error={orderLines.error} onRetry={() => void orderLines.refetch()} />
-      {orderId !== undefined && orderLines.isSuccess && lines.length === 0 && (
-        <Alert type="warning" showIcon message={PM_LABELS.noBoard} />
+      {hasNoBoard && <Alert type="warning" showIcon message={PM_LABELS.noBoard} />}
+      {orderLineId === undefined ? (
+        !hasNoBoard && (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={orderId === undefined ? PM_LABELS.selectOrder : PM_LABELS.selectOrderLine}
+          />
+        )
+      ) : (
+        <>
+          <DailyWorkerFilters
+            workers={workers}
+            keyword={keyword}
+            onKeywordChange={setKeyword}
+            state={state}
+            onStateChange={setState}
+          />
+          <DataTable<DailyWorker>
+            className={STAT_CARD_CLASS}
+            rowKey="workerId"
+            columns={columns}
+            dataSource={visible}
+            loading={daily.isFetching || members.isLoading}
+            locale={{ emptyText: PM_LABELS.noWorkers }}
+          />
+        </>
       )}
-      <DataTable<DailyWorker>
-        rowKey="workerId"
-        columns={columns}
-        dataSource={visible}
-        loading={daily.isFetching || members.isLoading}
-        locale={{
-          emptyText:
-            orderId === undefined
-              ? PM_LABELS.selectOrder
-              : orderLineId === undefined
-                ? PM_LABELS.selectOrderLine
-                : PM_LABELS.noWorkers,
-        }}
-      />
       {editing && (
         <DailyWorkerModal
           key={`${editing.workerId}-${apiDate}`}

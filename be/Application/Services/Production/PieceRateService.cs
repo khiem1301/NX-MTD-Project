@@ -39,12 +39,11 @@ public sealed class PieceRateService : IPieceRateService
             .Where(r => string.IsNullOrEmpty(keyword) || r.Operation.OperationCode.Contains(keyword)
                 || r.Operation.OperationName.Contains(keyword) || r.Operation.Product.ProductCode.Contains(keyword))
             .OrderByDescending(r => r.EffectiveDate).ThenByDescending(r => r.PieceRateId)
-            .Select(r => new PieceRateDto(r.PieceRateId, r.OperationId, r.Operation.OperationCode,
+            .ToPagedAsync(r => new PieceRateDto(r.PieceRateId, r.OperationId, r.Operation.OperationCode,
                 r.Operation.OperationName, r.Operation.ProductId, r.Operation.Product.ProductCode, r.Rate,
                 r.EffectiveDate, r.Status, r.SubmittedAt, r.ApprovedAt,
                 r.Status == PieceRateStatuses.Approved ? r.DecisionNote : null,
-                r.Status == PieceRateStatuses.Rejected ? r.DecisionNote : null))
-            .ToPagedAsync(query, ct);
+                r.Status == PieceRateStatuses.Rejected ? r.DecisionNote : null), query, ct);
 
         return Result<PagedResult<PieceRateDto>>.Success(
             page with { Items = page.Items.Select(i => i with { Status = CodeText.ToPascal(i.Status) }).ToList() });

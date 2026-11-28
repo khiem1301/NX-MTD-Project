@@ -24,48 +24,23 @@ public sealed class CreateWorkAllocationDtoValidator : AbstractValidator<CreateW
     }
 }
 
-public sealed class ConfirmWorkAllocationDtoValidator : AbstractValidator<ConfirmWorkAllocationDto>
-{
-    public ConfirmWorkAllocationDtoValidator()
-    {
-        RuleFor(x => x.ConfirmedQty).GreaterThan(0).WithMessage(WarehouseMessages.AllocationConfirmZero);
-        RuleFor(x => x.DiscrepancyReason).MaximumLength(TextLimits.Reason);
-    }
-}
-
 public sealed class ConfirmWorkAllocationBatchDtoValidator : AbstractValidator<ConfirmWorkAllocationBatchDto>
 {
     public const int MaxItems = 100;
 
     public ConfirmWorkAllocationBatchDtoValidator()
     {
-        RuleFor(x => x.Items).NotEmpty().WithMessage(WarehouseMessages.BatchConfirmItemsRequired)
+        RuleFor(x => x.WorkAllocationIds).NotEmpty().WithMessage(WarehouseMessages.BatchConfirmItemsRequired)
             .Must(i => i.Count <= MaxItems).WithMessage(string.Format(WarehouseMessages.BatchConfirmTooMany, MaxItems))
-            .Must(i => i.Select(x => x.WorkAllocationId).Distinct().Count() == i.Count)
-            .WithMessage(WarehouseMessages.BatchConfirmDuplicate);
-        RuleForEach(x => x.Items).ChildRules(item =>
-        {
-            item.RuleFor(i => i.WorkAllocationId).GreaterThan(0);
-            item.RuleFor(i => i.ConfirmedQty).GreaterThan(0).WithMessage(WarehouseMessages.AllocationConfirmZero);
-            item.RuleFor(i => i.DiscrepancyReason).MaximumLength(TextLimits.Reason);
-        });
+            .Must(i => i.Distinct().Count() == i.Count).WithMessage(WarehouseMessages.BatchConfirmDuplicate);
+        RuleForEach(x => x.WorkAllocationIds).GreaterThan(0);
     }
-}
-
-public sealed class ConfirmWorkerOnBehalfDtoValidator : AbstractValidator<ConfirmWorkerOnBehalfDto>
-{
-    public ConfirmWorkerOnBehalfDtoValidator() =>
-        RuleFor(x => x.OnBehalfReason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(TextLimits.Reason);
 }
 
 public sealed class ConfirmOnBehalfDtoValidator : AbstractValidator<ConfirmOnBehalfDto>
 {
-    public ConfirmOnBehalfDtoValidator()
-    {
-        RuleFor(x => x.ConfirmedQty).GreaterThan(0).WithMessage(WarehouseMessages.AllocationConfirmZero);
-        RuleFor(x => x.DiscrepancyReason).MaximumLength(TextLimits.Reason);
+    public ConfirmOnBehalfDtoValidator() =>
         RuleFor(x => x.OnBehalfReason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(TextLimits.Reason);
-    }
 }
 
 public sealed class SaveDailyAllocationDtoValidator : AbstractValidator<SaveDailyAllocationDto>

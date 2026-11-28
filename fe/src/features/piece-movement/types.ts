@@ -92,17 +92,11 @@ export type AllocationQuery = PageParams & {
   orderId?: number;
 };
 
-export type ConfirmAllocationPayload = {
-  confirmedQty: number;
-  discrepancyReason?: string;
-};
-export type ConfirmOnBehalfPayload = ConfirmAllocationPayload & { onBehalfReason: string };
-/** DEV-ALL-182: xác nhận hộ mọi phiếu đang chờ của một công nhân, đủ số trên phiếu. */
-export type ConfirmWorkerOnBehalfPayload = { onBehalfReason: string };
+/** Tổ trưởng xác nhận hộ công nhân: đủ số trên phiếu, bắt buộc lý do. */
+export type ConfirmOnBehalfPayload = { onBehalfReason: string };
 
-/** DEV-ALL-126: công nhân xác nhận nhiều phiếu một lần. */
-export type ConfirmBatchItem = ConfirmAllocationPayload & { workAllocationId: number };
-export type ConfirmBatchPayload = { items: ConfirmBatchItem[] };
+/** DEV-ALL-198: công nhân xác nhận nhiều phiếu một lần (chỉ xác nhận số được giao là đúng). */
+export type ConfirmBatchPayload = { workAllocationIds: number[] };
 
 export type AllocationFilters = { status?: string; movementType?: string };
 

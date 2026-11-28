@@ -95,7 +95,6 @@ export function PaymentFormModal({ order, open, editing, onClose }: Props) {
         <Form.Item
           name="amount"
           label={text.amount}
-          validateTrigger="onSubmit"
           rules={[
             { required: true, type: 'number', message: text.amountRequired },
             {

@@ -2,10 +2,8 @@ import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import type {
   AllocationQuery,
-  ConfirmAllocationPayload,
   ConfirmBatchPayload,
   ConfirmOnBehalfPayload,
-  ConfirmWorkerOnBehalfPayload,
   DailyAllocationBoard,
   DailyAllocationResult,
   SaveDailyPayload,
@@ -32,13 +30,10 @@ export const pieceMovementApi = {
   daily: (workDate: string, orderId: number, orderLineId: number) =>
     get<DailyAllocationBoard>(`${LEADER_BASE}/daily`, { workDate, orderId, orderLineId }),
   saveDaily: (body: SaveDailyPayload) => put<DailyAllocationResult>(`${LEADER_BASE}/daily`, body),
-  confirmOnBehalf: (id: number, body: ConfirmOnBehalfPayload) =>
-    post<null>(`${LEADER_BASE}/${id}/confirm-on-behalf`, body),
-  confirmByWorker: (id: number, body: ConfirmAllocationPayload) =>
-    post<null>(`${WORKER_BASE}/${id}/confirm`, body),
+  confirmByWorker: (id: number) => post<null>(`${WORKER_BASE}/${id}/confirm`),
   confirmBatchByWorker: (body: ConfirmBatchPayload) =>
     post<null>(`${WORKER_BASE}/confirm-batch`, body),
-  confirmWorkerOnBehalf: (workerId: number, body: ConfirmWorkerOnBehalfPayload) =>
+  confirmWorkerOnBehalf: (workerId: number, body: ConfirmOnBehalfPayload) =>
     post<null>(`${LEADER_BASE}/workers/${workerId}/confirm-on-behalf`, body),
   rejectByWorker: (id: number, reason: string) =>
     post<null>(`${WORKER_BASE}/${id}/reject`, { reason }),

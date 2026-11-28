@@ -18,6 +18,7 @@ import { DetailModal } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
 import { QtyInput } from '@/components/common/QtyInput';
 import { maxQtyRule } from '@/utils/qtyLimit';
+import { revalidate } from '@/utils/formValidate';
 import { HandoverInfo } from './HandoverInfo';
 
 type HandoverDetailModalProps = { handoverId: number | undefined; onClose: () => void };
@@ -146,7 +147,10 @@ export function HandoverDetailModal({ handoverId, onClose }: HandoverDetailModal
                           maxQtyRule(l.handedQty),
                         ]}
                       >
-                        <QtyInput min={0} />
+                        <QtyInput
+                          min={0}
+                          onChange={() => revalidate(form, ['lines', index, 'discrepancyReason'])}
+                        />
                       </Form.Item>
                     ) : (
                       (l.confirmedQty ?? '—')

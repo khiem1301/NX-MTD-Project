@@ -1,0 +1,33 @@
+/* Bước chọn việc và bộ lọc của màn giao sản lượng theo ngày. */
+.daily-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.daily-filters__search {
+  width: 220px;
+}
+
+@media (max-width: 767px) {
+  /* Mỗi ô một dòng, rộng hết màn. */
+  .daily-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .daily-filters .ant-picker,
+  .daily-filters .ant-select,
+  .daily-filters .daily-filters__search,
+  .daily-filters .ant-segmented {
+    width: 100% !important;
+  }
+
+  .daily-filters__line > .ant-space {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+  }
+}

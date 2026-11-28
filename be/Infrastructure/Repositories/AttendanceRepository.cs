@@ -2,6 +2,7 @@ using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
@@ -241,6 +242,19 @@ public sealed class AttendanceRepository : IAttendanceRepository
         }
     }
 
+    private static readonly System.Linq.Expressions.Expression<Func<AttendanceAdjustment, AttendanceAdjustmentDto>> AdjustmentProjection =
+        a => new AttendanceAdjustmentDto(
+            a.AttendanceAdjustmentId, a.EmployeeId, a.Employee.EmployeeCode, a.Employee.FullName,
+            a.WorkDate, a.AdjustmentType, a.Reason, a.RequestId, a.CheckIn, a.CheckOut, a.RecordedAt);
+
+    private static readonly System.Linq.Expressions.Expression<Func<DailyTimesheet, DailyTimesheetDto>> TimesheetProjection =
+        t => new DailyTimesheetDto(
+            t.DailyTimesheetId, t.EmployeeId, t.Employee.EmployeeCode, t.Employee.FullName,
+            t.Employee.Team == null ? null : t.Employee.Team.TeamCode,
+            t.WorkDate, t.CheckIn, t.CheckOut, t.WorkedHours, t.WorkdayValue, t.OvertimeHours,
+            t.IsMissingPunch, t.HasExtraPunch, t.IsSunday ?? false,
+            t.Source ?? string.Empty, t.Note, t.UpdatedAt);
+
     public async Task<(IReadOnlyList<AttendanceAdjustmentDto> Items, int TotalItems)> GetAdjustmentsAsync(
         AdjustmentQuery query, CancellationToken ct)
     {
@@ -258,14 +272,9 @@ public sealed class AttendanceRepository : IAttendanceRepository
 
         var total = await filtered.CountAsync(ct);
 
-        var items = await filtered
-            .OrderByDescending(a => a.WorkDate).ThenBy(a => a.Employee.EmployeeCode)
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .Select(a => new AttendanceAdjustmentDto(
-                a.AttendanceAdjustmentId, a.EmployeeId, a.Employee.EmployeeCode, a.Employee.FullName,
-                a.WorkDate, a.AdjustmentType, a.Reason, a.RequestId, a.CheckIn, a.CheckOut, a.RecordedAt))
-            .ToListAsync(ct);
+        var items = await SortableSelect.ToPageListAsync(
+            filtered.OrderByDescending(a => a.WorkDate).ThenBy(a => a.Employee.EmployeeCode), AdjustmentProjection,
+            query.SortBy, query.SortDir, (query.Page - 1) * query.PageSize, query.PageSize, ct);
 
         return (items, total);
     }
@@ -282,17 +291,9 @@ public sealed class AttendanceRepository : IAttendanceRepository
         var filtered = ApplyFilter(query);
         var total = await filtered.CountAsync(ct);
 
-        var items = await filtered
-            .OrderByDescending(t => t.WorkDate).ThenBy(t => t.Employee.EmployeeCode)
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .Select(t => new DailyTimesheetDto(
-                t.DailyTimesheetId, t.EmployeeId, t.Employee.EmployeeCode, t.Employee.FullName,
-                t.Employee.Team == null ? null : t.Employee.Team.TeamCode,
-                t.WorkDate, t.CheckIn, t.CheckOut, t.WorkedHours, t.WorkdayValue, t.OvertimeHours,
-                t.IsMissingPunch, t.HasExtraPunch, t.IsSunday ?? false,
-                t.Source ?? string.Empty, t.Note, t.UpdatedAt))
-            .ToListAsync(ct);
+        var items = await SortableSelect.ToPageListAsync(
+            filtered.OrderByDescending(t => t.WorkDate).ThenBy(t => t.Employee.EmployeeCode), TimesheetProjection,
+            query.SortBy, query.SortDir, (query.Page - 1) * query.PageSize, query.PageSize, ct);
 
         return (items, total);
     }

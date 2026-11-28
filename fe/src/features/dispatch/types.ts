@@ -47,7 +47,7 @@ export type ExportDispatchPayload = {
   odometerStart: number | null;
 };
 
-/** Xe đang hoạt động và chưa có chuyến đang chạy; lastOdometer để điền sẵn km lúc đi. */
+/** Xe đang hoạt động và chưa có chuyến đang chạy; lastOdometer hiện thành gợi ý dưới ô km lúc đi. */
 export type AvailableVehicle = {
   vehicleId: number;
   plateNumber: string;

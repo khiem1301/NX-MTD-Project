@@ -1,6 +1,7 @@
 import { MESSAGES } from '@/constants/messages';
 import { IconAction } from '@/components/common/IconAction';
 import { useState } from 'react';
+import { useViewingId } from '@/hooks/useQueryId';
 import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
@@ -36,7 +37,7 @@ export function CutHandoverPage() {
   const table = useTableQuery<Filters>({});
   const handovers = useHandovers(table.params);
   const workOrders = useWorkOrders({ page: 1, pageSize: MAX_PAGE_SIZE });
-  const [viewingId, setViewingId] = useState<number>();
+  const [viewingId, setViewingId, closeViewing] = useViewingId();
   const [createOpen, setCreateOpen] = useState(false);
 
   const columns: TableColumnsType<CutHandoverListItem> = [
@@ -129,7 +130,7 @@ export function CutHandoverPage() {
         loading={handovers.isFetching}
         pagination={table.pagination(handovers.data?.totalItems)}
       />
-      <HandoverDetailModal handoverId={viewingId} onClose={() => setViewingId(undefined)} />
+      <HandoverDetailModal handoverId={viewingId} onClose={closeViewing} />
       {table.filters.workOrderId !== undefined && (
         <HandoverCreateModal
           open={createOpen}

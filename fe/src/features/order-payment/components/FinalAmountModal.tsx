@@ -62,7 +62,6 @@ export function FinalAmountModal({ order, open, onClose }: Props) {
         <Form.Item
           name="amount"
           label={text.amount}
-          validateTrigger="onSubmit"
           rules={[
             { required: true, type: 'number', message: text.amountRequired },
             {

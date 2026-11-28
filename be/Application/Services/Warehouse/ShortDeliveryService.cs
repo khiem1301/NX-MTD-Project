@@ -45,11 +45,10 @@ public sealed class ShortDeliveryService : IShortDeliveryService
             .Where(q => string.IsNullOrEmpty(keyword) || q.RequestCode.Contains(keyword)
                         || q.MaterialReceipt!.ReceiptCode.Contains(keyword))
             .OrderByDescending(q => q.RequestId)
-            .Select(q => new ShortDeliveryListItemDto(q.RequestId, q.RequestCode, q.Status, q.ShortageResolution,
+            .ToPagedAsync(q => new ShortDeliveryListItemDto(q.RequestId, q.RequestCode, q.Status, q.ShortageResolution,
                 q.MaterialReceiptId!.Value, q.MaterialReceipt!.ReceiptCode, q.MaterialReceipt.Source!,
                 q.MaterialReceipt.PurchaseOrder == null ? null : q.MaterialReceipt.PurchaseOrder.PoCode,
-                q.Order == null ? null : q.Order.OrderCode, q.CreatedAt))
-            .ToPagedAsync(query, ct);
+                q.Order == null ? null : q.Order.OrderCode, q.CreatedAt), query, ct);
         return Result<PagedResult<ShortDeliveryListItemDto>>.Success(page);
     }
 

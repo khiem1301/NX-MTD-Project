@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Table } from 'antd';
+import { CARD_TABLE_CLASS, withCardLabels } from '@/components/common/cardTable';
 import { QueryError } from '@/components/common/QueryError';
 import { useAllocations } from '../hooks/usePieceMovement';
 import type { AllocationFilters } from '../types';
@@ -21,7 +22,8 @@ export function WorkerSlipsTable({ workerId, filters }: Props) {
       <Table
         size="small"
         rowKey="workAllocationId"
-        columns={columns}
+        className={CARD_TABLE_CLASS}
+        columns={withCardLabels(columns)}
         dataSource={slips.data?.items}
         loading={slips.isFetching}
         pagination={{

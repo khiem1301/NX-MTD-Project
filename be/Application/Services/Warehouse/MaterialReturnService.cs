@@ -17,6 +17,8 @@ public sealed class MaterialReturnService : IMaterialReturnService
     private readonly IUnitOfWork _uow;
     private readonly IStockService _stock;
     private readonly IDocumentCodeGenerator _codes;
+    private const string ReturnLink = "/warehouse/material-returns";
+
     private readonly INotificationService _notifier;
     private readonly IAppLock _locks;
     private readonly IClock _clock;
@@ -41,12 +43,11 @@ public sealed class MaterialReturnService : IMaterialReturnService
                         || (r.Order != null && r.Order.OrderCode.Contains(keyword))
                         || (r.WorkOrder != null && r.WorkOrder.WorkOrderCode.Contains(keyword)))
             .OrderByDescending(r => r.MaterialReturnId)
-            .Select(r => new MaterialReturnListItemDto(r.MaterialReturnId, r.ReturnCode, r.WarehouseType, r.ReturningTeamId,
+            .ToPagedAsync(r => new MaterialReturnListItemDto(r.MaterialReturnId, r.ReturnCode, r.WarehouseType, r.ReturningTeamId,
                 r.ReturningTeam.TeamCode, r.Order == null ? null : r.Order.OrderCode,
                 r.WorkOrder == null ? null : r.WorkOrder.WorkOrderCode, r.Status, r.CreatedAt,
                 r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName, r.ConfirmedAt,
-                r.MaterialReturnLines.Sum(l => l.ReturnedQty)))
-            .ToPagedAsync(query, ct);
+                r.MaterialReturnLines.Sum(l => l.ReturnedQty)), query, ct);
         return Result<PagedResult<MaterialReturnListItemDto>>.Success(page);
     }
 
@@ -235,10 +236,23 @@ public sealed class MaterialReturnService : IMaterialReturnService
             ret.ConfirmedBy = employeeId;
             ret.ConfirmedAt = _clock.Now;
             await _notifier.NotifyTeamLeadersAsync(ret.ReturningTeamId, new NotificationMessage(NotificationSources.Warehouse,
-                "Kho đã nhận hàng trả", $"Thủ kho đã xác nhận phiếu trả {ret.ReturnCode}.", "/warehouse/material-returns"), ct);
+                "Kho đã nhận hàng trả", $"Thủ kho đã xác nhận phiếu trả {ret.ReturnCode}.", ReturnLink), ct);
+            await NotifyShortfallAsync(ret, ct);
             await _uow.SaveChangesAsync();
             return Result.Success(WarehouseMessages.ReturnConfirmed);
         });
+
+    /// <summary>Kho nhận ít hơn tổ trả: báo tổ trả số trả, số nhận và lý do (DEV-ALL-196).</summary>
+    private async Task NotifyShortfallAsync(MaterialReturn ret, CancellationToken ct)
+    {
+        var reduced = ret.MaterialReturnLines.Where(l => l.ConfirmedQty < l.ReturnedQty).ToList();
+        if (reduced.Count == 0) return;
+        var labels = await ShortfallNotice.LoadLabelsAsync(_uow, reduced.Select(l => l.OrderLineId), reduced.Select(l => l.MaterialId), ct);
+        var text = ShortfallNotice.Build($"Phiếu trả {ret.ReturnCode}",
+            reduced.Select(l => new ShortfallLine(labels.Of(l.OrderLineId, l.MaterialId), l.ReturnedQty, l.ConfirmedQty ?? 0, l.DiscrepancyReason)));
+        await _notifier.NotifyTeamLeadersAsync(ret.ReturningTeamId, new NotificationMessage(NotificationSources.Warehouse,
+            ShortfallNotice.Title, text!, $"{ReturnLink}?id={ret.MaterialReturnId}", nameof(MaterialReturn), ret.MaterialReturnId), ct);
+    }
 
     private static StockKey StockKeyOf(string warehouseType, MaterialReturnLine line) =>
         warehouseType == WarehouseTypes.SemiFinished
@@ -275,7 +289,7 @@ public sealed class MaterialReturnService : IMaterialReturnService
         ret.ConfirmedBy = employeeId;
         ret.ConfirmedAt = _clock.Now;
         await _notifier.NotifyTeamLeadersAsync(ret.ReturningTeamId, new NotificationMessage(NotificationSources.Warehouse,
-            "Phiếu trả bị từ chối", $"Thủ kho từ chối phiếu trả {ret.ReturnCode}: {ret.RejectReason}", "/warehouse/material-returns"), ct);
+            "Phiếu trả bị từ chối", $"Thủ kho từ chối phiếu trả {ret.ReturnCode}: {ret.RejectReason}", ReturnLink), ct);
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.ReturnRejected);
     }

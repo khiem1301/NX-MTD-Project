@@ -180,10 +180,10 @@ public sealed class StockRepository : IStockRepository
                       && (query.OrderScope != MaterialOrderScopes.NoOrder
                           || !_context.OrderMaterials.Any(o => o.MaterialId == b.MaterialId))
                 orderby m.MaterialCode, m.Color
-                select new StockBalanceDto(b.WarehouseType, m.MaterialId, m.MaterialCode, m.MaterialName,
-                    m.MaterialType, m.Unit, m.Color, null, null, null, null, null, null,
-                    b.OnHandQty ?? 0, b.ReservedQty ?? 0, b.AvailableQty ?? 0, null, null);
-        return q.ToPagedAsync(query, ct);
+                select new { b, m };
+        return q.ToPagedAsync(x => new StockBalanceDto(x.b.WarehouseType, x.m.MaterialId, x.m.MaterialCode, x.m.MaterialName,
+            x.m.MaterialType, x.m.Unit, x.m.Color, null, null, null, null, null, null,
+            x.b.OnHandQty ?? 0, x.b.ReservedQty ?? 0, x.b.AvailableQty ?? 0, null, null), query, ct);
     }
 
     private Task<PagedResult<StockBalanceDto>> PieceBalances(StockBalanceQuery query, CancellationToken ct)
@@ -201,11 +201,12 @@ public sealed class StockRepository : IStockRepository
                       && (string.IsNullOrEmpty(query.SizeCode) || l.ProductVariant.SizeCode == query.SizeCode)
                 orderby l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode,
                     c.ProductComponentId
-                select new StockBalanceDto(b.WarehouseType, null, null, null, null, null, null, l.OrderLineId,
-                    l.OrderId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode,
-                    b.OnHandQty ?? 0, b.ReservedQty ?? 0, b.AvailableQty ?? 0, b.ProductComponentMaterialId,
-                    pcm == null ? null : c.ComponentName + " – " + pcm.Material.MaterialName + (pcm.Material.Color == "" ? "" : " " + pcm.Material.Color));
-        return q.ToPagedAsync(query, ct);
+                select new { b, l, pcm, c };
+        return q.ToPagedAsync(x => new StockBalanceDto(x.b.WarehouseType, null, null, null, null, null, null, x.l.OrderLineId,
+            x.l.OrderId, x.l.Order.OrderCode, x.l.ProductVariant.Product.ProductCode, x.l.ProductVariant.ProductColor.Color, x.l.ProductVariant.SizeCode,
+            x.b.OnHandQty ?? 0, x.b.ReservedQty ?? 0, x.b.AvailableQty ?? 0, x.b.ProductComponentMaterialId,
+            x.pcm == null ? null : x.c.ComponentName + " – " + x.pcm.Material.MaterialName + (x.pcm.Material.Color == "" ? "" : " " + x.pcm.Material.Color)),
+            query, ct);
     }
 
     public async Task<PagedResult<NxtSummaryDto>> GetNxtSummaryAsync(NxtReportQuery query, CancellationToken ct)
@@ -246,7 +247,7 @@ public sealed class StockRepository : IStockRepository
             .ToList();
 
         var total = rows.Count;
-        var page = rows.Skip(query.Skip).Take(query.SafePageSize).ToList();
+        var page = SortableSelect.OrderInMemory(rows, query.SortBy, query.Desc).Skip(query.Skip).Take(query.SafePageSize).ToList();
         return new PagedResult<NxtSummaryDto>(page, query.SafePage, query.SafePageSize, total);
     }
 

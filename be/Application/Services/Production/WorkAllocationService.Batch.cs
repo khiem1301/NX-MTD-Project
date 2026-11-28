@@ -9,7 +9,7 @@ namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// DEV-ALL-126: công nhân xác nhận nhiều phiếu giao việc một lần. Mỗi phiếu qua đúng các kiểm tra của xác nhận từng phiếu
-/// (của mình, đang chờ, số trong khoảng, lệch số phải có lý do, khóa theo tổ × dòng đơn); một phiếu lỗi thì không lưu phiếu nào.
+/// (của mình, đang chờ, khóa theo tổ × dòng đơn); công nhân chỉ xác nhận số tổ trưởng giao là đúng (DEV-ALL-198), một phiếu lỗi thì không lưu phiếu nào.
 /// Tổ trưởng / tổ phó nhận một thông báo gộp thay vì một thông báo mỗi phiếu.
 /// </summary>
 public sealed partial class WorkAllocationService
@@ -18,12 +18,11 @@ public sealed partial class WorkAllocationService
         _uow.InTransactionAsync(async () =>
         {
             var confirmed = new List<WorkAllocation>();
-            foreach (var item in dto.Items)
+            foreach (var id in dto.WorkAllocationIds)
             {
-                var (allocation, failure) = await LoadPendingAsync(item.WorkAllocationId, m => m.WorkerId == workerId, ct);
-                if (allocation is null) return LineFailure($"#{item.WorkAllocationId}", failure!);
-                var result = await ApplyConfirmAsync(allocation, item.ConfirmedQty, item.DiscrepancyReason,
-                    ConfirmModes.Worker, null, ct);
+                var (allocation, failure) = await LoadPendingAsync(id, m => m.WorkerId == workerId, ct);
+                if (allocation is null) return LineFailure($"#{id}", failure!);
+                var result = await ApplyConfirmAsync(allocation, ConfirmModes.Worker, null, ct);
                 if (!result.IsSuccess) return LineFailure(allocation.Operation.OperationName, result);
                 AuditDecision(allocation);
                 confirmed.Add(allocation);
@@ -34,7 +33,7 @@ public sealed partial class WorkAllocationService
         });
 
     /// <summary>DEV-ALL-182: tổ trưởng xác nhận hộ cả công nhân - mọi phiếu đang chờ của công nhân trong tổ, mỗi phiếu đủ số, cùng một lý do.</summary>
-    public Task<Result> ConfirmWorkerOnBehalfAsync(int workerId, ConfirmWorkerOnBehalfDto dto, int teamId, CancellationToken ct) =>
+    public Task<Result> ConfirmWorkerOnBehalfAsync(int workerId, ConfirmOnBehalfDto dto, int teamId, CancellationToken ct) =>
         _uow.InTransactionAsync(async () =>
         {
             var ids = await Allocations.Where(m => m.WorkerId == workerId && m.SewingTeamId == teamId && m.Status == HandoverStatuses.Pending)
@@ -47,7 +46,7 @@ public sealed partial class WorkAllocationService
             {
                 var (allocation, failure) = await LoadPendingAsync(id, m => m.SewingTeamId == teamId, ct);
                 if (allocation is null) return LineFailure($"#{id}", failure!);
-                var result = await ApplyConfirmAsync(allocation, allocation.Quantity, null, ConfirmModes.OnBehalf, reason, ct);
+                var result = await ApplyConfirmAsync(allocation, ConfirmModes.OnBehalf, reason, ct);
                 if (!result.IsSuccess) return LineFailure(allocation.Operation.OperationName, result);
                 AuditDecision(allocation);
                 confirmed++;

@@ -31,7 +31,6 @@ export function PaymentAmountFields({ order, form, closedShort }: Props) {
       <Form.Item
         name="paidAmount"
         label={text.amount}
-        validateTrigger="onSubmit"
         rules={[
           { required: true, type: 'number', min: 0.01, message: text.amountRequired },
           {

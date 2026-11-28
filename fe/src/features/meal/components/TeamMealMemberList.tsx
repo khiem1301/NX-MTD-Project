@@ -1,5 +1,6 @@
 import { Alert, Button, Checkbox, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { CARD_TABLE_CLASS, withCardLabels } from '@/components/common/cardTable';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDateTime } from '@/utils/format';
 import { MEAL_TEXT } from '../constants';
@@ -99,7 +100,8 @@ export function TeamMealMemberList({ date, members, suggestion }: Props) {
 
       <Table
         rowKey="employeeId"
-        columns={columns}
+        className={CARD_TABLE_CLASS}
+        columns={withCardLabels(columns)}
         dataSource={members.members}
         pagination={false}
         size="middle"

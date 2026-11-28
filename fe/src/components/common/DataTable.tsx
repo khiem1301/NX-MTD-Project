@@ -4,6 +4,14 @@ import type { TablePaginationConfig, TableProps } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 import { fill } from '@/utils/format';
+import {
+  TABLE_SORT,
+  toServerSort,
+  withDefaultSorter,
+  withServerSorter,
+  type SortablePagination,
+} from '@/utils/tableSort';
+import { CARD_TABLE_CLASS, withCardLabels } from './cardTable';
 import { PageSizeSelect } from './PageSizeSelect';
 
 type Columns<T> = NonNullable<TableProps<T>['columns']>;
@@ -48,16 +56,25 @@ const usePaging = (pagination: TablePaginationConfig | undefined) => {
 /**
  * Bảng dữ liệu dùng chung: cỡ nhỏ, cuộn ngang khi màn hẹp, cột "Thao tác" ghim phải, phân trang có tổng số dòng
  * và ô chọn số dòng mỗi trang ở góc trên bên phải. Mọi thuộc tính của antd Table vẫn truyền được và ghi đè mặc định.
+ * Cột có `dataIndex` bấm tiêu đề để sắp xếp: bảng phân trang ở máy chủ (`useTableQuery.pagination`) sắp ở máy chủ trên toàn bộ dữ liệu,
+ * bảng khác sắp trong các dòng đang có. Khai báo `sorter` riêng hoặc `sorter: false` ở cột để đổi.
  * Dùng `DataTable.Summary` cho dòng tổng. Text khi trống lấy từ ConfigProvider (app/providers.tsx).
  */
 export function DataTable<T extends object>({
   columns,
   pagination,
   title,
+  className,
+  onChange,
   ...props
 }: TableProps<T>) {
   const paging = usePaging(pagination === false ? undefined : pagination);
   const paged = pagination !== false;
+  const serverSort = paged
+    ? (pagination as SortablePagination | undefined)?.[TABLE_SORT]
+    : undefined;
+  const isAction = (col: Columns<T>[number]) => isActionColumn(col as Columns<object>[number]);
+  const prepared = withActionColumn(columns);
   const header = paged
     ? (rows: readonly T[]) => (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '0 -8px' }}>
@@ -70,7 +87,16 @@ export function DataTable<T extends object>({
     <Table<T>
       size="small"
       scroll={{ x: 'max-content' }}
-      columns={withActionColumn(columns)}
+      className={className ? `${CARD_TABLE_CLASS} ${className}` : CARD_TABLE_CLASS}
+      columns={withCardLabels(
+        serverSort
+          ? withServerSorter(prepared, serverSort.sort, isAction)
+          : withDefaultSorter(prepared, isAction),
+      )}
+      onChange={(next, filters, sorter, extra) => {
+        if (serverSort && extra.action === 'sort') serverSort.onChange(toServerSort(sorter));
+        onChange?.(next, filters, sorter, extra);
+      }}
       pagination={paged ? paging.config : false}
       title={header}
       {...props}

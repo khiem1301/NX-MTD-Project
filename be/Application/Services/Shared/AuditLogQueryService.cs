@@ -28,9 +28,8 @@ public sealed class AuditLogQueryService : IAuditLogQueryService
             .Where(a => string.IsNullOrEmpty(keyword) || (a.Reason != null && a.Reason.Contains(keyword))
                         || (a.ChangedByNavigation != null && a.ChangedByNavigation.FullName.Contains(keyword)))
             .OrderByDescending(a => a.AuditLogId)
-            .Select(a => new AuditLogRowDto(a.AuditLogId, a.TableName, a.RecordId, a.Action, a.OldValues, a.NewValues, a.Reason, a.ChangedBy,
-                a.ChangedByNavigation == null ? null : a.ChangedByNavigation.FullName, a.ChangedAt, a.Summary))
-            .ToPagedAsync(q, ct);
+            .ToPagedAsync(a => new AuditLogRowDto(a.AuditLogId, a.TableName, a.RecordId, a.Action, a.OldValues, a.NewValues, a.Reason, a.ChangedBy,
+                a.ChangedByNavigation == null ? null : a.ChangedByNavigation.FullName, a.ChangedAt, a.Summary), q, ct);
         return Result<PagedResult<AuditLogRowDto>>.Success(page);
     }
 

@@ -34,8 +34,7 @@ public sealed class MaterialService : IMaterialService
             .Where(m => string.IsNullOrEmpty(query.MaterialType) || m.MaterialType == query.MaterialType)
             .Where(m => string.IsNullOrEmpty(query.Status) || m.Status == query.Status)
             .OrderBy(m => m.MaterialCode)
-            .Select(ToDto)
-            .ToPagedAsync(query, ct);
+            .ToPagedAsync(ToDto, query, ct);
         return Result<PagedResult<MaterialDto>>.Success(page);
     }
 

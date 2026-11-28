@@ -11,6 +11,9 @@ import { buildNavigation, findActiveLeaf } from './menuModel';
 import { SideMenu } from './SideMenu';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Brand } from './Brand';
+import { isWorkshopRole, MOBILE_QUERY, mobileShortcuts } from './mobileNav';
+import { MobileTabBar } from './MobileTabBar';
+import { useWorkshopMobile } from '@/hooks/useWorkshopMobile';
 import './layout.css';
 
 const COLLAPSED_KEY = 'nxmtd.sider.collapsed';
@@ -58,6 +61,7 @@ export function MainLayout() {
     [role, teamType],
   );
   const active = findActiveLeaf(location.pathname, nav.leaves);
+  const isWorkshopMobile = useWorkshopMobile(isWorkshopRole(role), MOBILE_QUERY);
 
   useEffect(() => {
     document.title = active ? `${active.label} · NX-MTD` : 'NX-MTD';
@@ -136,6 +140,14 @@ export function MainLayout() {
         <Layout.Content className="app-content">
           <Outlet />
         </Layout.Content>
+        {isWorkshopMobile && (
+          <MobileTabBar
+            shortcuts={mobileShortcuts(role, nav.leaves)}
+            activePath={active?.path}
+            onNavigate={go}
+            onOpenMenu={() => setDrawerOpen(true)}
+          />
+        )}
       </Layout>
     </Layout>
   );

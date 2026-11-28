@@ -37,8 +37,7 @@ public sealed class CuttingLayService : ICuttingLayService
             .Where(l => query.WorkDate == null || l.WorkDate == query.WorkDate)
             .Where(l => string.IsNullOrEmpty(query.Status) || l.Status == query.Status)
             .OrderByDescending(l => l.WorkDate).ThenByDescending(l => l.CuttingLayId)
-            .Select(ToDto())
-            .ToPagedAsync(query, ct);
+            .ToPagedAsync(ToDto(), query, ct);
         return Result<PagedResult<CuttingLayDto>>.Success(page with { Items = page.Items.Select(WithSizeSummary).ToList() });
     }
 

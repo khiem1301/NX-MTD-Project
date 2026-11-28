@@ -51,7 +51,7 @@ public sealed class DefectService : IDefectService
         var keyword = query.Keyword?.Trim();
         var status = string.IsNullOrWhiteSpace(query.Status) ? null : CodeText.ToCode(query.Status);
         var type = string.IsNullOrWhiteSpace(query.DefectType) ? null : CodeText.ToCode(query.DefectType);
-        var page = await Project(Defects.AsNoTracking()
+        var page = await Defects.AsNoTracking()
                 .Where(d => teamId == null || d.SewingTeamId == teamId)
                 // Quản đốc lọc theo tổ; tổ trưởng đã bị giới hạn ở tổ mình ở trên.
                 .Where(d => teamId != null || query.SewingTeamId == null || d.SewingTeamId == query.SewingTeamId)
@@ -66,8 +66,8 @@ public sealed class DefectService : IDefectService
                             || d.OrderLine.ProductVariant.Product.ProductCode.Contains(keyword)
                             || d.SewingTeam.TeamCode.Contains(keyword)
                             || d.OrderLine.Order.OrderCode.Contains(keyword))
-                .OrderByDescending(d => d.WorkDate).ThenByDescending(d => d.DefectRecordId))
-            .ToPagedAsync(query, ct);
+                .OrderByDescending(d => d.WorkDate).ThenByDescending(d => d.DefectRecordId)
+            .ToPagedAsync(DefectProjection, query, ct);
         return Result<PagedResult<DefectDto>>.Success(page with { Items = page.Items.Select(Finish).ToList() });
     }
 
@@ -423,14 +423,16 @@ public sealed class DefectService : IDefectService
         return $"{prefix}{max + 1:000}";
     }
 
-    private static IQueryable<DefectDto> Project(IQueryable<DefectRecord> source) => source.Select(d => new DefectDto(
+    private static readonly System.Linq.Expressions.Expression<Func<DefectRecord, DefectDto>> DefectProjection = d => new DefectDto(
         d.DefectRecordId, d.DefectCode, d.WorkDate, d.ShiftCode, d.SewingTeamId, d.OrderLineId, d.OrderLine.Order.OrderCode,
         d.OrderLine.ProductVariant.Product.ProductCode, d.OperationId, d.Operation.OperationCode, d.Operation.OperationName,
         d.ResponsibleWorkerId, d.ResponsibleWorker.FullName, d.DefectType, d.Quantity, d.DefectReasonCode, d.ReasonNote,
         d.PieceRate == null ? (decimal?)null : d.PieceRate.Rate, d.WorkerNotifiedAt, d.EditDeadline, d.Status, d.RecordedAt,
         false, d.RowVer, d.OrderLine.OrderId,
         d.Request == null ? (int?)null : d.Request.RequestId, d.Request == null ? null : d.Request.RequestCode,
-        d.Request == null ? null : d.Request.Status, d.SewingTeam.TeamCode, d.UpdatedAt));
+        d.Request == null ? null : d.Request.Status, d.SewingTeam.TeamCode, d.UpdatedAt);
+
+    private static IQueryable<DefectDto> Project(IQueryable<DefectRecord> source) => source.Select(DefectProjection);
 
     /// <summary>
     /// Đổi mã DB sang PascalCase; hạn sửa của tổ trưởng luôn là lúc lập + 24 giờ (kể cả phiếu cũ); CanEdit = còn hiệu lực và còn

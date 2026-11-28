@@ -6,10 +6,8 @@ import { LEADER_BASE, pieceMovementApi, WORKER_BASE } from '../api/pieceMovement
 import { PM_MESSAGES } from '../constants';
 import type {
   AllocationQuery,
-  ConfirmAllocationPayload,
   ConfirmBatchPayload,
   ConfirmOnBehalfPayload,
-  ConfirmWorkerOnBehalfPayload,
   SaveDailyPayload,
 } from '../types';
 
@@ -61,26 +59,18 @@ export const useSaveDaily = () =>
     successMessage: PM_MESSAGES.dailySaved,
   });
 
-export const useConfirmOnBehalf = () =>
-  useApiMutation(
-    ({ id, body }: { id: number; body: ConfirmOnBehalfPayload }) =>
-      pieceMovementApi.confirmOnBehalf(id, body),
-    { invalidate: AFFECTED, successMessage: PM_MESSAGES.confirmed },
-  );
-
 export const useConfirmWorkerOnBehalf = () =>
   useApiMutation(
-    ({ workerId, body }: { workerId: number; body: ConfirmWorkerOnBehalfPayload }) =>
+    ({ workerId, body }: { workerId: number; body: ConfirmOnBehalfPayload }) =>
       pieceMovementApi.confirmWorkerOnBehalf(workerId, body),
     { invalidate: AFFECTED, successMessage: PM_MESSAGES.confirmed },
   );
 
 export const useConfirmByWorker = () =>
-  useApiMutation(
-    ({ id, body }: { id: number; body: ConfirmAllocationPayload }) =>
-      pieceMovementApi.confirmByWorker(id, body),
-    { invalidate: AFFECTED, successMessage: PM_MESSAGES.confirmed },
-  );
+  useApiMutation((id: number) => pieceMovementApi.confirmByWorker(id), {
+    invalidate: AFFECTED,
+    successMessage: PM_MESSAGES.confirmed,
+  });
 
 export const useConfirmBatchByWorker = () =>
   useApiMutation((body: ConfirmBatchPayload) => pieceMovementApi.confirmBatchByWorker(body), {

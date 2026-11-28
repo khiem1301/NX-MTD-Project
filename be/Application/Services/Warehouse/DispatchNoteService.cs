@@ -48,10 +48,9 @@ public sealed class DispatchNoteService : IDispatchNoteService
             .Where(d => string.IsNullOrEmpty(keyword) || d.DispatchCode.Contains(keyword)
                         || d.Order.OrderCode.Contains(keyword) || d.Order.Customer.CustomerName.Contains(keyword))
             .OrderByDescending(d => d.DispatchNoteId)
-            .Select(d => new DispatchNoteListItemDto(d.DispatchNoteId, d.DispatchCode, d.OrderId, d.Order.OrderCode,
+            .ToPagedAsync(d => new DispatchNoteListItemDto(d.DispatchNoteId, d.DispatchCode, d.OrderId, d.Order.OrderCode,
                 d.Order.Customer.CustomerName, d.DeliveryDate, d.Status, d.CreatedAt,
-                d.DispatchNoteLines.Sum(l => l.IssueQty)))
-            .ToPagedAsync(query, ct);
+                d.DispatchNoteLines.Sum(l => l.IssueQty)), query, ct);
         return Result<PagedResult<DispatchNoteListItemDto>>.Success(page);
     }
 
