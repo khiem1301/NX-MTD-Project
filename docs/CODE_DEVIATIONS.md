@@ -239,6 +239,13 @@
 | DEV-ALL-191 | 27/11/2026 | AI theo yêu cầu của người dùng | UC19 (lệnh cắt), `WorkOrderService.CreateAsync` | Lập lệnh cắt thường khi thiếu vải chỉ cảnh báo, không chặn lưu | Mở |
 | DEV-ALL-192 | 27/11/2026 | AI theo yêu cầu của người dùng | UC09, UC10, `ExcelBundleService`, `MaterialSheetChecker`, `ImportTemplateService`, form đơn hàng | File Excel có thêm sheet NVL (đủ thông tin NVL) nhập cùng; mã trùng hệ thống mà khác thông tin thì báo lỗi; form đơn đổi thứ tự NVL của đơn lên trước Bìa của đơn, NVL của đơn bắt buộc khi tạo đơn mới | Mở |
 | DEV-ALL-193 | 27/11/2026 | AI theo yêu cầu của người dùng | UC09, UC10, form đơn hàng, `ExcelBundleService`, `MaterialSheetChecker` | Tạo mã hàng trên form đơn kiểm cả NVL đã nhập ở NVL của đơn (chưa lưu); khi Lưu đơn tạo NVL mới trước rồi mới nhập định mức | Mở |
+| DEV-ALL-194 | 28/11/2026 | AI theo yêu cầu của người dùng | UC xuất hàng (phiếu xuất), sổ xe | Km lúc đi (xuất hàng) và km đầu (ghi chuyến mới) không điền sẵn nữa, km cuối chuyến trước hiện thành gợi ý dưới ô | Mở |
+| DEV-ALL-195 | 28/11/2026 | AI theo yêu cầu của người dùng | Màn của công nhân, tổ trưởng / tổ phó, QA/QC, cơ điện | Giao diện điện thoại: thanh lối tắt đáy màn, bảng dạng thẻ, hộp thoại toàn màn hình, nút và ô nhập to | Mở |
+| DEV-ALL-196 | 28/11/2026 | AI theo yêu cầu của người dùng | UC53, UC42, bàn giao BTP / thành phẩm, phiếu cấp | Xác nhận số nhận thấp hơn số gửi (kèm lý do) thì báo người gửi, thông báo mở thẳng phiếu | Mở |
+| DEV-ALL-197 | 28/11/2026 | AI theo yêu cầu của người dùng | Mọi danh sách phân trang | Bấm tiêu đề cột để sắp xếp: danh sách phân trang ở máy chủ sắp phía máy chủ trên toàn bộ dữ liệu (`sortBy`, `sortDir`) | Mở |
+| DEV-ALL-198 | 29/11/2026 | AI theo yêu cầu của người dùng | UC60, UC54, `WorkAllocation` | Công nhân chỉ xác nhận số tổ trưởng giao là đúng (không nhập lại số nhận); không đúng thì từ chối kèm lý do. Lỗi nhập hiện ngay dưới ô khi gõ | Mở |
+| DEV-ALL-199 | 29/11/2026 | AI theo yêu cầu của người dùng | UC36, báo cáo kế toán | Sheet CongTangCa và bảng công trên web: bỏ giờ tăng ca, thêm bậc thợ, sản lượng, số lượng lỗi (xem thêm DEV-ALL-200) | Mở |
+| DEV-ALL-200 | 29/11/2026 | AI theo yêu cầu của người dùng | UC36, báo cáo kế toán, `OutputRecord`, `PieceRate` | Báo cáo công: sản lượng chia theo công đoạn nhân đơn giá theo thời điểm; file Excel mỗi tổ một sheet | Mở |
 
 ---
 
@@ -3641,4 +3648,81 @@
 - **Lý do:** người dùng yêu cầu.
 - **Ảnh hưởng người khác:** Khiêm (mã hàng, định mức); Thái (NVL của đơn).
 - **Cần sửa trong tài liệu:** có (UC09: tạo mã hàng trên form đơn).
+- **Trạng thái:** Mở
+
+### DEV-ALL-194 · Km lúc đi chỉ gợi ý dưới ô, không điền sẵn
+
+- **Ngày / Người / Task / PR:** 28/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC35; FE `ExportDispatchModal`, `TripStartModal` (Sổ xe, Ghi chuyến mới). Không đổi BE, DB.
+- **Tài liệu gốc ghi:** DEV-ALL-127: chọn xe thì ô km lúc đi điền sẵn km cuối chuyến trước.
+- **Code đang làm:** ô km lúc đi để trống; km cuối chuyến trước (lấy từ DB) hiện thành chữ xám dưới ô "Km cuối chuyến trước: ...", luôn thấy (không cần rê chuột như gợi ý khác). Thủ kho phải tự nhập, vẫn bắt buộc. Đổi xe thì xóa số đã gõ. Ô km đầu ở Sổ xe > Ghi chuyến mới (trước đây cũng điền sẵn km hiện tại của xe) làm giống vậy.
+- **Lý do:** người dùng yêu cầu.
+- **Ảnh hưởng người khác:** Thái (xuất hàng); Thảo (sổ xe).
+- **Cần sửa trong tài liệu:** có (luồng xuất hàng bằng xe công ty).
+- **Trạng thái:** Mở
+
+### DEV-ALL-195 · Giao diện điện thoại cho vai trò xưởng
+
+- **Ngày / Người / Task / PR:** 28/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** FE `MainLayout`, `MobileTabBar`, `mobileNav`, `useWorkshopMobile`, `DataTable`, `cardTable`, `TableToolbar`, `NotificationBell`, `styles/workshop-mobile.css`, bảng ở `TeamMealMemberList`, `WorkerSlipsTable`, `ConfirmBatchModal`, `ConfirmWorkerOnBehalfModal`. Không đổi BE, DB.
+- **Tài liệu gốc ghi:** Coding Rules 4.9: dùng được trên màn ≥ 1280px, màn thao tác tại xưởng dùng được trên tablet; DEV-KI-14-1: làm gọn từng màn xưởng cho điện thoại.
+- **Code đang làm:** với Worker, TeamLeader, TeamDeputy, QaQc, Electrician trên màn rộng tối đa 767px: (1) thanh lối tắt ở đáy màn gồm Trang chủ, tối đa 3 việc hay làm theo vai trò (lọc theo quyền và loại tổ) và Menu; (2) bảng xếp thành thẻ, mỗi ô một hàng "tên cột — giá trị", không cuộn ngang; (3) hộp thoại (trừ hộp xác nhận) chiếm cả màn, nút ở đáy; (4) nút, ô nhập cao tối thiểu 40px, chữ trong ô 16px; bộ lọc mỗi mục một dòng. Vai trò khác và màn rộng hơn giữ nguyên. Riêng màn Giao sản lượng theo ngày: ô mã hàng, màu - size chỉ hiện khi đã chọn đơn; ô tìm, tình trạng việc (đổi thành nút bấm một chạm, nhãn "Chưa giao" / "Đã giao") và bảng công nhân chỉ hiện khi đã chọn dòng đơn; nút ở dòng công nhân có chữ "Giao việc" (không được giao, VD ngày đã qua: "Xem"); trên điện thoại thẻ công nhân xếp số liệu 3 cột, ẩn tiêu đề lặp. Áp dụng chung cho các màn khác của vai trò xưởng trên điện thoại: hàng bộ lọc mỗi mục một dòng; nút chỉ có biểu tượng ở dòng bảng hiện thêm tên thao tác; trang chỉ có một thẻ thì ẩn tiêu đề lặp, nút chính rộng hết màn. Màn Sản lượng cuối ca: tình trạng nhập đổi từ ô chọn thành nút bấm một chạm (cả máy tính), thẻ công nhân gọn như màn giao theo ngày.
+- **Lý do:** người dùng yêu cầu giao diện điện thoại dễ dùng hơn.
+- **Ảnh hưởng người khác:** mọi luồng có màn cho các vai trò trên (bảng mới nên dùng `DataTable`, hoặc `CARD_TABLE_CLASS` + `withCardLabels`).
+- **Cần sửa trong tài liệu:** có (mô tả giao diện mobile, ảnh màn hình).
+- **Trạng thái:** Mở
+
+### DEV-ALL-196 · Báo người gửi khi xác nhận số nhận thấp hơn số gửi
+
+- **Ngày / Người / Task / PR:** 28/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** BE `ShortfallNotice` (mới), `WorkAllocationService`, `CutHandoverService`, `FgHandoverService`, `MaterialIssueService`, `MaterialReturnService`; FE `useViewingId` và 4 màn phiếu (bàn giao BTP, bàn giao thành phẩm, phiếu cấp, phiếu trả). Không đổi DB.
+- **Tài liệu gốc ghi:** các luồng xác nhận đã bắt buộc nhập lý do khi số nhận khác số gửi, nhưng không có thông báo riêng cho người gửi.
+- **Code đang làm:** người nhận xác nhận ít hơn số gửi thì người gửi nhận thông báo "Số nhận thấp hơn số gửi" ghi từng dòng bị giảm (gửi, nhận, lý do). Người nhận thông báo: công nhân xác nhận → tổ trưởng / tổ phó tổ may; Thủ kho nhận BTP → tổ trưởng / tổ phó tổ cắt; Thủ kho nhận thành phẩm → QA/QC lập phiếu; tổ nhận phiếu cấp → người lập phiếu (Thủ kho); Thủ kho nhận phiếu trả → tổ trưởng / tổ phó tổ trả. Bàn giao BTP, thành phẩm, phiếu cấp, phiếu trả: bấm thông báo mở thẳng phiếu (`?id=`), chi tiết phiếu đã có cột số nhận và lý do lệch. Giao việc cho công nhân: thông báo mở màn Giao sản lượng. Không thông báo khi tổ trưởng xác nhận hộ công nhân.
+- **Lý do:** người dùng yêu cầu người gửi biết số bị giảm và xem lại được.
+- **Ảnh hưởng người khác:** Thái (kho, cắt), Minh (giao việc, sản lượng), Kiều (QA/QC).
+- **Cần sửa trong tài liệu:** có (các UC xác nhận bàn giao, phiếu cấp, phiếu trả, giao việc: thêm bước báo người gửi).
+- **Trạng thái:** Mở
+
+### DEV-ALL-197 · Sắp xếp theo cột phía máy chủ cho danh sách phân trang
+
+- **Ngày / Người / Task / PR:** 28/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** mọi màn danh sách phân trang. BE `SortableSelect` (mới), `QueryableExtensions.ToPagedAsync` và các service / repository gọi `ToPagedAsync` (đổi `Select(...).ToPagedAsync(query, ct)` thành `ToPagedAsync(selector, query, ct)`); FE `DataTable`, `useTableQuery`, `utils/tableSort`. Không đổi DB.
+- **Tài liệu gốc ghi:** Coding Rules 2.1: phân trang / lọc có tham số `sortBy`, `sortDir`; không nêu cột nào sắp được.
+- **Code đang làm:** bấm tiêu đề cột ở bảng thì FE gửi `sortBy` (tên cột DTO, không phân biệt hoa thường) và `sortDir` (`asc` / `desc`); BE sắp theo biểu thức tương ứng trong `Select` của danh sách trước khi phân trang, cột đầu của DTO (thường là Id) làm khóa phụ. Cột không có trong DTO, kiểu không phải số / chữ / ngày, hoặc dùng hàm EF không dịch được thì bỏ qua và giữ thứ tự mặc định. Bảng không phân trang ở máy chủ sắp trong các dòng đang có. Tồn kho (số dư và nhập - xuất - tồn, sắp trong bộ nhớ vì số liệu tính ở C#), bảng công và chấm bù cũng sắp ở máy chủ (`TimesheetQuery`, `AdjustmentQuery` thêm `SortBy`, `SortDir`); cột hiển thị ghép nhiều dữ liệu (NVL, thuộc về) sắp theo mã NVL / mã đơn. Chưa làm: chia dòng đơn cho tổ, bảng lương, thẻ trên điện thoại (không có hàng tiêu đề).
+- **Lý do:** người dùng yêu cầu sắp xếp ở phía máy chủ để thứ tự đúng trên mọi trang.
+- **Ảnh hưởng người khác:** mọi luồng có danh sách phân trang (Thái, Minh, Khiêm, Kiều, Thảo).
+- **Cần sửa trong tài liệu:** có (mô tả bảng danh sách: sắp xếp theo cột).
+- **Trạng thái:** Mở
+
+### DEV-ALL-198 · Công nhân chỉ xác nhận số được giao là đúng; lỗi nhập hiện ngay khi gõ
+
+- **Ngày / Người / Task / PR:** 29/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC60 (công nhân xác nhận việc được giao), UC54 (tổ trưởng xác nhận hộ); BE `ConfirmWorkAllocationBatchDto` (nhận danh sách Id), `ConfirmOnBehalfDto` (chỉ lý do, dùng chung cho xác nhận hộ từng phiếu và theo công nhân), bỏ `ConfirmWorkAllocationDto`, `ConfirmWorkAllocationItemDto`, `ConfirmWorkerOnBehalfDto`, endpoint `POST worker/work-allocations/{id}/confirm` không còn body; FE `MyPieceMovementsPage` (xác nhận có hộp xác nhận, bỏ `ConfirmMovementModal`, `ConfirmBatchModal`), `utils/formValidate`; các ô nhập có `validateTrigger="onSubmit"` của thanh toán đơn hàng / đơn mua. Không đổi DB (cột `ConfirmedQty`, `DiscrepancyReason` giữ nguyên; phiếu mới luôn `ConfirmedQty` = `Quantity`, không lý do lệch).
+- **Tài liệu gốc ghi:** DEV-ALL-126 / DEV-ALL-109 và UC60: công nhân đếm số thực nhận (từ 1 đến số trên phiếu), lệch số phải ghi lý do; xác nhận hàng loạt có sửa số và lý do chung.
+- **Code đang làm:** công nhân chỉ xem số tổ trưởng giao rồi bấm Xác nhận (nhận đúng số trên phiếu) hoặc Từ chối kèm lý do; xác nhận hàng loạt chỉ chọn phiếu rồi xác nhận. Tổ trưởng xác nhận hộ cũng chỉ ghi lý do. Thu hồi: xác nhận đủ số thu hồi, vượt phần công nhân còn giữ thì báo lỗi và công nhân từ chối. Thông báo "Số nhận thấp hơn số gửi" của DEV-ALL-196 không còn áp dụng cho giao việc (chỉ còn bàn giao BTP, thành phẩm, phiếu cấp, phiếu trả). Phiếu cũ đã lệch số vẫn hiện cột số xác nhận và lý do lệch ở danh sách.
+- **Lý do:** người dùng yêu cầu công nhân chỉ xác nhận số được giao có đúng hay không.
+- **Ảnh hưởng người khác:** Minh (giao việc, sản lượng), Thái (kho: các phiếu bàn giao / cấp / trả vẫn nhập số nhận như cũ).
+- **Cần sửa trong tài liệu:** có (UC60: bước công nhân xác nhận, bỏ nhập số nhận và lý do lệch; UC54; bảng test case xác nhận lệch số).
+- **Trạng thái:** Mở
+
+### DEV-ALL-199 · Báo cáo kế toán: bỏ giờ tăng ca, thêm bậc thợ, sản lượng, số lượng lỗi
+
+- **Ngày / Người / Task / PR:** 29/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC36; BE `WorkdayOvertimeRowDto`, `WorkdayOvertimeReportDto`, `IAccountingReportRepository` (`GetTimesheetRowsAsync` bỏ giờ tăng ca, thêm bậc thợ; mới `GetProductionTotalsAsync`), `AccountingReportService`, `ClosedXmlAccountingReportWriter` (sheet `CongTangCa`); FE `accounting-reports` (bảng và tab công). Không đổi DB.
+- **Tài liệu gốc ghi:** UC36: báo cáo công + tăng ca theo nhân viên trong tháng (công ngày thường, công Chủ nhật, tổng công, giờ tăng ca).
+- **Code đang làm:** bỏ cột giờ tăng ca (cả file Excel và màn web); thêm Bậc thợ (bậc hiện tại của nhân viên `Employee.CurrentGradeCode`), Sản lượng (tổng số lượng công đoạn đã báo trong tháng, `OutputRecord`), Số lượng lỗi (tổng số lượng các phiếu hàng hỏng chưa hủy mà nhân viên chịu trách nhiệm, `DefectRecord`). Tên sheet giữ `CongTangCa`; chỉ có nhân viên có công trong tháng mới có dòng. Cột Excel: Mã NV, Họ tên, Tổ, Bậc thợ, Công ngày thường, Công Chủ nhật, Tổng công, Sản lượng, Số lượng lỗi.
+- **Lý do:** người dùng yêu cầu.
+- **Ảnh hưởng người khác:** Minh (báo cáo kế toán, bảng công); Kiều (sản lượng, hàng hỏng).
+- **Cần sửa trong tài liệu:** có (UC36: nội dung báo cáo công; mô tả file Excel).
+- **Trạng thái:** Mở
+
+### DEV-ALL-200 · Báo cáo công: sản lượng theo công đoạn × đơn giá theo thời điểm, mỗi tổ một sheet
+
+- **Ngày / Người / Task / PR:** 29/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC36; BE `WorkdayOvertimeRowDto` (thêm `Operations`, `OutputAmount`), `WorkerOperationOutputDto` (mới), `WorkdayOvertimeReportDto` (thêm `TotalOutputAmount`), `IAccountingReportRepository.GetProductionTotalsAsync` (trả `EmployeeProduction`), `AccountingReportService`, `ClosedXmlAccountingReportWriter`; FE `WorkdayOvertimeTable`. Không đổi DB.
+- **Tài liệu gốc ghi:** DEV-ALL-199: sheet `CongTangCa` một sheet chung, sản lượng là tổng số lượng của cả tháng.
+- **Code đang làm:** sản lượng chia theo công đoạn; mỗi lần báo sản lượng đã gắn mức giá có hiệu lực lúc báo (`OutputRecord.PieceRateId`) nên thành tiền = Σ số lượng × đơn giá của đúng mức giá đó. Giá đổi giữa tháng thì công đoạn đó có nhiều dòng, mỗi dòng một mức giá. File Excel: mỗi tổ một sheet tên `Cong {mã tổ}` (nhân viên chưa có tổ ở sheet `Cong KhongTo`), mỗi nhân viên nhiều dòng theo công đoạn, các ô thông tin của nhân viên (mã, tên, bậc thợ, công, số lượng lỗi) gộp ô theo chiều dọc, thêm cột Tổng tiền (tổng thành tiền của nhân viên, cũng gộp ô), có dòng tổng cộng của tổ; tiền hiển thị số nguyên (có phần lẻ thì hai chữ số lẻ); các bảng trong file (công theo tổ, suất ăn, sổ xe) có viền đen mảnh ở mọi cạnh ô. Màn web: cột Thành tiền và dòng mở rộng xem từng công đoạn. Tổ lấy theo tổ hiện tại của nhân viên. Số lượng lỗi vẫn là tổng của nhân viên, chưa chia theo công đoạn, chưa nhân giá.
+- **Lý do:** người dùng yêu cầu. Lưu ý: thành tiền sản lượng chính là lương khoán tạm tính của công nhân, trong khi chú thích cũ của báo cáo này ghi không chứa lương; báo cáo chỉ Kế toán xem.
+- **Ảnh hưởng người khác:** Minh (báo cáo kế toán, lương tạm tính); Kiều (sản lượng, đơn giá công đoạn).
+- **Cần sửa trong tài liệu:** có (UC36: nội dung báo cáo công và cấu trúc file Excel).
 - **Trạng thái:** Mở

@@ -45,12 +45,12 @@ public sealed class EmployeeRepository : GenericRepository<Employee>, IEmployeeR
             query = query.Where(e => e.EmployeeCode.Contains(k) || e.FullName.Contains(k));
         }
 
-        var page = await query.OrderBy(e => e.EmployeeCode).Select(e => new
+        var page = await query.OrderBy(e => e.EmployeeCode).ToPagedAsync(e => new
         {
             e.EmployeeId, e.EmployeeCode, e.FullName, e.Role.RoleCode, e.Role.RoleName, e.TeamId,
             TeamCode = e.Team == null ? null : e.Team.TeamCode, e.PayType, e.CurrentGradeCode, e.AttendanceCode, e.Status,
             AccountStatus = e.Account == null ? null : e.Account.Status, e.StartDate,
-        }).ToPagedAsync(q, ct);
+        }, q, ct);
 
         var items = page.Items.Select(e => new EmployeeListItemDto(e.EmployeeId, e.EmployeeCode, e.FullName,
             Roles.FromRoleCode(e.RoleCode), e.RoleName, e.TeamId, e.TeamCode, CodeText.ToPascal(e.PayType), e.CurrentGradeCode,

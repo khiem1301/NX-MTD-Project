@@ -47,11 +47,10 @@ public sealed class MaterialIssueService : IMaterialIssueService
             .Where(i => query.WorkOrderId == null || i.WorkOrderId == query.WorkOrderId)
             .Where(i => string.IsNullOrEmpty(keyword) || i.IssueCode.Contains(keyword) || i.Order.OrderCode.Contains(keyword))
             .OrderByDescending(i => i.MaterialIssueId)
-            .Select(i => new MaterialIssueListItemDto(i.MaterialIssueId, i.IssueCode, i.WarehouseType, i.OrderId,
+            .ToPagedAsync(i => new MaterialIssueListItemDto(i.MaterialIssueId, i.IssueCode, i.WarehouseType, i.OrderId,
                 i.Order.OrderCode, i.WorkOrderId, i.WorkOrder == null ? null : i.WorkOrder.WorkOrderCode, i.RequestId,
                 i.ReceivingTeamId, i.ReceivingTeam.TeamCode, i.IssueDate, i.Status, i.IssuedByNavigation.FullName,
-                i.ReceivedAt, i.MaterialIssueLines.Count))
-            .ToPagedAsync(query, ct);
+                i.ReceivedAt, i.MaterialIssueLines.Count), query, ct);
         return Result<PagedResult<MaterialIssueListItemDto>>.Success(page);
     }
 
@@ -156,10 +155,23 @@ public sealed class MaterialIssueService : IMaterialIssueService
             issue.Status = IssueStatuses.Received;
             issue.ReceivedBy = employeeId;
             issue.ReceivedAt = _clock.Now;
+            await NotifyShortfallAsync(issue, ct);
             await AfterReceivedAsync(issue, ct);
             await _uow.SaveChangesAsync();
             return Result.Success(WarehouseMessages.IssueReceived);
         });
+
+    /// <summary>Tổ nhận ít hơn Thủ kho cấp: báo người lập phiếu số cấp, số nhận và lý do (DEV-ALL-196).</summary>
+    private async Task NotifyShortfallAsync(MaterialIssue issue, CancellationToken ct)
+    {
+        var reduced = issue.MaterialIssueLines.Where(l => l.ConfirmedQty < l.IssuedQty).ToList();
+        if (reduced.Count == 0) return;
+        var labels = await ShortfallNotice.LoadLabelsAsync(_uow, reduced.Select(l => l.OrderLineId), reduced.Select(l => l.MaterialId), ct);
+        var text = ShortfallNotice.Build($"Phiếu cấp {issue.IssueCode}",
+            reduced.Select(l => new ShortfallLine(labels.Of(l.OrderLineId, l.MaterialId), l.IssuedQty, l.ConfirmedQty ?? 0, l.DiscrepancyReason)));
+        _notifier.NotifyEmployees([issue.IssuedBy], new NotificationMessage(NotificationSources.Warehouse,
+            ShortfallNotice.Title, text!, $"{IssueLink}?id={issue.MaterialIssueId}", nameof(MaterialIssue), issue.MaterialIssueId));
+    }
 
     /// <summary>
     /// Tổ may phải phân công đủ trước khi nhận BTP (DEV-ALL-48): mọi công đoạn may đang dùng của các mã hàng trên phiếu đều có ít nhất

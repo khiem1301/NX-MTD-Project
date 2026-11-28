@@ -87,6 +87,8 @@ export function TimesheetView({ audience, personal = false }: Props) {
         isFetching={timesheets.isFetching}
         error={(timesheets.error as ApiError | null) ?? null}
         onPageChange={filterState.changePage}
+        sort={filterState.sort}
+        onSortChange={filterState.changeSort}
         showEmployee={!personal}
         showTeam={!personal && audience !== 'teamLeader'}
       />

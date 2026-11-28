@@ -20,7 +20,7 @@ public interface IWorkAllocationService
     Task<Result<WorkAllocationDto>> CreateAsync(CreateWorkAllocationDto dto, int teamId, CancellationToken ct);
 
     /// <summary>Công nhân tự xác nhận (UC60); lệch số phải có lý do.</summary>
-    Task<Result> ConfirmByWorkerAsync(int allocationId, ConfirmWorkAllocationDto dto, int workerId, CancellationToken ct);
+    Task<Result> ConfirmByWorkerAsync(int allocationId, int workerId, CancellationToken ct);
 
     /// <summary>DEV-ALL-126: công nhân xác nhận nhiều phiếu một lần (một transaction, lỗi một phiếu thì không lưu gì).</summary>
     Task<Result> ConfirmBatchByWorkerAsync(ConfirmWorkAllocationBatchDto dto, int workerId, CancellationToken ct);
@@ -31,7 +31,7 @@ public interface IWorkAllocationService
     Task<Result> ConfirmOnBehalfAsync(int allocationId, ConfirmOnBehalfDto dto, int teamId, CancellationToken ct);
 
     /// <summary>DEV-ALL-182: xác nhận hộ mọi phiếu đang chờ của một công nhân trong tổ, đủ số trên phiếu (một transaction).</summary>
-    Task<Result> ConfirmWorkerOnBehalfAsync(int workerId, ConfirmWorkerOnBehalfDto dto, int teamId, CancellationToken ct);
+    Task<Result> ConfirmWorkerOnBehalfAsync(int workerId, ConfirmOnBehalfDto dto, int teamId, CancellationToken ct);
 }
 
 /// <summary>DEV-ALL-101: tự xác nhận phiếu giao việc công nhân để quá hạn không xác nhận (chạy theo chu kỳ ở job nền).</summary>

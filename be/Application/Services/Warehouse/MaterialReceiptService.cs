@@ -57,13 +57,12 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
                 || (r.Order != null && r.Order.OrderCode.Contains(keyword))
                 || (r.PurchaseOrder != null && r.PurchaseOrder.PoCode.Contains(keyword)))
             .OrderByDescending(r => r.MaterialReceiptId)
-            .Select(r => new MaterialReceiptListItemDto(r.MaterialReceiptId, r.ReceiptCode,
+            .ToPagedAsync(r => new MaterialReceiptListItemDto(r.MaterialReceiptId, r.ReceiptCode,
                 r.ShortageRequestId == null ? ReceiptTypes.New : ReceiptTypes.Supplementary, r.OrderId,
                 r.Order == null ? null : r.Order.OrderCode, r.Source!, r.PurchaseOrderId,
                 r.PurchaseOrder == null ? null : r.PurchaseOrder.PoCode, r.ReceiptDate, r.Status, r.SubmittedAt,
                 r.ConfirmedAt, r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName,
-                r.MaterialReceiptLines.Count))
-            .ToPagedAsync(query, ct);
+                r.MaterialReceiptLines.Count), query, ct);
         return Result<PagedResult<MaterialReceiptListItemDto>>.Success(page);
     }
 

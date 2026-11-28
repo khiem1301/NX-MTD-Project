@@ -22,8 +22,7 @@ public sealed class CustomerRepository : GenericRepository<Customer>, ICustomerR
             q = q.Where(c => c.CustomerName.Contains(k) || (c.Phone != null && c.Phone.Contains(k)));
         }
         var page = await q.OrderBy(c => c.CustomerName).ThenBy(c => c.CustomerId)
-            .Select(c => new CustomerDto(c.CustomerId, c.CustomerName, c.Phone, c.Email, c.DefaultAddress, c.Status, c.DiscontinueReason))
-            .ToPagedAsync(query, ct);
+            .ToPagedAsync(c => new CustomerDto(c.CustomerId, c.CustomerName, c.Phone, c.Email, c.DefaultAddress, c.Status, c.DiscontinueReason), query, ct);
         return page with { Items = page.Items.Select(c => c with { Status = CodeText.ToPascal(c.Status) }).ToList() };
     }
 
@@ -52,9 +51,8 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
             query = query.Where(p => p.ProductCode.Contains(k));
         }
         var page = await query.OrderBy(p => p.ProductCode)
-            .Select(p => new { p.ProductId, p.ProductCode, p.SampleImageUrl, p.Status, IsUsed = p.ProductVariants.Any(v => v.OrderLines.Any()), p.CreatedAt,
-                ExtraImages = p.ProductImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList() })
-            .ToPagedAsync(q, ct);
+            .ToPagedAsync(p => new { p.ProductId, p.ProductCode, p.SampleImageUrl, p.Status, IsUsed = p.ProductVariants.Any(v => v.OrderLines.Any()), p.CreatedAt,
+                ExtraImages = p.ProductImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList() }, q, ct);
         var items = page.Items.Select(p => new ProductListItemDto(p.ProductId, p.ProductCode,
             p.SampleImageUrl, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, p.ExtraImages)).ToList();
         return new PagedResult<ProductListItemDto>(items, page.Page, page.PageSize, page.TotalItems);
@@ -99,7 +97,7 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
             query = query.Where(p => p.ProductCode.Contains(k));
         }
         return await query.OrderBy(p => p.ProductCode)
-            .Select(p => new ProductLookupDto(p.ProductId, p.ProductCode)).ToPagedAsync(q, ct);
+            .ToPagedAsync(p => new ProductLookupDto(p.ProductId, p.ProductCode), q, ct);
     }
 
     public async Task<IReadOnlyList<string>> ListColorsAsync(int? productId, CancellationToken ct)
@@ -153,12 +151,12 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
             _ => q.Desc ? query.OrderByDescending(o => o.DueDate).ThenByDescending(o => o.OrderId) : query.OrderBy(o => o.DueDate).ThenBy(o => o.OrderId),
         };
 
-        var page = await query.Select(o => new
+        var page = await query.ToPagedAsync(o => new
         {
             o.OrderId, o.OrderCode, o.Customer.CustomerName, o.ReceivedDate, o.DueDate, o.Status, o.MaterialStatus, IsDelayRisk = o.IsDelayRisk ?? false,
             TotalQty = o.OrderLines.Sum(l => (int?)l.OrderedQty) ?? 0,
             TotalAmount = o.OrderLines.Sum(l => (decimal?)(l.OrderedQty * l.CmtUnitPrice)) ?? 0m,
-        }).ToPagedAsync(q, ct);
+        }, q, ct);
 
         // Mã hàng của từng đơn lấy bằng 1 query phụ (string.Join trong Select không chắc dịch được sang SQL).
         var ids = page.Items.Select(o => o.OrderId).ToList();
@@ -206,8 +204,7 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
             query = query.Where(o => o.OrderCode.Contains(k) || o.Customer.CustomerName.Contains(k));
         }
         var page = await query.OrderBy(o => o.DueDate).ThenBy(o => o.OrderId)
-            .Select(o => new { o.OrderId, o.OrderCode, o.Customer.CustomerName, o.DueDate, o.Status, o.MaterialStatus })
-            .ToPagedAsync(q, ct);
+            .ToPagedAsync(o => new { o.OrderId, o.OrderCode, o.Customer.CustomerName, o.DueDate, o.Status, o.MaterialStatus }, q, ct);
         var items = page.Items.Select(o => new OrderLookupDto(o.OrderId, o.OrderCode, o.CustomerName, o.DueDate,
             CodeText.ToPascal(o.Status), CodeText.ToPascal(o.MaterialStatus))).ToList();
         return new PagedResult<OrderLookupDto>(items, page.Page, page.PageSize, page.TotalItems);

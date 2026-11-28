@@ -51,6 +51,17 @@ body {
   visibility: visible;
 }
 
+/* Gợi ý cần thấy ngay khi nhập (Form.Item mang class FORM_HINT_BELOW_CLASS): luôn hiện, là chữ xám dưới ô. */
+.form-hint-below .ant-form-item-extra {
+  position: static;
+  padding: 0;
+  background: none;
+  color: rgba(0, 0, 0, 0.55) !important;
+  font-size: 13px;
+  opacity: 1;
+  visibility: visible;
+}
+
 /*
  * Mọi ô nhập số (InputNumber) không hiện nút tăng / giảm 1: người dùng gõ số trực tiếp (phím mũi tên vẫn dùng được).
  * Cần !important vì style của antd được chèn lúc chạy, sau file này, với selector .ant-input-number .ant-input-number-handler-wrap.

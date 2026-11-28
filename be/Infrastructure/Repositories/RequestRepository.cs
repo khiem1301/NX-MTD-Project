@@ -59,7 +59,7 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
         }
 
         var page = await q.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.RequestId)
-            .Select(r => new
+            .ToPagedAsync(r => new
             {
                 r.RequestId,
                 r.RequestCode,
@@ -71,8 +71,7 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
                 TeamCode = r.CreatedByTeam == null ? null : r.CreatedByTeam.TeamCode,
                 r.CreatedAt,
                 r.DecidedAt,
-            })
-            .ToPagedAsync(f.Page, ct);
+            }, f.Page, ct);
 
         var items = page.Items.Select(r => new RequestListItemDto(r.RequestId, r.RequestCode,
             CodeText.ToPascal(r.RequestTypeCode), CodeText.ToPascal(r.Status), r.Title, r.TargetDate,

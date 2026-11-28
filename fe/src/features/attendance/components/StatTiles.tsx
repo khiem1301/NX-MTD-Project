@@ -21,7 +21,7 @@ const TONE_COLOR: Record<StatTile['tone'], string> = {
 /** Dải số liệu đầu màn hình: xem một cái là nắm được tình hình trong ngày. */
 export function StatTiles({ tiles, loading }: { tiles: StatTile[]; loading?: boolean }) {
   return (
-    <Row gutter={[16, 16]}>
+    <Row gutter={[16, 16]} className="stat-tiles">
       {tiles.map((tile) => (
         <Col key={tile.key} xs={12} md={12} lg={6}>
           <Card size="small" styles={{ body: { padding: 16 } }}>

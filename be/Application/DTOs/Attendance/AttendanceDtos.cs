@@ -61,7 +61,7 @@ public sealed record DailyTimesheetDto(
 /// <summary>Bộ lọc bảng công: khoảng ngày bắt buộc, lọc thêm theo tổ / nhân viên / chỉ dòng thiếu giờ.</summary>
 public sealed record TimesheetQuery(
     DateOnly FromDate, DateOnly ToDate, int? TeamId, int? EmployeeId, bool? OnlyMissingPunch,
-    string? Keyword, int Page = 1, int PageSize = 20);
+    string? Keyword, int Page = 1, int PageSize = 20, string? SortBy = null, string? SortDir = null);
 
 /// <summary>Tổng hợp cho thẻ số liệu đầu màn hình bảng công.</summary>
 public sealed record TimesheetSummaryDto(
@@ -82,7 +82,8 @@ public sealed record AttendanceAdjustmentDto(
 
 /// <summary>Bộ lọc danh sách chấm bù của Kế toán.</summary>
 public sealed record AdjustmentQuery(
-    DateOnly FromDate, DateOnly ToDate, int? EmployeeId, string? Keyword, int Page = 1, int PageSize = 20);
+    DateOnly FromDate, DateOnly ToDate, int? EmployeeId, string? Keyword, int Page = 1, int PageSize = 20,
+    string? SortBy = null, string? SortDir = null);
 
 // ---------- Import Excel chấm công (UC29) ----------
 

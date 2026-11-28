@@ -12,6 +12,7 @@ import { useMyEstimatedPay } from '../hooks/usePayroll';
 import type { MyEstimatedPayDay } from '../types';
 import { PageCard } from '@/components/common/PageCard';
 import { DetailModal } from '@/components/common/DetailModal';
+import { STAT_CARD_CLASS } from '@/components/common/cardTable';
 import { DataTable } from '@/components/common/DataTable';
 import { AppMonthPicker } from '@/components/common/DateInputs';
 import { DayDetail } from '../components/DayDetail';
@@ -161,8 +162,7 @@ export function MyEstimatedPayPage() {
             size="small"
             columns={columns}
             dataSource={data.days}
-            pagination={false}
-            scroll={{ x: 'max-content' }}
+            className={STAT_CARD_CLASS}
           />
         </>
       )}

@@ -35,6 +35,7 @@ export const VL_LABELS = {
   purpose: 'Mục đích',
   dispatch: 'Phiếu xuất',
   odometerStart: 'Km đầu',
+  odometerStartHint: 'Km cuối chuyến trước: {0}',
   odometerEnd: 'Km cuối',
   distance: 'Quãng đường (km)',
   fuelNormLiters: 'Định mức (lít)',

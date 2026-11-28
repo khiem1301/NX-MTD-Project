@@ -45,10 +45,9 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             .Where(p => string.IsNullOrEmpty(keyword) || p.PoCode.Contains(keyword)
                 || (p.Order != null && p.Order.OrderCode.Contains(keyword)))
             .OrderByDescending(p => p.PurchaseOrderId)
-            .Select(p => new PurchaseOrderListItemDto(p.PurchaseOrderId, p.PoCode, p.OrderId,
+            .ToPagedAsync(p => new PurchaseOrderListItemDto(p.PurchaseOrderId, p.PoCode, p.OrderId,
                 p.Order == null ? null : p.Order.OrderCode, p.Supplier == null ? null : p.Supplier.SupplierName,
-                p.GoodsStatus, p.PaymentStatus, p.CreatedAt, p.PurchaseOrderLines.Count))
-            .ToPagedAsync(query, ct);
+                p.GoodsStatus, p.PaymentStatus, p.CreatedAt, p.PurchaseOrderLines.Count), query, ct);
         return Result<PagedResult<PurchaseOrderListItemDto>>.Success(page);
     }
 

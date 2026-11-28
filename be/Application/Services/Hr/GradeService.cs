@@ -199,10 +199,9 @@ public sealed class GradeService : IGradeService
             .Where(e => query.WorkerId == null || e.WorkerId == query.WorkerId)
             .Where(e => string.IsNullOrEmpty(keyword) || e.Worker.FullName.Contains(keyword) || e.Worker.EmployeeCode.Contains(keyword))
             .OrderByDescending(e => e.GradeEvaluationId)
-            .Select(e => new GradeEvaluationDto(e.GradeEvaluationId, e.WorkerId, e.Worker.EmployeeCode, e.Worker.FullName, e.TeamId,
+            .ToPagedAsync(e => new GradeEvaluationDto(e.GradeEvaluationId, e.WorkerId, e.Worker.EmployeeCode, e.Worker.FullName, e.TeamId,
                 e.Team == null ? null : e.Team.TeamCode, e.ProposedByNavigation.FullName, e.CurrentGradeCode, e.ProposedGradeCode,
-                e.Reason, e.RecentDefectCount, e.EvaluationDate, e.Status, e.EffectiveDate, e.ConsideredAt, e.DecisionNote, e.CreatedAt))
-            .ToPagedAsync(query, ct);
+                e.Reason, e.RecentDefectCount, e.EvaluationDate, e.Status, e.EffectiveDate, e.ConsideredAt, e.DecisionNote, e.CreatedAt), query, ct);
         return Result<PagedResult<GradeEvaluationDto>>.Success(page);
     }
 

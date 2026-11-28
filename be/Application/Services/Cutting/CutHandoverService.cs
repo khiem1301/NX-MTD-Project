@@ -44,11 +44,10 @@ public sealed class CutHandoverService : ICutHandoverService
             .Where(h => string.IsNullOrEmpty(keyword) || h.HandoverCode.Contains(keyword)
                         || h.WorkOrder.WorkOrderCode.Contains(keyword) || h.WorkOrder.Order.OrderCode.Contains(keyword))
             .OrderByDescending(h => h.CutHandoverId)
-            .Select(h => new CutHandoverListItemDto(h.CutHandoverId, h.HandoverCode, h.WorkOrderId,
+            .ToPagedAsync(h => new CutHandoverListItemDto(h.CutHandoverId, h.HandoverCode, h.WorkOrderId,
                 h.WorkOrder.WorkOrderCode, h.WorkOrder.Order.OrderCode, h.WorkOrder.CuttingTeamId, h.WorkOrder.CuttingTeam.TeamCode,
                 h.HandedAt, h.Status, h.ConfirmedByNavigation == null ? null : h.ConfirmedByNavigation.FullName,
-                h.ConfirmedAt, h.CutHandoverLines.Sum(l => l.HandedQty)))
-            .ToPagedAsync(query, ct);
+                h.ConfirmedAt, h.CutHandoverLines.Sum(l => l.HandedQty)), query, ct);
         return Result<PagedResult<CutHandoverListItemDto>>.Success(page);
     }
 
@@ -182,6 +181,19 @@ public sealed class CutHandoverService : ICutHandoverService
             "BTP đã vào kho",
             $"Thủ kho đã xác nhận phiếu bàn giao {handover.HandoverCode} của lệnh {wo.WorkOrderCode}.{done} Còn vải thừa thì lập phiếu trả vải.",
             HandoverLink), ct);
+        await NotifyShortfallAsync(handover, wo.CuttingTeamId, wo.WorkOrderCode, ct);
+    }
+
+    /// <summary>Kho nhận ít hơn tổ cắt giao: báo tổ cắt số giao, số nhận và lý do (DEV-ALL-196).</summary>
+    private async Task NotifyShortfallAsync(CutHandover handover, int cuttingTeamId, string workOrderCode, CancellationToken ct)
+    {
+        var reduced = handover.CutHandoverLines.Where(l => l.ConfirmedQty < l.HandedQty).ToList();
+        if (reduced.Count == 0) return;
+        var labels = await ShortfallNotice.LoadLabelsAsync(_uow, reduced.Select(l => (int?)l.OrderLineId), [], ct);
+        var text = ShortfallNotice.Build($"Phiếu bàn giao {handover.HandoverCode} (lệnh {workOrderCode})",
+            reduced.Select(l => new ShortfallLine(labels.Of(l.OrderLineId, null), l.HandedQty, l.ConfirmedQty ?? 0, l.DiscrepancyReason)));
+        await _notifier.NotifyTeamLeadersAsync(cuttingTeamId, new NotificationMessage(NotificationSources.Warehouse,
+            ShortfallNotice.Title, text!, $"{HandoverLink}?id={handover.CutHandoverId}", nameof(CutHandover), handover.CutHandoverId), ct);
     }
 
     /// <summary>

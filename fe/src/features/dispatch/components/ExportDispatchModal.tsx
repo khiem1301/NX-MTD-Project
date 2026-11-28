@@ -1,7 +1,8 @@
 import { QtyInput } from '@/components/common/QtyInput';
+import { FORM_HINT_BELOW_CLASS } from '@/components/common/formHint';
 import { Alert, Form, Input, Modal, Radio, Select } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { fill } from '@/utils/format';
+import { fill, formatQty } from '@/utils/format';
 import {
   DELIVERY_METHOD,
   DELIVERY_METHOD_LABEL,
@@ -27,8 +28,8 @@ const METHOD_OPTIONS = Object.values(DELIVERY_METHOD).map((value) => ({
 }));
 
 /**
- * DEV-ALL-127: Thủ kho xuất hàng và chọn cách giao. Xe công ty giao thì chọn xe đang rảnh, tài xế, km lúc đi (điền sẵn km
- * cuối chuyến trước); BE tạo luôn chuyến xe đang chạy gắn phiếu. Trang chỉ render khi mở.
+ * DEV-ALL-127: Thủ kho xuất hàng và chọn cách giao. Xe công ty giao thì chọn xe đang rảnh, tài xế, km lúc đi (km cuối
+ * chuyến trước hiện thành gợi ý dưới ô để đối chiếu, Thủ kho tự nhập số trên đồng hồ); BE tạo luôn chuyến xe đang chạy gắn phiếu. Trang chỉ render khi mở.
  */
 export function ExportDispatchModal({ note, onClose, onDone }: Props) {
   const [form] = Form.useForm<FormValues>();
@@ -56,10 +57,8 @@ export function ExportDispatchModal({ note, onClose, onDone }: Props) {
     );
   };
 
-  const selectVehicle = (id: number) => {
-    const picked = vehicles.data?.find((v) => v.vehicleId === id);
-    form.setFieldValue('odometerStart', picked?.lastOdometer ?? null);
-  };
+  // Đổi xe thì bỏ số đã gõ: số đó là của đồng hồ xe trước.
+  const clearOdometer = () => form.setFieldValue('odometerStart', null);
 
   return (
     <Modal
@@ -99,7 +98,7 @@ export function ExportDispatchModal({ note, onClose, onDone }: Props) {
               <Select
                 placeholder={DISPATCH_LABELS.vehiclePlaceholder}
                 loading={vehicles.isFetching}
-                onChange={selectVehicle}
+                onChange={clearOdometer}
                 options={vehicles.data?.map((v) => ({
                   value: v.vehicleId,
                   label: `${v.plateNumber} · ${v.vehicleType}`,
@@ -119,10 +118,11 @@ export function ExportDispatchModal({ note, onClose, onDone }: Props) {
               name="odometerStart"
               label={DISPATCH_LABELS.odometerStart}
               rules={[{ required: true, message: DISPATCH_LABELS.odometerRequired }]}
+              className={FORM_HINT_BELOW_CLASS}
               extra={
                 lastOdometer === null || lastOdometer === undefined
                   ? undefined
-                  : fill(DISPATCH_LABELS.odometerHint, lastOdometer)
+                  : fill(DISPATCH_LABELS.odometerHint, formatQty(lastOdometer))
               }
             >
               <QtyInput min={0} max={MAX_ODOMETER} style={{ width: 200 }} />

@@ -53,8 +53,8 @@ export const PM_LABELS = {
   searchWorker: 'Tìm mã, tên công nhân',
   stateLabel: 'Tình trạng việc',
   stateAll: 'Tất cả ({0})',
-  stateIdle: 'Chưa được giao ({0})',
-  stateBusy: 'Đã được giao ({0})',
+  stateIdle: 'Chưa giao ({0})',
+  stateBusy: 'Đã giao ({0})',
   operation: 'Công đoạn',
   group: 'Nhóm công đoạn',
   worker: 'Công nhân',
@@ -83,13 +83,17 @@ export const PM_LABELS = {
   unallocated: 'Còn giao được',
   operationCount: 'Số công đoạn',
   giveWork: 'Giao việc',
+  viewWork: 'Xem',
   giveLikePrevious: 'Giao như lần trước',
   giveLikePreviousHint: 'Điền lại số của lần giao gần nhất cho các công đoạn đã từng giao',
   workerModalTitle: 'Giao việc: {0}',
   workerModalHint:
     'Công đoạn đã phân công được lấy sẵn. Nhập ở dòng nhóm để điền cùng số cho cả nhóm. Số 0 = bỏ phần giao thêm của ngày. Số giao không vượt số còn giao được; công nhân không xác nhận sau 1 giờ thì tự xác nhận đủ.',
   workerHint:
-    'Xác nhận hoặc từ chối số được giao. Quá 1 giờ chưa xác nhận thì hệ thống tự xác nhận đủ số.',
+    'Kiểm tra số tổ trưởng giao: đúng thì bấm Xác nhận, không đúng thì bấm Từ chối và ghi lý do. Quá 1 giờ chưa xác nhận thì hệ thống tự xác nhận đủ số.',
+  confirmTitle: 'Xác nhận số được giao?',
+  confirmBody: 'Bạn xác nhận số tổ trưởng giao là đúng. Không đúng thì chọn Từ chối và ghi lý do.',
+  confirmBatchTitle: 'Xác nhận {0} phiếu?',
   components: 'Thành phần',
   noComponents: 'chưa gắn',
   pendingConfirm: 'Chờ CN xác nhận {0}',
@@ -120,13 +124,6 @@ export const PM_LABELS = {
   confirmSelected: 'Xác nhận các phiếu đã chọn ({0})',
   selectAllPending: 'Chọn tất cả phiếu đang chờ',
   clearSelection: 'Bỏ chọn',
-  batchTitle: 'Xác nhận {0} phiếu giao việc',
-  batchHint:
-    'Số xác nhận mặc định bằng số giao. Nhận khác thì sửa số và ghi lý do lệch (bắt buộc).',
-  sharedReason: 'Lý do chung',
-  sharedReasonPlaceholder: 'Điền nhanh cho mọi phiếu lệch chưa có lý do',
-  applySharedReason: 'Áp dụng',
-  missingReasons: 'Còn {0} phiếu lệch số chưa có lý do.',
   // DEV-ALL-182: phiếu của tổ trưởng gộp theo công nhân.
   slipCount: 'Số phiếu',
   totalHandover: 'Tổng giao',
@@ -137,14 +134,13 @@ export const PM_LABELS = {
   pendingRetrieval: 'Thu hồi {0}',
   confirmWorkerOnBehalf: 'Xác nhận hộ cả công nhân',
   workerOnBehalfHint:
-    'Xác nhận đủ số trên mọi phiếu đang chờ của công nhân này, cùng một lý do. Phiếu nhận khác số thì để công nhân tự xác nhận.',
+    'Xác nhận đủ số trên mọi phiếu đang chờ của công nhân này, cùng một lý do. Công nhân thấy số không đúng thì tự từ chối.',
   workerOnBehalfSummary: '{0} phiếu: giao {1} lần, thu hồi {2} lần',
 } as const;
 
 export const PM_MESSAGES = {
   confirmed: 'Đã xác nhận.',
   rejected: 'Đã từ chối phiếu.',
-  discrepancyReasonRequired: 'Số xác nhận khác số ghi trên phiếu, vui lòng nhập lý do.',
   dailySaved: 'Đã lưu giao việc trong ngày.',
   batchConfirmed: 'Đã xác nhận các phiếu đã chọn.',
 } as const;

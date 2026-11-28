@@ -467,6 +467,31 @@ public class MaterialReturnServiceTests
     }
 
     [Fact]
+    public async Task ConfirmAsync_CountedLessThanReturned_NotifiesReturningTeamWithQtyAndReason()
+    {
+        PriorReturn(SewTeam, WarehouseTypes.Material, HandoverStatuses.Pending, 8, ScrapKgId);
+        _stock.PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
+
+        await Service().ConfirmAsync(500, new ConfirmMaterialReturnDto([new ConfirmReturnLineDto(600, 5, "Thiếu 3 kg")]), 900, default);
+
+        await _notifier.Received(1).NotifyTeamLeadersAsync(SewTeam,
+            Arg.Is<NotificationMessage>(n => n.Title == ShortfallNotice.Title && n.Message.Contains("gửi 8, nhận 5") && n.Message.Contains("Thiếu 3 kg") && n.LinkUrl == "/warehouse/material-returns?id=500"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ConfirmAsync_CountedSameAsReturned_DoesNotSendShortfallNotice()
+    {
+        PriorReturn(SewTeam, WarehouseTypes.Material, HandoverStatuses.Pending, 8, ScrapKgId);
+        _stock.PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
+
+        await Service().ConfirmAsync(500, new ConfirmMaterialReturnDto([new ConfirmReturnLineDto(600, 8, null)]), 900, default);
+
+        await _notifier.DidNotReceive().NotifyTeamLeadersAsync(Arg.Any<int>(),
+            Arg.Is<NotificationMessage>(n => n.Title == ShortfallNotice.Title), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ConfirmAsync_DifferentCountWithoutReason_ReturnsFailure()
     {
         PriorReturn(SewTeam, WarehouseTypes.Material, HandoverStatuses.Pending, 8, ScrapKgId);

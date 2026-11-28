@@ -34,7 +34,7 @@ public sealed partial class WorkAllocationService : IWorkAllocationService
         int? workerId, CancellationToken ct)
     {
         var keyword = query.Keyword?.Trim();
-        var page = await Project(Allocations.AsNoTracking()
+        var page = await Allocations.AsNoTracking()
                 .Where(m => teamId == null || m.SewingTeamId == teamId)
                 .Where(m => workerId == null || m.WorkerId == workerId)
                 .Where(m => query.WorkerId == null || m.WorkerId == query.WorkerId)
@@ -44,8 +44,8 @@ public sealed partial class WorkAllocationService : IWorkAllocationService
                 .Where(m => string.IsNullOrEmpty(keyword) || m.Worker.FullName.Contains(keyword)
                             || m.Worker.EmployeeCode.Contains(keyword) || m.OrderLine.Order.OrderCode.Contains(keyword)
                             || m.Operation.OperationName.Contains(keyword))
-                .OrderByDescending(m => m.WorkAllocationId))
-            .ToPagedAsync(query, ct);
+                .OrderByDescending(m => m.WorkAllocationId)
+            .ToPagedAsync(AllocationProjection, query, ct);
         return Result<PagedResult<WorkAllocationDto>>.Success(await WithRatesAsync(page, ct));
     }
 
@@ -65,14 +65,13 @@ public sealed partial class WorkAllocationService : IWorkAllocationService
                         || m.Operation.OperationName.Contains(keyword))
             .GroupBy(m => new { m.WorkerId, m.Worker.EmployeeCode, m.Worker.FullName })
             .OrderBy(g => g.Key.EmployeeCode)
-            .Select(g => new WorkerAllocationSummaryDto(
+            .ToPagedAsync(g => new WorkerAllocationSummaryDto(
                 g.Key.WorkerId, g.Key.EmployeeCode, g.Key.FullName, g.Count(),
                 g.Where(m => m.Status != HandoverStatuses.Rejected && m.MovementType == PieceMovementTypes.Handover).Sum(m => m.Quantity),
                 g.Where(m => m.Status != HandoverStatuses.Rejected && m.MovementType == PieceMovementTypes.Retrieval).Sum(m => m.Quantity),
                 g.Count(m => m.Status == HandoverStatuses.Pending),
                 g.Where(m => m.Status == HandoverStatuses.Pending && m.MovementType == PieceMovementTypes.Handover).Sum(m => m.Quantity),
-                g.Where(m => m.Status == HandoverStatuses.Pending && m.MovementType == PieceMovementTypes.Retrieval).Sum(m => m.Quantity)))
-            .ToPagedAsync(query, ct);
+                g.Where(m => m.Status == HandoverStatuses.Pending && m.MovementType == PieceMovementTypes.Retrieval).Sum(m => m.Quantity)), query, ct);
         return Result<PagedResult<WorkerAllocationSummaryDto>>.Success(page);
     }
 
@@ -219,13 +218,13 @@ public sealed partial class WorkAllocationService : IWorkAllocationService
             : null;
     }
 
-    public Task<Result> ConfirmByWorkerAsync(int allocationId, ConfirmWorkAllocationDto dto, int workerId, CancellationToken ct) =>
-        DecideAsync(allocationId, ct, m => m.WorkerId == workerId, m => ApplyConfirmAsync(m, dto.ConfirmedQty,
-            dto.DiscrepancyReason, ConfirmModes.Worker, null, ct), notifyLeaders: true);
+    public Task<Result> ConfirmByWorkerAsync(int allocationId, int workerId, CancellationToken ct) =>
+        DecideAsync(allocationId, ct, m => m.WorkerId == workerId, m => ApplyConfirmAsync(m, ConfirmModes.Worker, null, ct),
+            notifyLeaders: true);
 
     public Task<Result> ConfirmOnBehalfAsync(int allocationId, ConfirmOnBehalfDto dto, int teamId, CancellationToken ct) =>
-        DecideAsync(allocationId, ct, m => m.SewingTeamId == teamId, m => ApplyConfirmAsync(m, dto.ConfirmedQty,
-            dto.DiscrepancyReason, ConfirmModes.OnBehalf, dto.OnBehalfReason.Trim(), ct), notifyLeaders: false);
+        DecideAsync(allocationId, ct, m => m.SewingTeamId == teamId, m => ApplyConfirmAsync(m, ConfirmModes.OnBehalf,
+            dto.OnBehalfReason.Trim(), ct), notifyLeaders: false);
 
     public Task<Result> RejectByWorkerAsync(int allocationId, ReasonDto dto, int workerId, CancellationToken ct) =>
         DecideAsync(allocationId, ct, m => m.WorkerId == workerId, m =>
@@ -286,26 +285,22 @@ public sealed partial class WorkAllocationService : IWorkAllocationService
                         && (e.Role.RoleCode == RoleCodes.TeamLeader || e.Role.RoleCode == RoleCodes.TeamDeputy))
             .Select(e => e.EmployeeId).ToListAsync(ct);
 
-    private async Task<Result> ApplyConfirmAsync(WorkAllocation m, int confirmedQty, string? discrepancy,
-        string mode, string? onBehalfReason, CancellationToken ct)
+    /// <summary>
+    /// Xác nhận số tổ trưởng giao là đúng (DEV-ALL-198): số xác nhận luôn bằng số trên phiếu, không có lệch số. Không đúng thì công
+    /// nhân từ chối kèm lý do.
+    /// </summary>
+    private async Task<Result> ApplyConfirmAsync(WorkAllocation m, string mode, string? onBehalfReason, CancellationToken ct)
     {
-        if (confirmedQty < 1 || confirmedQty > m.Quantity)
-            return Result.Failure(ErrorCodes.WarehouseInvalidReference,
-                string.Format(WarehouseMessages.AllocationConfirmRange, m.Quantity));
-        var same = confirmedQty == m.Quantity;
-        if (!same && string.IsNullOrWhiteSpace(discrepancy))
-            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DiscrepancyReasonRequired);
-
         // Thu hồi: kiểm lại đến lúc này vì công nhân có thể đã báo thêm sản lượng (50050 / 50052).
         if (m.MovementType == PieceMovementTypes.Retrieval)
         {
             var retrievable = await WorkerRetrievableAsync(m.WorkerId, m.OrderLineId, m.OperationId, ct, excludeId: m.WorkAllocationId);
-            if (confirmedQty > retrievable)
+            if (m.Quantity > retrievable)
                 return Result.Failure(ErrorCodes.PieceRetrievalExceedsHolding, WarehouseMessages.PieceRetrievalExceedsHolding);
         }
 
-        m.ConfirmedQty = confirmedQty;
-        m.DiscrepancyReason = same ? null : discrepancy!.Trim();
+        m.ConfirmedQty = m.Quantity;
+        m.DiscrepancyReason = null;
         m.ConfirmMode = mode;
         m.OnBehalfReason = onBehalfReason;
         m.Status = HandoverStatuses.Confirmed;
@@ -369,12 +364,13 @@ public sealed partial class WorkAllocationService : IWorkAllocationService
         return new PagedResult<WorkAllocationDto>(items, page.Page, page.PageSize, page.TotalItems);
     }
 
-    private static IQueryable<WorkAllocationDto> Project(IQueryable<WorkAllocation> q) =>
-        q.Select(m => new WorkAllocationDto(m.WorkAllocationId, m.WorkDate, m.MovementType, m.SewingTeamId,
+    private static readonly System.Linq.Expressions.Expression<Func<WorkAllocation, WorkAllocationDto>> AllocationProjection = m => new WorkAllocationDto(m.WorkAllocationId, m.WorkDate, m.MovementType, m.SewingTeamId,
             m.SewingTeam.TeamCode, m.WorkerId, m.Worker.EmployeeCode, m.Worker.FullName, m.OrderLineId,
             m.OrderLine.Order.OrderCode, m.OrderLine.ProductVariant.Product.ProductCode, m.OrderLine.ProductVariant.ProductColor.Color,
             m.OrderLine.ProductVariant.SizeCode, m.OperationId, m.Operation.OperationCode, m.Operation.OperationName,
             m.Quantity, m.ConfirmedQty,
             m.DiscrepancyReason, m.RetrievalReason, m.RetrievalNote, m.ConfirmMode, m.OnBehalfReason, m.Status, m.RejectReason,
-            m.CreatedAt, m.ConfirmedAt, null, false));
+            m.CreatedAt, m.ConfirmedAt, null, false);
+
+    private static IQueryable<WorkAllocationDto> Project(IQueryable<WorkAllocation> q) => q.Select(AllocationProjection);
 }

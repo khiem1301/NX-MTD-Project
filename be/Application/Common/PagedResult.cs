@@ -47,6 +47,7 @@ public static class QueryableExtensions
     public static async Task<PagedResult<T>> ToPagedAsync<T>(this IQueryable<T> source, PageQuery query,
         CancellationToken ct)
     {
+        source = SortableSelect.OrderEntityByRequested(source, query.SortBy, query.Desc);
         var total = await source.CountAsync(ct);
         var items = await source.Skip((query.SafePage - 1) * query.SafePageSize).Take(query.SafePageSize)
             .ToListAsync(ct);

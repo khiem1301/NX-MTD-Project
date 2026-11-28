@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from '@/app/App';
 import { installNumericInputGuard } from '@/utils/numericInputGuard';
 import '@/styles/global.css';
+import '@/styles/workshop-mobile.css';
 
 installNumericInputGuard();
 

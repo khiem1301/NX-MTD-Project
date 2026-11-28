@@ -6,12 +6,17 @@ import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { fill } from '@/utils/format';
-import { ConfirmBatchModal } from '../components/ConfirmBatchModal';
-import { ConfirmMovementModal } from '../components/ConfirmMovementModal';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { MAX_BATCH_CONFIRM, MOVEMENT_STATUS, PM_LABELS } from '../constants';
-import { useAllocations, useRejectByWorker } from '../hooks/usePieceMovement';
+import {
+  useAllocations,
+  useConfirmBatchByWorker,
+  useConfirmByWorker,
+  useRejectByWorker,
+} from '../hooks/usePieceMovement';
 import type { WorkAllocation } from '../types';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { STAT_CARD_CLASS } from '@/components/common/cardTable';
 import { DataTable } from '@/components/common/DataTable';
 import { allocationColumns } from '../components/allocationColumns';
 import type { AllocationFilters } from '../types';
@@ -28,21 +33,24 @@ export function MyPieceMovementsPage() {
   const table = useTableQuery<AllocationFilters>({});
   const allocations = useAllocations(table.params);
   const reject = useRejectByWorker();
-  const [confirming, setConfirming] = useState<WorkAllocation | null>(null);
+  const confirm = useConfirmByWorker();
+  const confirmBatch = useConfirmBatchByWorker();
   const [rejecting, setRejecting] = useState<WorkAllocation | null>(null);
   const [selected, setSelected] = useState<WorkAllocation[]>([]);
-  const [batchOpen, setBatchOpen] = useState(false);
   const pendingOnPage = (allocations.data?.items ?? []).filter(isPending);
 
   const columns = allocationColumns(
     (m) =>
       isPending(m) ? (
         <Space size={0} wrap>
-          <IconAction
-            title={PM_LABELS.confirm}
-            icon={<CheckCircleOutlined />}
-            onClick={() => setConfirming(m)}
-          />
+          <ConfirmAction
+            title={PM_LABELS.confirmTitle}
+            description={PM_LABELS.confirmBody}
+            okText={PM_LABELS.confirm}
+            onConfirm={() => confirm.mutateAsync(m.workAllocationId)}
+          >
+            <IconAction title={PM_LABELS.confirm} icon={<CheckCircleOutlined />} />
+          </ConfirmAction>
           <IconAction
             title={PM_LABELS.reject}
             icon={<CloseCircleOutlined />}
@@ -71,14 +79,22 @@ export function MyPieceMovementsPage() {
         >
           {PM_LABELS.selectAllPending}
         </Button>
-        <Button
-          type="primary"
-          icon={<CheckCircleOutlined />}
+        <ConfirmAction
+          title={fill(PM_LABELS.confirmBatchTitle, selected.length)}
+          description={PM_LABELS.confirmBody}
+          okText={PM_LABELS.confirm}
           disabled={selected.length === 0}
-          onClick={() => setBatchOpen(true)}
+          onConfirm={() =>
+            confirmBatch.mutateAsync(
+              { workAllocationIds: selected.map((m) => m.workAllocationId) },
+              { onSuccess: () => setSelected([]) },
+            )
+          }
         >
-          {fill(PM_LABELS.confirmSelected, selected.length)}
-        </Button>
+          <Button type="primary" icon={<CheckCircleOutlined />} disabled={selected.length === 0}>
+            {fill(PM_LABELS.confirmSelected, selected.length)}
+          </Button>
+        </ConfirmAction>
         {selected.length > 0 && (
           <Button type="link" onClick={() => setSelected([])}>
             {PM_LABELS.clearSelection}
@@ -87,6 +103,7 @@ export function MyPieceMovementsPage() {
       </Space>
       <QueryError error={allocations.error} onRetry={() => void allocations.refetch()} />
       <DataTable
+        className={STAT_CARD_CLASS}
         rowKey="workAllocationId"
         columns={columns}
         dataSource={allocations.data?.items}
@@ -97,21 +114,6 @@ export function MyPieceMovementsPage() {
           onChange: (_keys, rows) => setSelected(rows.slice(0, MAX_BATCH_CONFIRM)),
           getCheckboxProps: (m) => ({ disabled: !isPending(m) }),
         }}
-      />
-      {batchOpen && (
-        <ConfirmBatchModal
-          rows={selected}
-          onClose={() => setBatchOpen(false)}
-          onDone={() => {
-            setBatchOpen(false);
-            setSelected([]);
-          }}
-        />
-      )}
-      <ConfirmMovementModal
-        movement={confirming}
-        onBehalf={false}
-        onClose={() => setConfirming(null)}
       />
       <ReasonModal
         open={rejecting !== null}

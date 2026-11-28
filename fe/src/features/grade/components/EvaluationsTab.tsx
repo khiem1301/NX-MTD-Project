@@ -20,6 +20,7 @@ import { useEvaluations, useRejectGrade } from '../hooks/useGrade';
 import type { GradeEvaluation } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { CARD_WIDE_CELL_CLASS, STAT_CARD_CLASS } from '@/components/common/cardTable';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
 import { AiSuggestionModal } from './AiSuggestionModal';
@@ -70,10 +71,20 @@ export function EvaluationsTab() {
       dataIndex: 'proposedGradeCode',
       render: (v: string) => <Tag color="blue">{v}</Tag>,
     },
-    { title: GR_LABELS.defects, dataIndex: 'recentDefectCount', align: 'right' },
-    { title: GR_LABELS.reason, dataIndex: 'reason' },
-    { title: GR_LABELS.proposedBy, dataIndex: 'proposedByName' },
-    { title: GR_LABELS.date, dataIndex: 'evaluationDate', render: formatDate },
+    {
+      title: GR_LABELS.defects,
+      dataIndex: 'recentDefectCount',
+      align: 'right',
+      responsive: ['md'],
+    },
+    { title: GR_LABELS.reason, dataIndex: 'reason', className: CARD_WIDE_CELL_CLASS },
+    { title: GR_LABELS.proposedBy, dataIndex: 'proposedByName', responsive: ['md'] },
+    {
+      title: GR_LABELS.date,
+      dataIndex: 'evaluationDate',
+      render: formatDate,
+      responsive: ['md'],
+    },
     {
       title: GR_LABELS.status,
       dataIndex: 'status',
@@ -155,6 +166,7 @@ export function EvaluationsTab() {
       />
       <QueryError error={list.error} onRetry={() => void list.refetch()} />
       <DataTable
+        className={STAT_CARD_CLASS}
         rowKey="gradeEvaluationId"
         columns={columns}
         dataSource={list.data?.items}

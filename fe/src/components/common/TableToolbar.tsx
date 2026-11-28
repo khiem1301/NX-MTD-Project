@@ -9,6 +9,7 @@ export function TableToolbar({ filters, actions }: TableToolbarProps) {
   const inPageCard = useContext(InPageCardContext);
   return (
     <div
+      className="table-toolbar"
       style={{
         display: 'flex',
         flexWrap: 'wrap',

@@ -23,6 +23,7 @@ import { DataTable } from '@/components/common/DataTable';
 import { QtyInput } from '@/components/common/QtyInput';
 import { MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { maxQtyRule } from '@/utils/qtyLimit';
+import { revalidate } from '@/utils/formValidate';
 import { decimalsOfUnit } from '../utils/returnLines';
 
 type FormValues = { counts: Record<string, { confirmedQty: number; discrepancyReason?: string }> };
@@ -162,7 +163,18 @@ export function ReturnModalBody({ ret: r, onClose }: { ret: MaterialReturn; onCl
                       maxQtyRule(l.returnedQty),
                     ]}
                   >
-                    <QtyInput decimals={decimalsOfUnit(l.unit)} min={0} max={MAX_MATERIAL_QTY} />
+                    <QtyInput
+                      decimals={decimalsOfUnit(l.unit)}
+                      min={0}
+                      max={MAX_MATERIAL_QTY}
+                      onChange={() =>
+                        revalidate(form, [
+                          'counts',
+                          String(l.materialReturnLineId),
+                          'discrepancyReason',
+                        ])
+                      }
+                    />
                   </Form.Item>
                 ) : l.confirmedQty === null ? (
                   '—'

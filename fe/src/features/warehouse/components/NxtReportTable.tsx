@@ -30,7 +30,8 @@ const qty = (title: string, dataIndex: keyof NxtSummary) => ({
 const materialColumns: TableColumnsType<NxtSummary> = [
   {
     title: LABELS.material,
-    key: 'material',
+    key: 'materialCode',
+    sorter: true,
     render: (_, r) => (
       <MaterialIdentityCell
         code={r.materialCode ?? ''}
@@ -45,7 +46,8 @@ const materialColumns: TableColumnsType<NxtSummary> = [
 const pieceColumns: TableColumnsType<NxtSummary> = [
   {
     title: LABELS.belongsTo,
-    key: 'belongs',
+    key: 'orderCode',
+    sorter: true,
     render: (_, r) => (
       <div>
         <div>{`${r.orderCode} · ${r.productCode}`}</div>

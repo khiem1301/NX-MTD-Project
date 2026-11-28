@@ -35,7 +35,7 @@ export function NotificationBell() {
   };
 
   const content = (
-    <div style={{ width: 360 }}>
+    <div style={{ width: 'min(360px, calc(100vw - 32px))' }}>
       <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 8 }}>
         <Typography.Text strong>Thông báo</Typography.Text>
         <Button

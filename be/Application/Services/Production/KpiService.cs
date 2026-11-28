@@ -57,8 +57,7 @@ public sealed class KpiService : IKpiService
             .Where(k => string.IsNullOrEmpty(keyword) || k.Order.OrderCode.Contains(keyword)
                         || k.Product.ProductCode.Contains(keyword) || k.SewingTeam.TeamCode.Contains(keyword))
             .OrderByDescending(k => k.KpiTargetId)
-            .Select(ToDto)
-            .ToPagedAsync(query, ct);
+            .ToPagedAsync(ToDto, query, ct);
         var items = await WithActualAsync(page.Items.Select(Normalize).ToList(), ct);
         return Result<PagedResult<KpiTargetDto>>.Success(page with { Items = items });
     }

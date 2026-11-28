@@ -3,6 +3,7 @@ import { DEFAULT_PAGE_SIZE } from '../constants';
 import type { TimesheetFilter } from '../types';
 import { defaultRange, type DateRange } from '../utils/timesheet';
 import { toApiDate } from '@/utils/format';
+import type { ServerSort } from '@/utils/tableSort';
 
 /** Gom state bộ lọc + phân trang của màn bảng công; đổi bộ lọc thì quay về trang 1. */
 export const useTimesheetFilter = () => {
@@ -11,6 +12,7 @@ export const useTimesheetFilter = () => {
   const [onlyMissingPunch, setOnlyMissingPunch] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [sort, setSort] = useState<ServerSort>({});
 
   const filter = useMemo<TimesheetFilter>(
     () => ({
@@ -20,8 +22,9 @@ export const useTimesheetFilter = () => {
       onlyMissingPunch: onlyMissingPunch || undefined,
       page,
       pageSize,
+      ...sort,
     }),
-    [range, keyword, onlyMissingPunch, page, pageSize],
+    [range, keyword, onlyMissingPunch, page, pageSize, sort],
   );
 
   const reset = (): void => {
@@ -46,6 +49,11 @@ export const useTimesheetFilter = () => {
     },
     setOnlyMissingPunch: (value: boolean) => {
       setOnlyMissingPunch(value);
+      setPage(1);
+    },
+    sort,
+    changeSort: (next: ServerSort) => {
+      setSort(next);
       setPage(1);
     },
     changePage: (nextPage: number, nextSize: number) => {

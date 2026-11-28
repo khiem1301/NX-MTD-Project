@@ -89,7 +89,6 @@ export function EditPaymentModal({ order, payment, onClose }: Props) {
         <Form.Item
           name="amount"
           label={text.amount}
-          validateTrigger="onSubmit"
           rules={[
             { required: true, type: 'number', min: 0.01, message: text.amountRequired },
             {

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MESSAGES } from '@/constants/messages';
+import { TABLE_SORT, type SortablePagination } from '@/utils/tableSort';
 import { DataTable } from './DataTable';
 
 type Row = { id: number; name: string };
@@ -41,5 +42,32 @@ describe('DataTable', () => {
   it('bảng không phân trang thì không có ô chọn số dòng', () => {
     render(<DataTable<Row> rowKey="id" columns={columns} dataSource={rows} pagination={false} />);
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('bảng phân trang ở máy chủ: bấm tiêu đề cột thì báo sortBy / sortDir cho máy chủ, không sắp lại ở trình duyệt', () => {
+    const onSort = jest.fn();
+    const pagination: SortablePagination = {
+      current: 1,
+      pageSize: 10,
+      total: 25,
+      [TABLE_SORT]: { sort: {}, onChange: onSort },
+    };
+    render(
+      <DataTable<Row>
+        rowKey="id"
+        columns={columns}
+        dataSource={[rows[1] as Row, rows[0] as Row]}
+        pagination={pagination}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByText('Tên')[0] as HTMLElement);
+
+    expect(onSort).toHaveBeenCalledWith({ sortBy: 'name', sortDir: 'asc' });
+    const body = screen
+      .getAllByRole('row')
+      .slice(1)
+      .map((r) => r.textContent);
+    expect(body).toEqual(['Dòng 2', 'Dòng 1']);
   });
 });

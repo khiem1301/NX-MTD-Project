@@ -30,20 +30,14 @@ public sealed record WorkAllocationBoardDto(
 public sealed record CreateWorkAllocationDto(string MovementType, int WorkerId, int OrderLineId, int OperationId,
     int Quantity, string? RetrievalReason);
 
-/// <param name="ConfirmedQty">1..Quantity; khác Quantity thì bắt buộc DiscrepancyReason (CK_WA_Confirmed). Không nhận gì thì từ chối.</param>
-public sealed record ConfirmWorkAllocationDto(int ConfirmedQty, string? DiscrepancyReason);
+/// <summary>
+/// DEV-ALL-198: công nhân xác nhận nhiều phiếu một lần. Công nhân chỉ xác nhận số tổ trưởng giao là đúng (không nhập lại số nhận);
+/// không đúng thì từ chối kèm lý do. Một phiếu lỗi thì không lưu phiếu nào.
+/// </summary>
+public sealed record ConfirmWorkAllocationBatchDto(IReadOnlyList<int> WorkAllocationIds);
 
-/// <summary>DEV-ALL-126: một dòng khi công nhân xác nhận hàng loạt.</summary>
-public sealed record ConfirmWorkAllocationItemDto(int WorkAllocationId, int ConfirmedQty, string? DiscrepancyReason);
-
-/// <summary>DEV-ALL-126: xác nhận nhiều phiếu một lần — một phiếu lỗi thì không lưu phiếu nào.</summary>
-public sealed record ConfirmWorkAllocationBatchDto(IReadOnlyList<ConfirmWorkAllocationItemDto> Items);
-
-/// <summary>Tổ trưởng xác nhận hộ công nhân (UC54): bắt buộc lý do.</summary>
-public sealed record ConfirmOnBehalfDto(int ConfirmedQty, string? DiscrepancyReason, string OnBehalfReason);
-
-/// <summary>DEV-ALL-182: tổ trưởng xác nhận hộ một lần mọi phiếu đang chờ của một công nhân (xác nhận đủ số trên phiếu).</summary>
-public sealed record ConfirmWorkerOnBehalfDto(string OnBehalfReason);
+/// <summary>Tổ trưởng xác nhận hộ công nhân (UC54, DEV-ALL-182): xác nhận đủ số trên phiếu, bắt buộc lý do.</summary>
+public sealed record ConfirmOnBehalfDto(string OnBehalfReason);
 
 /// <summary>DEV-ALL-182: một dòng mỗi công nhân của tab phiếu giao / thu hồi: số phiếu, tổng giao / thu hồi (bỏ phiếu bị từ chối) và phần đang chờ công nhân xác nhận.</summary>
 public sealed record WorkerAllocationSummaryDto(

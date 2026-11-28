@@ -32,9 +32,8 @@ public sealed class SupplierService : ISupplierService
             .Where(s => string.IsNullOrEmpty(keyword) || s.SupplierName.Contains(keyword)
                 || (s.Phone != null && s.Phone.Contains(keyword)))
             .OrderBy(s => s.SupplierName)
-            .Select(s => new SupplierDto(s.SupplierId, s.SupplierName, s.Phone, s.Email, s.Address, s.MaterialTypes,
-                s.Note, s.Status, s.CreatedAt, s.PurchaseOrders.Count, s.DiscontinueReason))
-            .ToPagedAsync(query, ct);
+            .ToPagedAsync(s => new SupplierDto(s.SupplierId, s.SupplierName, s.Phone, s.Email, s.Address, s.MaterialTypes,
+                s.Note, s.Status, s.CreatedAt, s.PurchaseOrders.Count, s.DiscontinueReason), query, ct);
 
         return Result<PagedResult<SupplierDto>>.Success(
             page with { Items = page.Items.Select(WithPascalStatus).ToList() });

@@ -38,10 +38,9 @@ public sealed class StocktakeService : IStocktakeService
             .Where(s => string.IsNullOrEmpty(query.WarehouseType) || s.WarehouseType == query.WarehouseType)
             .Where(s => string.IsNullOrEmpty(keyword) || s.StocktakeCode.Contains(keyword) || (s.Scope != null && s.Scope.Contains(keyword)))
             .OrderByDescending(s => s.StocktakeId)
-            .Select(s => new StocktakeListItemDto(s.StocktakeId, s.StocktakeCode, s.WarehouseType, s.Scope, s.StocktakeDate,
+            .ToPagedAsync(s => new StocktakeListItemDto(s.StocktakeId, s.StocktakeCode, s.WarehouseType, s.Scope, s.StocktakeDate,
                 s.Status, s.CreatedAt, s.ApprovedAt, s.StocktakeLines.Count,
-                s.StocktakeLines.Count(l => l.CountedQty != null && l.CountedQty != l.BookQty)))
-            .ToPagedAsync(query, ct);
+                s.StocktakeLines.Count(l => l.CountedQty != null && l.CountedQty != l.BookQty)), query, ct);
         return Result<PagedResult<StocktakeListItemDto>>.Success(page);
     }
 

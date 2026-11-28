@@ -57,10 +57,9 @@ public sealed class WorkOrderService : IWorkOrderService
             .Where(w => string.IsNullOrEmpty(keyword) || w.WorkOrderCode.Contains(keyword)
                         || w.Order.OrderCode.Contains(keyword) || w.Product.ProductCode.Contains(keyword))
             .OrderByDescending(w => w.WorkOrderId)
-            .Select(w => new WorkOrderListItemDto(w.WorkOrderId, w.WorkOrderCode, w.OrderId, w.Order.OrderCode,
+            .ToPagedAsync(w => new WorkOrderListItemDto(w.WorkOrderId, w.WorkOrderCode, w.OrderId, w.Order.OrderCode,
                 w.ProductId, w.Product.ProductCode, w.CuttingTeamId, w.CuttingTeam.TeamCode, w.DueDate, w.Status,
-                w.WorkOrderLines.Sum(l => l.PlannedQty), w.CreatedAt))
-            .ToPagedAsync(query, ct);
+                w.WorkOrderLines.Sum(l => l.PlannedQty), w.CreatedAt), query, ct);
         return Result<PagedResult<WorkOrderListItemDto>>.Success(page);
     }
 

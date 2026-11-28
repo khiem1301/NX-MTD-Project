@@ -43,13 +43,12 @@ public sealed class OrderPaymentService : IOrderPaymentService
                         || (state == OrderPaymentStates.Partial && o.FinalAmount != null
                             && o.OrderPayments.Sum(p => p.Amount) != 0 && o.OrderPayments.Sum(p => p.Amount) != o.FinalAmount))
             .OrderByDescending(o => o.OrderId)
-            .Select(o => new
+            .ToPagedAsync(o => new
             {
                 o.OrderId, o.OrderCode, o.Customer.CustomerName, o.Status, o.FinalAmount,
                 Amount = o.OrderLines.Sum(l => (decimal?)l.OrderedQty * l.CmtUnitPrice) ?? 0,
                 Paid = o.OrderPayments.Sum(p => (decimal?)p.Amount) ?? 0,
-            })
-            .ToPagedAsync(query, ct);
+            }, query, ct);
 
         var items = page.Items.Select(o => new OrderPaymentListItemDto(o.OrderId, o.OrderCode, o.CustomerName,
             CodeText.ToPascal(o.Status), o.Amount, o.FinalAmount, o.Paid, Remaining(o.FinalAmount, o.Paid),

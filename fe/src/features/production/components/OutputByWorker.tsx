@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { EditOutlined } from '@ant-design/icons';
-import { Input, Select, Space, Tag, Typography } from 'antd';
+import { Input, Segmented, Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { STAT_CARD_CLASS } from '@/components/common/cardTable';
 import { DataTable } from '@/components/common/DataTable';
 import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
@@ -118,8 +119,7 @@ export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
         />
-        <Select<OutputWorkerState>
-          style={{ width: 200 }}
+        <Segmented<OutputWorkerState>
           aria-label={t.stateLabel}
           value={state}
           onChange={setState}
@@ -138,6 +138,7 @@ export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
       </Space>
       <QueryError error={members.error} onRetry={() => void members.refetch()} />
       <DataTable<OutputWorker>
+        className={STAT_CARD_CLASS}
         rowKey="workerId"
         columns={columns}
         dataSource={visible}

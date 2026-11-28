@@ -19,6 +19,7 @@ import { DetailDescriptions, ModalActions } from '@/components/common/DetailModa
 import { DataTable } from '@/components/common/DataTable';
 import { QtyInput } from '@/components/common/QtyInput';
 import { maxQtyRule } from '@/utils/qtyLimit';
+import { revalidate } from '@/utils/formValidate';
 
 type FormValues = { counts: Record<string, { confirmedQty: number; discrepancyReason?: string }> };
 
@@ -146,7 +147,16 @@ export function FgHandoverModalBody({
                       maxQtyRule(l.handedQty),
                     ]}
                   >
-                    <QtyInput min={0} />
+                    <QtyInput
+                      min={0}
+                      onChange={() =>
+                        revalidate(form, [
+                          'counts',
+                          String(l.fgHandoverLineId),
+                          'discrepancyReason',
+                        ])
+                      }
+                    />
                   </Form.Item>
                 ) : (
                   (l.confirmedQty ?? '—')

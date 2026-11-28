@@ -11,6 +11,7 @@ import { useRequestInbox } from '@/hooks/useRequests';
 import type { RequestListItem } from '@/types/request';
 import { DATE_TIME_FORMAT, formatDate, toApiDate } from '@/utils/format';
 import { ATTENDANCE_TEXT } from '../constants';
+import { TABLE_SORT, type ServerSort, type SortablePagination } from '@/utils/tableSort';
 import { useAdjustments } from '../hooks/useAttendance';
 import type { AdjustmentFilter, AttendanceAdjustment } from '../types';
 import { AdjustmentFormModal, type AdjustmentPrefill } from './AdjustmentFormModal';
@@ -57,6 +58,7 @@ export function AdjustmentPanel({ presetRequestId = null }: { presetRequestId?: 
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [sort, setSort] = useState<ServerSort>({});
   const [formOpen, setFormOpen] = useState(false);
   const [prefill, setPrefill] = useState<AdjustmentPrefill | null>(null);
   const [presetDone, setPresetDone] = useState(false);
@@ -78,6 +80,7 @@ export function AdjustmentPanel({ presetRequestId = null }: { presetRequestId?: 
     keyword: keyword || undefined,
     page,
     pageSize,
+    ...sort,
   };
   const adjustments = useAdjustments(filter);
   const approved = useRequestInbox({
@@ -146,6 +149,23 @@ export function AdjustmentPanel({ presetRequestId = null }: { presetRequestId?: 
     },
   ];
 
+  const pagination: SortablePagination = {
+    current: adjustments.data?.page ?? page,
+    pageSize,
+    total: adjustments.data?.totalItems ?? 0,
+    onChange: (nextPage, nextSize) => {
+      setPage(nextSize === pageSize ? nextPage : 1);
+      setPageSize(nextSize);
+    },
+    [TABLE_SORT]: {
+      sort,
+      onChange: (next) => {
+        setSort(next);
+        setPage(1);
+      },
+    },
+  };
+
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
       <HintTip text={text.hint} />
@@ -198,15 +218,7 @@ export function AdjustmentPanel({ presetRequestId = null }: { presetRequestId?: 
         loading={adjustments.isFetching}
         locale={{ emptyText: text.empty }}
         scroll={{ x: 'max-content' }}
-        pagination={{
-          current: adjustments.data?.page ?? page,
-          pageSize,
-          total: adjustments.data?.totalItems ?? 0,
-          onChange: (nextPage, nextSize) => {
-            setPage(nextSize === pageSize ? nextPage : 1);
-            setPageSize(nextSize);
-          },
-        }}
+        pagination={pagination}
       />
 
       <AdjustmentFormModal

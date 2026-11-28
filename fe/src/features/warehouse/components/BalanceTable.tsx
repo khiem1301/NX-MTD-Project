@@ -31,7 +31,8 @@ const qty = (title: string, dataIndex: keyof StockBalance) => ({
 const materialColumns: TableColumnsType<StockBalance> = [
   {
     title: LABELS.material,
-    key: 'material',
+    key: 'materialCode',
+    sorter: true,
     render: (_, b) => (
       <MaterialIdentityCell
         code={b.materialCode ?? ''}
@@ -46,7 +47,8 @@ const materialColumns: TableColumnsType<StockBalance> = [
 const pieceColumns: TableColumnsType<StockBalance> = [
   {
     title: LABELS.belongsTo,
-    key: 'belongs',
+    key: 'orderCode',
+    sorter: true,
     render: (_, b) => (
       <div>
         <div>{`${b.orderCode} · ${b.productCode}`}</div>

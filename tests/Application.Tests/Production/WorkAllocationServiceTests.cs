@@ -309,7 +309,7 @@ public class WorkAllocationServiceTests
     {
         var m = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
 
-        var result = await Service().ConfirmByWorkerAsync(m.WorkAllocationId, new ConfirmWorkAllocationDto(60, null), WorkerId, default);
+        var result = await Service().ConfirmByWorkerAsync(m.WorkAllocationId, WorkerId, default);
 
         result.IsSuccess.Should().BeTrue();
         m.Status.Should().Be(HandoverStatuses.Confirmed);
@@ -321,31 +321,15 @@ public class WorkAllocationServiceTests
     }
 
     [Fact]
-    public async Task Worker_confirming_a_different_qty_must_give_a_reason()
+    public async Task Worker_confirm_always_records_the_qty_the_leader_assigned_without_a_discrepancy()
     {
         var m = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
 
-        var noReason = await Service().ConfirmByWorkerAsync(m.WorkAllocationId, new ConfirmWorkAllocationDto(55, null), WorkerId, default);
-        noReason.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
-        m.Status.Should().Be(HandoverStatuses.Pending);
+        var result = await Service().ConfirmByWorkerAsync(m.WorkAllocationId, WorkerId, default);
 
-        var withReason = await Service().ConfirmByWorkerAsync(m.WorkAllocationId, new ConfirmWorkAllocationDto(55, " thiếu 5 "), WorkerId, default);
-        withReason.IsSuccess.Should().BeTrue();
-        m.ConfirmedQty.Should().Be(55);
-        m.DiscrepancyReason.Should().Be("thiếu 5");
-    }
-
-    [Fact]
-    public async Task Worker_cannot_confirm_more_than_the_recorded_qty_or_zero()
-    {
-        var m = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
-
-        var over = await Service().ConfirmByWorkerAsync(m.WorkAllocationId, new ConfirmWorkAllocationDto(61, "x"), WorkerId, default);
-        over.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
-        over.Message.Should().Contain("từ 1 đến 60");
-        (await Service().ConfirmByWorkerAsync(m.WorkAllocationId, new ConfirmWorkAllocationDto(0, "x"), WorkerId, default))
-            .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
-        m.Status.Should().Be(HandoverStatuses.Pending);
+        result.IsSuccess.Should().BeTrue();
+        m.ConfirmedQty.Should().Be(60);
+        m.DiscrepancyReason.Should().BeNull();
     }
 
     [Fact]
@@ -353,7 +337,7 @@ public class WorkAllocationServiceTests
     {
         var m = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60, worker: 77);
 
-        (await Service().ConfirmByWorkerAsync(m.WorkAllocationId, new ConfirmWorkAllocationDto(60, null), WorkerId, default))
+        (await Service().ConfirmByWorkerAsync(m.WorkAllocationId, WorkerId, default))
             .ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
         (await Service().RejectByWorkerAsync(m.WorkAllocationId, new ReasonDto("x"), WorkerId, default))
             .ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
@@ -364,7 +348,7 @@ public class WorkAllocationServiceTests
     {
         var m = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Confirmed, 60, confirmed: 60);
 
-        (await Service().ConfirmByWorkerAsync(m.WorkAllocationId, new ConfirmWorkAllocationDto(60, null), WorkerId, default))
+        (await Service().ConfirmByWorkerAsync(m.WorkAllocationId, WorkerId, default))
             .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
         (await Service().RejectByWorkerAsync(m.WorkAllocationId, new ReasonDto("x"), WorkerId, default))
             .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
@@ -390,7 +374,7 @@ public class WorkAllocationServiceTests
         var m = Allocation(PieceMovementTypes.Retrieval, HandoverStatuses.Pending, 30);
         _outputs.Add(new OutputRecord { WorkerId = WorkerId, OrderLineId = 101, OperationId = SewOpId, Quantity = 30 });   // chỉ còn thu hồi được 20
 
-        var result = await Service().ConfirmByWorkerAsync(m.WorkAllocationId, new ConfirmWorkAllocationDto(30, null), WorkerId, default);
+        var result = await Service().ConfirmByWorkerAsync(m.WorkAllocationId, WorkerId, default);
 
         result.ErrorCode.Should().Be(ErrorCodes.PieceRetrievalExceedsHolding);
         m.Status.Should().Be(HandoverStatuses.Pending);
@@ -398,8 +382,7 @@ public class WorkAllocationServiceTests
 
     // ---------- Công nhân xác nhận hàng loạt (DEV-ALL-126) ----------
 
-    private static ConfirmWorkAllocationBatchDto Batch(params (int Id, int Qty, string? Reason)[] items) =>
-        new(items.Select(i => new ConfirmWorkAllocationItemDto(i.Id, i.Qty, i.Reason)).ToList());
+    private static ConfirmWorkAllocationBatchDto Batch(params int[] ids) => new(ids);
 
     [Fact]
     public async Task Batch_confirm_saves_every_line_and_notifies_leaders_once()
@@ -408,28 +391,30 @@ public class WorkAllocationServiceTests
         var b = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 40, operationId: IronOpId);
 
         var result = await Service().ConfirmBatchByWorkerAsync(
-            Batch((a.WorkAllocationId, 60, null), (b.WorkAllocationId, 35, " hỏng 5 ")), WorkerId, default);
+            Batch(a.WorkAllocationId, b.WorkAllocationId), WorkerId, default);
 
         result.IsSuccess.Should().BeTrue();
         result.Message.Should().Contain("2 phiếu");
         a.Status.Should().Be(HandoverStatuses.Confirmed);
-        b.ConfirmedQty.Should().Be(35);
-        b.DiscrepancyReason.Should().Be("hỏng 5");
+        b.ConfirmedQty.Should().Be(40);
+        b.DiscrepancyReason.Should().BeNull();
         _notifier.Received(1).NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
         await _uow.Received(1).SaveChangesAsync();
     }
 
     [Fact]
-    public async Task Batch_confirm_saves_nothing_when_a_line_differs_without_a_reason()
+    public async Task Batch_confirm_saves_nothing_when_one_line_cannot_be_confirmed()
     {
         var a = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
         var b = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 40, operationId: IronOpId);
+        _outputs.Add(new OutputRecord { WorkerId = WorkerId, OrderLineId = 101, OperationId = IronOpId, Quantity = 40 });
+        var retrieval = Allocation(PieceMovementTypes.Retrieval, HandoverStatuses.Pending, 40, operationId: IronOpId);
 
-        var result = await Service().ConfirmBatchByWorkerAsync(
-            Batch((a.WorkAllocationId, 60, null), (b.WorkAllocationId, 35, null)), WorkerId, default);
+        var result = await Service().ConfirmBatchByWorkerAsync(Batch(a.WorkAllocationId, retrieval.WorkAllocationId), WorkerId, default);
 
-        result.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
-        result.Message.Should().Contain("Là").And.Contain("Chưa lưu phiếu nào");
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("Chưa lưu phiếu nào");
+        b.Status.Should().Be(HandoverStatuses.Pending);
         await _uow.DidNotReceive().SaveChangesAsync();
         await _uow.Received(1).RollbackTransactionAsync();
         _notifier.DidNotReceive().NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
@@ -442,9 +427,9 @@ public class WorkAllocationServiceTests
         var other = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60, worker: 77);
         var decided = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Confirmed, 60, confirmed: 60);
 
-        (await Service().ConfirmBatchByWorkerAsync(Batch((mine.WorkAllocationId, 60, null), (other.WorkAllocationId, 60, null)),
+        (await Service().ConfirmBatchByWorkerAsync(Batch(mine.WorkAllocationId, other.WorkAllocationId),
             WorkerId, default)).ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
-        (await Service().ConfirmBatchByWorkerAsync(Batch((decided.WorkAllocationId, 60, null)), WorkerId, default))
+        (await Service().ConfirmBatchByWorkerAsync(Batch(decided.WorkAllocationId), WorkerId, default))
             .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
         await _uow.DidNotReceive().SaveChangesAsync();
     }
@@ -494,7 +479,7 @@ public class WorkAllocationServiceTests
         var b = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 40, operationId: IronOpId);
         var other = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 30, worker: 77);
 
-        var result = await Service().ConfirmWorkerOnBehalfAsync(WorkerId, new ConfirmWorkerOnBehalfDto(" vắng điện thoại "), TeamId, default);
+        var result = await Service().ConfirmWorkerOnBehalfAsync(WorkerId, new ConfirmOnBehalfDto(" vắng điện thoại "), TeamId, default);
 
         result.IsSuccess.Should().BeTrue();
         result.Message.Should().Contain("2 phiếu");
@@ -510,7 +495,7 @@ public class WorkAllocationServiceTests
         Allocation(PieceMovementTypes.Handover, HandoverStatuses.Confirmed, 60, confirmed: 60);
         Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
 
-        (await Service().ConfirmWorkerOnBehalfAsync(WorkerId, new ConfirmWorkerOnBehalfDto("x"), 99, default))
+        (await Service().ConfirmWorkerOnBehalfAsync(WorkerId, new ConfirmOnBehalfDto("x"), 99, default))
             .ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
         await _uow.DidNotReceive().SaveChangesAsync();
     }
@@ -521,10 +506,9 @@ public class WorkAllocationServiceTests
         var validator = new ConfirmWorkAllocationBatchDtoValidator();
 
         validator.Validate(Batch()).IsValid.Should().BeFalse();
-        validator.Validate(Batch((1, 5, null), (1, 5, null))).IsValid.Should().BeFalse();
-        validator.Validate(new ConfirmWorkAllocationBatchDto(Enumerable.Range(1, 101)
-            .Select(i => new ConfirmWorkAllocationItemDto(i, 1, null)).ToList())).IsValid.Should().BeFalse();
-        validator.Validate(Batch((1, 5, null), (2, 3, "thiếu"))).IsValid.Should().BeTrue();
+        validator.Validate(Batch(1, 1)).IsValid.Should().BeFalse();
+        validator.Validate(new ConfirmWorkAllocationBatchDto(Enumerable.Range(1, 101).ToList())).IsValid.Should().BeFalse();
+        validator.Validate(Batch(1, 2)).IsValid.Should().BeTrue();
     }
 
     // ---------- Tổ trưởng xác nhận hộ (UC54) ----------
@@ -535,7 +519,7 @@ public class WorkAllocationServiceTests
         var m = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
 
         var result = await Service().ConfirmOnBehalfAsync(m.WorkAllocationId,
-            new ConfirmOnBehalfDto(60, null, " công nhân nghỉ ốm "), TeamId, default);
+            new ConfirmOnBehalfDto(" công nhân nghỉ ốm "), TeamId, default);
 
         result.IsSuccess.Should().BeTrue();
         m.Status.Should().Be(HandoverStatuses.Confirmed);
@@ -549,7 +533,7 @@ public class WorkAllocationServiceTests
     {
         var m = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
 
-        var result = await Service().ConfirmOnBehalfAsync(m.WorkAllocationId, new ConfirmOnBehalfDto(60, null, "x"), 99, default);
+        var result = await Service().ConfirmOnBehalfAsync(m.WorkAllocationId, new ConfirmOnBehalfDto("x"), 99, default);
 
         result.ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
         m.Status.Should().Be(HandoverStatuses.Pending);
@@ -597,13 +581,8 @@ public class WorkAllocationServiceTests
         create.Validate(Handover(5) with { MovementType = "SWAP" }).IsValid.Should().BeFalse();
         create.Validate(Handover(5, worker: 0)).IsValid.Should().BeFalse();
 
-        var confirm = new ConfirmWorkAllocationDtoValidator();
-        confirm.Validate(new ConfirmWorkAllocationDto(5, null)).IsValid.Should().BeTrue();
-        confirm.Validate(new ConfirmWorkAllocationDto(0, "x")).IsValid.Should().BeFalse();
-
         var behalf = new ConfirmOnBehalfDtoValidator();
-        behalf.Validate(new ConfirmOnBehalfDto(5, null, "nghỉ ốm")).IsValid.Should().BeTrue();
-        behalf.Validate(new ConfirmOnBehalfDto(5, null, " ")).IsValid.Should().BeFalse();
-        behalf.Validate(new ConfirmOnBehalfDto(0, null, "x")).IsValid.Should().BeFalse();
+        behalf.Validate(new ConfirmOnBehalfDto("nghỉ ốm")).IsValid.Should().BeTrue();
+        behalf.Validate(new ConfirmOnBehalfDto(" ")).IsValid.Should().BeFalse();
     }
 }

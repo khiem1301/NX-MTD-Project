@@ -5,7 +5,9 @@ import { ATTENDANCE_TEXT, DEFAULT_PAGE_SIZE } from '../constants';
 import type { DailyTimesheet } from '../types';
 import { formatDate, formatNumber, formatTime } from '@/utils/format';
 import { formatHours, workdayTone } from '../utils/timesheet';
+import { STAT_CARD_CLASS } from '@/components/common/cardTable';
 import { DataTable } from '@/components/common/DataTable';
+import { TABLE_SORT, type ServerSort, type SortablePagination } from '@/utils/tableSort';
 
 const WORKDAY_COLOR = {
   full: '#52c41a',
@@ -19,6 +21,9 @@ type Props = {
   isFetching: boolean;
   error: { message: string } | null;
   onPageChange: (page: number, pageSize: number) => void;
+  /** Cột đang sắp xếp ở máy chủ và hàm đổi cột sắp xếp. */
+  sort: ServerSort;
+  onSortChange: (next: ServerSort) => void;
   /** Màn "của tôi" đã biết người là ai nên ẩn cột nhân viên. */
   showEmployee?: boolean;
   /** Ẩn cột tổ khi màn chấm công tổ / đã lọc 1 tổ. */
@@ -31,6 +36,8 @@ export function TimesheetTable({
   isFetching,
   error,
   onPageChange,
+  sort,
+  onSortChange,
   showEmployee = true,
   showTeam = true,
 }: Props) {
@@ -135,8 +142,20 @@ export function TimesheetTable({
     },
   ];
 
+  const pagination: SortablePagination = {
+    current: data?.page ?? 1,
+    pageSize: data?.pageSize ?? DEFAULT_PAGE_SIZE,
+    total: data?.totalItems ?? 0,
+    showSizeChanger: true,
+    pageSizeOptions: [20, 50, 100],
+    showTotal: (total, [from, to]) => `${from}–${to} / ${total} dòng`,
+    onChange: onPageChange,
+    [TABLE_SORT]: { sort, onChange: onSortChange },
+  };
+
   return (
     <DataTable<DailyTimesheet>
+      className={STAT_CARD_CLASS}
       rowKey="dailyTimesheetId"
       size="small"
       columns={columns}
@@ -145,15 +164,7 @@ export function TimesheetTable({
       scroll={{ x: 'max-content' }}
       locale={{ emptyText: <Empty description={ATTENDANCE_TEXT.tabs.timesheet} /> }}
       rowClassName={(row) => (row.isMissingPunch ? 'nx-row-warning' : '')}
-      pagination={{
-        current: data?.page ?? 1,
-        pageSize: data?.pageSize ?? DEFAULT_PAGE_SIZE,
-        total: data?.totalItems ?? 0,
-        showSizeChanger: true,
-        pageSizeOptions: [20, 50, 100],
-        showTotal: (total, [from, to]) => `${from}–${to} / ${total} dòng`,
-        onChange: onPageChange,
-      }}
+      pagination={pagination}
     />
   );
 }

@@ -1,6 +1,7 @@
 import { Col, Form, Row } from 'antd';
 import { QtyInput } from '@/components/common/QtyInput';
 import { MESSAGES } from '@/constants/messages';
+import { revalidate } from '@/utils/formValidate';
 import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { LABELS } from '../constants';
 import { qtyProblem } from '../utils/orderMaterialRules';
@@ -58,6 +59,7 @@ export function OrderMaterialQtyFields() {
             decimals={MATERIAL_QTY_DECIMALS}
             max={MAX_MATERIAL_QTY}
             style={{ width: '100%' }}
+            onChange={() => revalidate(form, 'requiredQty')}
           />
         </Form.Item>
       </Col>

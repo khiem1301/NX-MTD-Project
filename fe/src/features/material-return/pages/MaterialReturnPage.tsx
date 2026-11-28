@@ -1,5 +1,6 @@
 import { IconAction } from '@/components/common/IconAction';
 import { useState } from 'react';
+import { useViewingId } from '@/hooks/useQueryId';
 import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
@@ -30,7 +31,7 @@ const STATUS_OPTIONS = Object.entries(RETURN_STATUS_LABEL).map(([value, l]) => (
 export function MaterialReturnPage() {
   const table = useTableQuery<Filters>({});
   const returns = useMaterialReturns(table.params);
-  const [viewingId, setViewingId] = useState<number>();
+  const [viewingId, setViewingId, closeViewing] = useViewingId();
   const [createOpen, setCreateOpen] = useState(false);
 
   const columns: TableColumnsType<MaterialReturnListItem> = [
@@ -131,7 +132,7 @@ export function MaterialReturnPage() {
         loading={returns.isFetching}
         pagination={table.pagination(returns.data?.totalItems)}
       />
-      <ReturnModal returnId={viewingId} onClose={() => setViewingId(undefined)} />
+      <ReturnModal returnId={viewingId} onClose={closeViewing} />
       <ReturnCreateModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </Card>
   );

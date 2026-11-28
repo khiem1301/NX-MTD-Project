@@ -8,6 +8,7 @@ import { DataTable } from '@/components/common/DataTable';
 import { QtyInput } from '@/components/common/QtyInput';
 import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { maxQtyRule } from '@/utils/qtyLimit';
+import { revalidate } from '@/utils/formValidate';
 
 type IssueLinesTableProps = { lines: MaterialIssueLine[]; editable: boolean };
 
@@ -34,7 +35,12 @@ export function IssueLinesTable({ lines, editable }: IssueLinesTableProps) {
             rules={[{ required: true, message: MESSAGES.common.required }, maxQtyRule(l.issuedQty)]}
             style={{ marginBottom: 0 }}
           >
-            <QtyInput decimals={MATERIAL_QTY_DECIMALS} min={0} max={MAX_MATERIAL_QTY} />
+            <QtyInput
+              decimals={MATERIAL_QTY_DECIMALS}
+              min={0}
+              max={MAX_MATERIAL_QTY}
+              onChange={() => revalidate(form, ['lines', index, 'discrepancyReason'])}
+            />
           </Form.Item>
         ) : (
           formatQty(l.confirmedQty)

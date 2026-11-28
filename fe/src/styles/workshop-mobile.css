@@ -1,0 +1,622 @@
+/*
+ * Giao diện điện thoại cho vai trò xưởng (công nhân, tổ trưởng, tổ phó, QA/QC, cơ điện).
+ * Chỉ áp khi body có class `workshop-ui` (useWorkshopMobile) và màn hẹp. Khớp MOBILE_QUERY.
+ * Nhiều !important vì style của antd được chèn lúc chạy, sau file này.
+ */
+.mobile-tabbar {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 100;
+  display: flex;
+  height: calc(52px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  box-shadow: 0 -2px 8px rgba(0, 21, 41, 0.08);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-tabbar__item {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  color: #595959;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mobile-tabbar__item[aria-current='page'] {
+  color: #1677ff;
+  font-weight: 600;
+  background: #e6f4ff;
+}
+
+.mobile-tabbar__icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+@media (max-width: 767px) {
+  .workshop-ui .app-content {
+    padding: 8px 8px calc(64px + env(safe-area-inset-bottom));
+  }
+
+  .workshop-ui .app-header {
+    height: 56px;
+  }
+
+  /* Thẻ trang: tiêu đề và nút chính xuống dòng thay vì chen nhau. */
+  .workshop-ui .app-content .ant-card-head {
+    padding: 0 12px;
+  }
+
+  .workshop-ui .app-content .ant-card-head-wrapper {
+    flex-wrap: wrap;
+    column-gap: 8px;
+  }
+
+  .workshop-ui .app-content .ant-card-extra {
+    margin-inline-start: 0;
+    padding: 8px 0;
+  }
+
+  /*
+   * Trang chỉ có một thẻ: thanh đầu trang đã có tên màn nên không lặp lại tiêu đề. Giữ tiêu đề có nút (quay lại);
+   * trang nhiều thẻ (trang chủ) giữ nguyên tên từng mục.
+   */
+  .workshop-ui
+    .app-content
+    > .ant-card:only-child
+    > .ant-card-head:not(:has(.ant-card-extra, button)),
+  .workshop-ui
+    .app-content
+    > .ant-card:only-child
+    > .ant-card-head:has(.ant-card-extra)
+    .ant-card-head-title:not(:has(button)) {
+    display: none;
+  }
+
+  /* Nút chính của trang (Tạo mới, Ghi lỗi...) rộng hết màn. */
+  .workshop-ui .app-content > .ant-card:only-child > .ant-card-head .ant-card-extra {
+    flex: 1 1 100%;
+  }
+
+  .workshop-ui .app-content > .ant-card:only-child > .ant-card-head .ant-card-extra > .ant-btn,
+  .workshop-ui .app-content > .ant-card:only-child > .ant-card-head .ant-card-extra > .ant-space {
+    width: 100%;
+  }
+
+  .workshop-ui
+    .app-content
+    > .ant-card:only-child
+    > .ant-card-head
+    .ant-card-extra
+    .ant-space-item {
+    flex: 1;
+  }
+
+  .workshop-ui
+    .app-content
+    > .ant-card:only-child
+    > .ant-card-head
+    .ant-card-extra
+    .ant-space-item
+    > .ant-btn {
+    width: 100%;
+  }
+
+  .workshop-ui .app-content .ant-card-body {
+    padding: 12px;
+  }
+
+  /* Nút và ô nhập đủ to để bấm bằng ngón tay; chữ 16px để iOS không tự phóng to khi chạm vào ô. */
+  .workshop-ui .ant-btn:not(.ant-btn-link) {
+    min-height: 40px;
+  }
+
+  .workshop-ui .ant-btn-icon-only {
+    min-width: 40px;
+  }
+
+  .workshop-ui input,
+  .workshop-ui textarea,
+  .workshop-ui .ant-select-selector {
+    font-size: 16px !important;
+  }
+
+  .workshop-ui .ant-input-affix-wrapper,
+  .workshop-ui input.ant-input,
+  .workshop-ui .ant-input-number-input,
+  .workshop-ui .ant-picker {
+    min-height: 40px;
+  }
+
+  /* Ô nằm trong khung có nút xóa: chỉ khung cao 40px, ô bên trong cao thêm sẽ làm chữ lệch xuống. */
+  .workshop-ui .ant-input-affix-wrapper input.ant-input {
+    min-height: 0;
+  }
+
+  .workshop-ui .ant-select-single {
+    height: 40px;
+  }
+
+  .workshop-ui .ant-checkbox-inner {
+    width: 22px;
+    height: 22px;
+  }
+
+  .workshop-ui .ant-select-item,
+  .workshop-ui .ant-dropdown-menu-item {
+    min-height: 40px;
+    align-content: center;
+  }
+
+  /* Ô chọn, ô ngày đặt cứng độ rộng cho máy tính không được tràn màn hình. */
+  .workshop-ui .ant-select,
+  .workshop-ui .ant-picker,
+  .workshop-ui .ant-input-number {
+    max-width: 100%;
+    min-width: 0 !important;
+  }
+
+  /* Bộ lọc và nút của thanh công cụ: mỗi mục một dòng, rộng hết màn. */
+  .workshop-ui .table-toolbar > .ant-space {
+    width: 100%;
+  }
+
+  .workshop-ui .table-toolbar > .ant-space > .ant-space-item {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .workshop-ui .table-toolbar > .ant-space > .ant-space-item > .ant-btn {
+    width: 100%;
+  }
+
+  .workshop-ui .table-toolbar .ant-select,
+  .workshop-ui .table-toolbar .ant-picker,
+  .workshop-ui .table-toolbar .ant-input-search,
+  .workshop-ui .table-toolbar .ant-input-affix-wrapper,
+  .workshop-ui .table-toolbar input.ant-input {
+    width: 100% !important;
+  }
+
+  /*
+   * Hàng bộ lọc không dùng thanh công cụ chung (Space của antd có ô chọn, ô ngày, ô tìm): mỗi mục một dòng,
+   * rộng hết màn, kể cả trong hộp thoại.
+   */
+  .workshop-ui
+    :is(.app-content, .ant-modal-body)
+    .ant-space-horizontal:not(.ant-space-compact):has(
+      > .ant-space-item
+        > :is(.ant-select, .ant-picker, .ant-input-affix-wrapper, .ant-input-group-wrapper)
+    ) {
+    display: flex;
+    flex-direction: column;
+    /* Space có wrap: không tắt thì mục xếp dọc bị đẩy sang cột bên cạnh, tràn ra ngoài màn. */
+    flex-wrap: nowrap;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .workshop-ui
+    :is(.app-content, .ant-modal-body)
+    .ant-space-horizontal:not(.ant-space-compact):has(
+      > .ant-space-item
+        > :is(.ant-select, .ant-picker, .ant-input-affix-wrapper, .ant-input-group-wrapper)
+    )
+    > .ant-space-item {
+    flex: none;
+    min-width: 0;
+  }
+
+  .workshop-ui
+    :is(.app-content, .ant-modal-body)
+    .ant-space-item
+    > :is(
+      .ant-select,
+      .ant-picker,
+      .ant-input-affix-wrapper,
+      .ant-input-group-wrapper,
+      .ant-segmented
+    ) {
+    width: 100% !important;
+  }
+
+  /* Hàng bộ lọc dựng bằng Flex (bảng công): nút chọn nhanh, khoảng ngày, ô tìm xuống dòng và rộng hết màn. */
+  .workshop-ui .app-content .ant-flex:has(> .ant-segmented) > * {
+    flex: 1 1 100% !important;
+    width: 100%;
+  }
+
+  /* Ô thống kê đầu trang: một hàng 3 ô nhỏ, biểu tượng ở trên, số ở dưới. */
+  .workshop-ui .stat-tiles {
+    margin-inline: -3px !important;
+    row-gap: 6px !important;
+    flex-wrap: nowrap;
+  }
+
+  .workshop-ui .stat-tiles > .ant-col {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+    padding-inline: 3px !important;
+  }
+
+  .workshop-ui .stat-tiles .ant-card-body {
+    padding: 8px !important;
+  }
+
+  .workshop-ui .stat-tiles .ant-card-body > div > div {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px !important;
+  }
+
+  .workshop-ui .stat-tiles .ant-card-body span[aria-hidden] {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 14px !important;
+  }
+
+  .workshop-ui .stat-tiles .ant-card-body div[style*='font-size: 22px'] {
+    font-size: 17px !important;
+  }
+
+  .workshop-ui .stat-tiles .ant-typography {
+    font-size: 11px !important;
+    line-height: 1.2;
+    display: block;
+  }
+
+  /* Nút chọn một chạm: các lựa chọn chia đều, đủ cao để bấm. */
+  .workshop-ui .app-content .ant-segmented-item {
+    flex: 1;
+  }
+
+  .workshop-ui .app-content .ant-segmented-item-label {
+    min-height: 40px;
+    line-height: 40px;
+    padding: 0 4px;
+  }
+
+  /* Từ ngày / Đến ngày (AppDateRangeFields) luôn chung một dòng, mỗi ô một nửa. */
+  .workshop-ui .date-range-fields.ant-space {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    width: 100%;
+  }
+
+  .workshop-ui .date-range-fields.ant-space > .ant-space-item {
+    flex: 1 1 0 !important;
+    min-width: 0;
+  }
+
+  /* Ô nhập trong form hộp thoại đặt cứng độ rộng cho máy tính thì rộng hết dòng. */
+  .workshop-ui
+    .ant-form-vertical
+    .ant-form-item-control-input-content
+    > :is(.ant-select, .ant-picker, .ant-input-number, input.ant-input) {
+    width: 100% !important;
+  }
+
+  .workshop-ui .ant-checkbox-wrapper {
+    align-items: center;
+    min-height: 32px;
+  }
+
+  /* Hộp thoại chiếm cả màn hình, nút Lưu / Hủy luôn nằm ở đáy. Hộp xác nhận giữ cỡ nhỏ. */
+  .workshop-ui .ant-modal:not(.ant-modal-confirm) {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0;
+    padding-bottom: 0;
+    top: 0 !important;
+  }
+
+  .workshop-ui .ant-modal:not(.ant-modal-confirm) .ant-modal-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 12px;
+    border-radius: 0;
+  }
+
+  .workshop-ui .ant-modal:not(.ant-modal-confirm) .ant-modal-body {
+    flex: 1;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .workshop-ui .ant-modal:not(.ant-modal-confirm) .ant-modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin: 12px -12px -12px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    background: #fff;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  /*
+   * Bảng thành thẻ: mỗi dòng một thẻ, mỗi ô một hàng "tên cột — giá trị", không phải cuộn ngang.
+   * Chỉ chọn đúng các phần của bảng ngoài (dùng >) để bảng thường lồng bên trong không bị ảnh hưởng.
+   */
+  .workshop-ui .card-table .ant-table,
+  .workshop-ui .card-table .ant-table-container {
+    background: transparent;
+  }
+
+  .workshop-ui .card-table :is(.ant-table-content, .ant-table-body) {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .workshop-ui .card-table :is(.ant-table-content, .ant-table-body) > table {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .workshop-ui .card-table :is(.ant-table-content, .ant-table-body) > table > colgroup,
+  .workshop-ui .card-table :is(.ant-table-content, .ant-table-header) > table > .ant-table-thead,
+  .workshop-ui .card-table .ant-table-tbody > tr.ant-table-measure-row {
+    display: none;
+  }
+
+  /* Bảng có ô chọn dòng: giữ lại riêng ô "chọn tất cả" phía trên danh sách thẻ. */
+  .workshop-ui
+    .card-table
+    :is(.ant-table-content, .ant-table-header)
+    > table
+    > .ant-table-thead:has(.ant-table-selection-column) {
+    display: block;
+  }
+
+  .workshop-ui .card-table .ant-table-thead:has(.ant-table-selection-column) > tr {
+    display: flex;
+  }
+
+  .workshop-ui
+    .card-table
+    .ant-table-thead:has(.ant-table-selection-column)
+    th:not(.ant-table-selection-column) {
+    display: none;
+  }
+
+  .workshop-ui .card-table :is(.ant-table-content, .ant-table-body) > table > tbody {
+    display: block;
+  }
+
+  .workshop-ui
+    .card-table
+    :is(.ant-table-content, .ant-table-body)
+    > table
+    > tbody
+    > tr:not(.ant-table-measure-row) {
+    display: block;
+    margin-bottom: 10px;
+    padding: 4px 0;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0, 21, 41, 0.06);
+  }
+
+  /* Dòng mở rộng đang đóng được antd ẩn bằng style inline, phải giữ ẩn. */
+  .workshop-ui .card-table .ant-table-tbody > tr[style*='display: none'] {
+    display: none !important;
+  }
+
+  .workshop-ui .card-table :is(.ant-table-content, .ant-table-body) > table > tbody > tr > td {
+    display: flow-root;
+    position: static !important;
+    width: auto !important;
+    padding: 6px 12px !important;
+    border: 0 !important;
+    text-align: right !important;
+    overflow-wrap: anywhere;
+  }
+
+  .workshop-ui
+    .card-table
+    :is(.ant-table-content, .ant-table-body)
+    > table
+    > tbody
+    > tr
+    > td[data-label]:not([data-label=''])::before {
+    content: attr(data-label);
+    float: left;
+    max-width: 45%;
+    margin-right: 12px;
+    text-align: left;
+    color: #6b7280;
+  }
+
+  /* Nút thao tác của dòng nằm cuối thẻ, căn giữa, không cần nhãn. */
+  .workshop-ui .card-table .ant-table-tbody > tr > td.ant-table-cell-fix-right-first {
+    text-align: center !important;
+  }
+
+  .workshop-ui .card-table .ant-table-tbody > tr > td.ant-table-cell-fix-right-first::before {
+    content: none !important;
+  }
+
+  .workshop-ui
+    .card-table
+    .ant-table-tbody
+    > tr
+    > td:is(.ant-table-selection-column, .ant-table-row-expand-icon-cell) {
+    text-align: left !important;
+  }
+
+  .workshop-ui
+    .card-table
+    .ant-table-tbody
+    > tr:is(.ant-table-placeholder, .ant-table-expanded-row)
+    > td {
+    text-align: left !important;
+  }
+
+  .workshop-ui .card-table .ant-table-expanded-row-fixed {
+    position: static !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Dải bóng của cột ghim (antd vẽ rộng 30px lệch ra ngoài ô) làm trang rộng hơn màn hình: bảng thẻ không cần. */
+  .workshop-ui .card-table :is(.ant-table-cell-fix-left, .ant-table-cell-fix-right)::after,
+  .workshop-ui .card-table .ant-table-container::before,
+  .workshop-ui .card-table .ant-table-container::after {
+    display: none !important;
+  }
+
+  .workshop-ui .card-table .ant-pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* Nút chỉ có biểu tượng trong thẻ: hiện thêm tên thao tác (lấy từ aria-label) vì điện thoại không rê chuột được. */
+  .workshop-ui .card-table .ant-table-tbody td .ant-btn-icon-only[aria-label] {
+    width: auto !important;
+    height: auto;
+    padding: 4px 12px;
+    border: 1px solid #d9d9d9;
+    white-space: normal;
+  }
+
+  .workshop-ui .card-table .ant-table-tbody td .ant-btn-icon-only[aria-label]::after {
+    content: attr(aria-label);
+    margin-inline-start: 6px;
+    font-size: 14px;
+  }
+
+  .workshop-ui .card-table .ant-table-tbody td.ant-table-cell-fix-right-first .ant-space {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /*
+   * Thẻ số liệu gọn (STAT_CARD_CLASS), cho bảng có cột đầu là tên và cột cuối là thao tác: tên ở trên, số liệu xếp
+   * tối đa 3 cột (nhãn trên, số dưới), nút thao tác rộng hết thẻ. Lặp .ant-table-row để thắng luật thẻ chung ở trên.
+   */
+  .workshop-ui .card-table.stat-cards .ant-table-tbody > tr.ant-table-row.ant-table-row {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 8px 4px;
+  }
+
+  .workshop-ui .card-table.stat-cards .ant-table-tbody > tr.ant-table-row.ant-table-row > td {
+    flex: 1 1 30%;
+    min-width: 0;
+    padding: 4px !important;
+    text-align: center !important;
+  }
+
+  .workshop-ui
+    .card-table.stat-cards
+    .ant-table-tbody
+    > tr.ant-table-row.ant-table-row
+    > td[data-label]:not([data-label=''])::before {
+    display: block;
+    float: none;
+    max-width: none;
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+  }
+
+  .workshop-ui
+    .card-table.stat-cards
+    .ant-table-tbody
+    > tr.ant-table-row.ant-table-row
+    > td:is(:first-child, .ant-table-cell-fix-right-first) {
+    flex-basis: 100%;
+  }
+
+  .workshop-ui
+    .card-table.stat-cards
+    .ant-table-tbody
+    > tr.ant-table-row.ant-table-row
+    > td:first-child {
+    text-align: left !important;
+    font-size: 16px;
+  }
+
+  .workshop-ui
+    .card-table.stat-cards
+    .ant-table-tbody
+    > tr.ant-table-row.ant-table-row
+    > td:is(:first-child, .ant-table-cell-fix-right-first)[data-label]::before {
+    content: none;
+  }
+
+  .workshop-ui
+    .card-table.stat-cards
+    .ant-table-tbody
+    > tr.ant-table-row.ant-table-row
+    > td.ant-table-cell-fix-right-first
+    span:has(> .ant-btn) {
+    display: block;
+  }
+
+  .workshop-ui
+    .card-table.stat-cards
+    .ant-table-tbody
+    > tr.ant-table-row.ant-table-row
+    > td.ant-table-cell-fix-right-first
+    .ant-btn {
+    width: 100% !important;
+  }
+
+  /* Ô số liệu trong thẻ gọn là các hộp nhỏ, hai ô cạnh nhau chia đều. */
+  .workshop-ui
+    .card-table.stat-cards
+    .ant-table-tbody
+    > tr.ant-table-row.ant-table-row
+    > td:not(:first-child, .ant-table-cell-fix-right-first) {
+    flex: 1 1 40%;
+    margin: 2px 4px;
+    padding: 6px !important;
+    background: #fafafa;
+    border: 1px solid #f0f0f0 !important;
+    border-radius: 8px;
+  }
+
+  /* Ô nội dung dài: cả dòng, nhãn ở trên, chữ canh trái trong khung. */
+  .workshop-ui
+    .card-table.stat-cards
+    .ant-table-tbody
+    > tr.ant-table-row.ant-table-row
+    > td.card-wide-cell {
+    flex: 1 1 100%;
+    text-align: left !important;
+  }
+
+  .workshop-ui
+    .card-table.stat-cards
+    .ant-table-tbody
+    > tr.ant-table-row.ant-table-row
+    > td.card-wide-cell[data-label]:not([data-label=''])::before {
+    text-align: left;
+    margin-bottom: 2px;
+  }
+
+  /* Danh sách trong thẻ gọn thường ngắn (người trong tổ): bỏ ô chọn số dòng cho đỡ chiếm chỗ. */
+  .workshop-ui .card-table.stat-cards .ant-table-title {
+    display: none;
+  }
+}

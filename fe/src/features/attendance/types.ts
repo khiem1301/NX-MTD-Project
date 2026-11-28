@@ -36,6 +36,8 @@ export type AdjustmentFilter = {
   keyword?: string;
   page: number;
   pageSize: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
 };
 
 export type SyncSession = {
@@ -132,4 +134,6 @@ export type TimesheetFilter = {
   keyword?: string;
   page: number;
   pageSize: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
 };

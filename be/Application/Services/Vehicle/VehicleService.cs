@@ -41,9 +41,8 @@ public sealed class VehicleService : IVehicleService
             .Where(v => string.IsNullOrEmpty(query.Status) || v.Status == query.Status)
             .Where(v => string.IsNullOrEmpty(keyword) || v.PlateNumber.Contains(keyword) || v.VehicleType.Contains(keyword))
             .OrderBy(v => v.PlateNumber)
-            .Select(v => new VehicleDto(v.VehicleId, v.PlateNumber, v.VehicleType, v.FuelNormPer100Km, v.Status,
-                v.VehicleTrips.Count, v.VehicleTrips.Max(t => (int?)(t.OdometerEnd ?? t.OdometerStart))))
-            .ToPagedAsync(query, ct);
+            .ToPagedAsync(v => new VehicleDto(v.VehicleId, v.PlateNumber, v.VehicleType, v.FuelNormPer100Km, v.Status,
+                v.VehicleTrips.Count, v.VehicleTrips.Max(t => (int?)(t.OdometerEnd ?? t.OdometerStart))), query, ct);
         return Result<PagedResult<VehicleDto>>.Success(page);
     }
 
@@ -70,11 +69,10 @@ public sealed class VehicleService : IVehicleService
                 OpenCount = v.VehicleTrips.Count(t => t.Status == TripStatuses.Started),
                 LastOdometer = v.VehicleTrips.Max(t => (int?)(t.OdometerEnd ?? t.OdometerStart))
             })
-            .Select(x => new VehicleLiveStatusDto(x.Vehicle.VehicleId, x.Vehicle.PlateNumber, x.Vehicle.VehicleType, x.Vehicle.Status,
+            .ToPagedAsync(x => new VehicleLiveStatusDto(x.Vehicle.VehicleId, x.Vehicle.PlateNumber, x.Vehicle.VehicleType, x.Vehicle.Status,
                 x.OpenCount > 0, x.OpenCount, x.Open == null ? null : x.Open.VehicleTripId, x.Open == null ? null : x.Open.TripDate,
                 x.Open == null ? null : x.Open.Driver, x.Open == null ? null : x.Open.Dispatch,
-                x.Open == null ? null : x.Open.OdometerStart, x.LastOdometer))
-            .ToPagedAsync(query, ct);
+                x.Open == null ? null : x.Open.OdometerStart, x.LastOdometer), query, ct);
         return Result<PagedResult<VehicleLiveStatusDto>>.Success(page);
     }
 

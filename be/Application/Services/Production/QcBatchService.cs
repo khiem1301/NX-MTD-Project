@@ -44,11 +44,10 @@ public sealed class QcBatchService : IQcBatchService
             .Where(b => string.IsNullOrEmpty(keyword) || b.OrderLine.Order.OrderCode.Contains(keyword)
                         || b.OrderLine.ProductVariant.Product.ProductCode.Contains(keyword))
             .OrderByDescending(b => b.WorkDate).ThenByDescending(b => b.BatchTime).ThenByDescending(b => b.QcBatchId)
-            .Select(b => new QcBatchDto(b.QcBatchId, b.WorkDate, b.ShiftCode, b.BatchTime, b.SewingTeamId,
+            .ToPagedAsync(b => new QcBatchDto(b.QcBatchId, b.WorkDate, b.ShiftCode, b.BatchTime, b.SewingTeamId,
                 b.SewingTeam.TeamCode, b.OrderLineId, b.OrderLine.Order.OrderCode, b.OrderLine.ProductVariant.Product.ProductCode,
                 b.OrderLine.ProductVariant.ProductColor.Color, b.OrderLine.ProductVariant.SizeCode, b.FinishedQty, b.InspectorId, b.Inspector.FullName,
-                b.EditDeadline, false, b.RowVer))
-            .ToPagedAsync(query, ct);
+                b.EditDeadline, false, b.RowVer), query, ct);
 
         var now = _clock.Now;
         var items = page.Items.Select(i => i with { CanEdit = now <= i.EditDeadline || _guard.IsManager }).ToList();
