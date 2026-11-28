@@ -1,0 +1,4 @@
+Worker đính kèm vào PurchaseOrder/2 (cần 403/400) → 404
+Worker đính kèm vào DispatchNote/1 (cần 403/400) → 404
+Worker đính kèm vào Request/2 (cần 403/400) → 404
+Worker đính kèm vào Payroll/2 (cần 403/400) → 404

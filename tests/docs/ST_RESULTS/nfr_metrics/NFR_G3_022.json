@@ -1,0 +1,12 @@
+{
+  "case_id": "NFR_G3_022",
+  "vu": 1,
+  "duration_sec": 0.36,
+  "rps": 22.27,
+  "p50_ms": 42.5,
+  "p95_ms": 79.2,
+  "max_ms": 79.2,
+  "ok_count": 8,
+  "fail_count": 0,
+  "extra_note": "Phép kiểm đạt/vi phạm tính ở ok/fail; p50/p95 là latency của request được kiểm. 8/8 lookup trả 200 cho Worker. Danh sách trường được phép nhóm chưa chốt: chỉ kiểm trường giá / chi phí / lương"
+}

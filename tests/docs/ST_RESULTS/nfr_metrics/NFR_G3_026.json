@@ -1,0 +1,12 @@
+{
+  "case_id": "NFR_G3_026",
+  "vu": 1,
+  "duration_sec": 0.4,
+  "rps": 17.61,
+  "p50_ms": 5,
+  "p95_ms": 33.4,
+  "max_ms": 33.4,
+  "ok_count": 7,
+  "fail_count": 0,
+  "extra_note": "Phép kiểm đạt/vi phạm tính ở ok/fail; p50/p95 là latency của request được kiểm."
+}

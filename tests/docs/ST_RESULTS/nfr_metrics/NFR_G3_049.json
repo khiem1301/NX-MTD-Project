@@ -1,0 +1,12 @@
+{
+  "case_id": "NFR_G3_049",
+  "vu": 1,
+  "duration_sec": 0.01,
+  "rps": 248.38,
+  "p50_ms": 1.3,
+  "p95_ms": 5.4,
+  "max_ms": 5.4,
+  "ok_count": 2,
+  "fail_count": 0,
+  "extra_note": "Phép kiểm đạt/vi phạm tính ở ok/fail; p50/p95 là latency của request được kiểm. HSTS: CHƯA kiểm được vì môi trường test không có reverse proxy HTTPS"
+}

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Bóc kết quả Integration Test từ file .trx ra JSON + Markdown gọn.
 
+  (System Test: ST_M<N>_Round<1|2>.trx → tests/docs/ST_RESULTS/, mã ca ST_M<N>_<NNN>)
+  (NFR: NFR_G<N>_Round<1|2>.trx → tests/docs/ST_RESULTS/, mã ca NFR_G<N>_<NNN>)
   python tests/scripts/parse_trx.py --trx tests/docs/IT_RESULTS/IT_B3_Round1.trx [--round 1] [--out-dir DIR] [--force]
 
 Mã ca lấy bằng regex IT_B\\d+_\\d+ trên tên test (hàm [Fact] tên IT_B2_001_..., hoặc [Theory] có tham số
@@ -17,9 +19,10 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-ID_RE = re.compile(r"IT_B\d+_\d+")
+ID_RE = re.compile(r"(?:IT_B|ST_M|NFR_G)\d+_\d+")
 MAX_MSG = 200
-DEFAULT_OUT = Path(__file__).resolve().parents[1] / "docs" / "IT_RESULTS"
+DOCS = Path(__file__).resolve().parents[1] / "docs"
+DEFAULT_OUT = DOCS / "IT_RESULTS"  # ca ST_M* / NFR_G* mặc định ghi vào docs/ST_RESULTS
 
 
 def short(text: str) -> str:
@@ -63,29 +66,32 @@ def main() -> None:
 
     rows = parse(args.trx)
     if not rows:
-        sys.exit("Không tìm thấy mã IT_B<X>_<NNN> nào trong file trx.")
-    batches = {re.match(r"IT_B(\d+)_", i).group(1) for i in rows}
+        sys.exit("Không tìm thấy mã IT_B<X>_<NNN> / ST_M<N>_<NNN> / NFR_G<N>_<NNN> nào trong file trx.")
+    batches = {re.match(r"(IT_B|ST_M|NFR_G)(\d+)_", i).groups() for i in rows}
     if len(batches) != 1:
-        sys.exit(f"File trx lẫn nhiều batch: {sorted(batches)}")
-    b = batches.pop()
+        sys.exit(f"File trx lẫn nhiều batch/module: {sorted(batches)}")
+    prefix, b = batches.pop()
+    if prefix != "IT_B" and args.out_dir == DEFAULT_OUT:
+        args.out_dir = DOCS / "ST_RESULTS"
     data = [rows[k] for k in sorted(rows)]
     failed = [d for d in data if d["Outcome"] == "Failed"]
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    stem = f"IT_B{b}_Round{args.round}"
+    stem = f"{prefix}{b}_Round{args.round}"
     (args.out_dir / f"{stem}.json").write_text(json.dumps(data, ensure_ascii=False, indent=4), encoding="utf-8")
 
     md = args.out_dir / f"{stem}_Failed.md"
     if md.exists() and not args.force:
         print(f"Giữ nguyên {md.name} (đã có; dùng --force để ghi đè).")
     else:
-        lines = [f"# IT Batch {b} — Round {args.round}: các ca Failed", "",
+        title = {"IT_B": "IT Batch", "ST_M": "ST Module", "NFR_G": "NFR Group"}[prefix]
+        lines = [f"# {title} {b} — Round {args.round}: các ca Failed", "",
                  f"Kết quả: **{len(data)} ca, {len(data) - len(failed)} Passed, {len(failed)} Failed**. Log: `{args.trx.name}`.", "",
                  "| Ca | Thông báo lỗi |", "|---|---|"]
         lines += [f"| {d['Id'][-3:]} | {d['Message'].replace('|', '\\|')} |" for d in failed]
         md.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    print(f"Batch {b}: {len(data)} ca; {len(data) - len(failed)} Passed; {len(failed)} Failed → {args.out_dir / (stem + '.json')}")
+    print(f"{prefix}{b}: {len(data)} ca; {len(data) - len(failed)} Passed; {len(failed)} Failed → {args.out_dir / (stem + '.json')}")
 
 
 if __name__ == "__main__":

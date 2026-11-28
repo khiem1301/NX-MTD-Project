@@ -1,0 +1,3 @@
+đơn giá 0 không hiện đúng câu 'Đơn giá phải lớn hơn 0.'
+đơn giá 100000001 không hiện đúng câu 'Đơn giá không được vượt quá 100.000.000 đồng.'
+đơn giá nhập 0.01 không được lưu/hiển thị là 0,01

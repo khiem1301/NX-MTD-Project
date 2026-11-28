@@ -1,0 +1,1 @@
+confirm-batch lẫn ID của B → 400/403 hoặc chỉ xử lý ID của A → 404

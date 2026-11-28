@@ -1,0 +1,12 @@
+{
+  "case_id": "NFR_G3_043",
+  "vu": 1,
+  "duration_sec": 2.57,
+  "rps": 1.56,
+  "p50_ms": 13.6,
+  "p95_ms": 93.3,
+  "max_ms": 93.3,
+  "ok_count": 4,
+  "fail_count": 0,
+  "extra_note": "Phép kiểm đạt/vi phạm tính ở ok/fail; p50/p95 là latency của request được kiểm. Không có API xuất cho mã hàng / đơn hàng: kiểm qua trường Loại xe trong accountant/accounting-reports/export (không đi qua đường import)"
+}

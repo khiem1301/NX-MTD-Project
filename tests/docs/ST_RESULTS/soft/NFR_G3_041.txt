@@ -1,0 +1,11 @@
+admin/employee-import/preview: 400 < 10 s (đo 4677 ms) → 500
+admin/employee-import/preview: RAM +2114 MB (cần ≤ 200)
+admin/customer-orders/import/preview: 400 < 10 s (đo 2680 ms) → 500
+admin/customer-orders/import/preview: RAM +399 MB (cần ≤ 200)
+admin/products/excel/parse: 400 < 10 s (đo 2903 ms) → 500
+admin/products/excel/parse: RAM +2108 MB (cần ≤ 200)
+manager/order-markers/excel/parse: 400 < 10 s (đo 5516 ms) → 500
+accountant/payrolls/import/preview: 400 < 10 s (đo 2671 ms) → 500
+accountant/payrolls/import/preview: RAM +207 MB (cần ≤ 200)
+accountant/attendance/import/preview: 400 < 10 s (đo 2608 ms) → 500
+accountant/attendance/import/preview: RAM +594 MB (cần ≤ 200)

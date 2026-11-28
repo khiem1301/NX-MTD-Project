@@ -1,0 +1,3 @@
+Manager reset-password Admin (cần 403) → 404
+Manager lock Admin (cần 403) → 404
+Manager unlock Admin (cần 403) → 404

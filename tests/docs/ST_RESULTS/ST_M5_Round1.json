@@ -1,0 +1,97 @@
+[
+  {
+    "Id": "ST_M5_001",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M5_002",
+    "Outcome": "Failed",
+    "Message": "System.InvalidOperationException : SAI: email 'ncc@' không báo 'Email không hợp lệ.'"
+  },
+  {
+    "Id": "ST_M5_003",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M5_004",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M5_005",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M5_006",
+    "Outcome": "Failed",
+    "Message": "System.InvalidOperationException : SAI: số lần giao '0' không báo lỗi mà ô tự đổi thành '1' | số lần giao '100' không báo lỗi mà ô tự đổi thành '10' | đơn giá gõ '0,5' thành '5': không làm tròn đúng …"
+  },
+  {
+    "Id": "ST_M5_007",
+    "Outcome": "Failed",
+    "Message": "Microsoft.Playwright.PlaywrightException : Locator expected to be visible Call log: - - LocatorAssertions.ToBeVisibleAsync with timeout 5000ms - - waiting for GetByRole(AriaRole.Dialog).First.GetByRo…"
+  },
+  {
+    "Id": "ST_M5_008",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M5_009",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M5_010",
+    "Outcome": "Failed",
+    "Message": "System.InvalidOperationException : SAI: số tiền 0,01 không nhập được: ô tự đổi thành '1'"
+  },
+  {
+    "Id": "ST_M5_011",
+    "Outcome": "Failed",
+    "Message": "System.InvalidOperationException : SAI: ảnh thứ 6 không bị chặn (giao diện cho tải tối đa 20 ảnh)"
+  },
+  {
+    "Id": "ST_M5_012",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M5_013",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M5_014",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M5_015",
+    "Outcome": "Failed",
+    "Message": "System.InvalidOperationException : SAI: đơn giá 0,01 không nhập được: ô tự đổi thành '1'"
+  },
+  {
+    "Id": "ST_M5_016",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M5_017",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M5_018",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M5_019",
+    "Outcome": "Passed",
+    "Message": ""
+  }
+]

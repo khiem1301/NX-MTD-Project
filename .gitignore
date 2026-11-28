@@ -123,3 +123,9 @@ NX-MTD_Login_Scaffold_AI_Runbook.md
 
 # Ảnh tải lên (dev)
 App_Data/
+
+# System Test: phiên đăng nhập cache
+tests/System.Tests/.auth/
+**/.auth/
+appsettings.SystemTest.local.json
+**/appsettings.SystemTest.local.json

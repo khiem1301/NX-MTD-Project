@@ -1,0 +1,112 @@
+[
+  {
+    "Id": "ST_M4_001",
+    "Outcome": "Failed",
+    "Message": "System.InvalidOperationException : SAI: payload POST /admin/customer-orders không theo cấu trúc blocks[].lines[] (thực tế gửi lines[] ở cấp gốc)"
+  },
+  {
+    "Id": "ST_M4_002",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_003",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_004",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_005",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_006",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_007",
+    "Outcome": "Failed",
+    "Message": "System.InvalidOperationException : SAI: đơn giá nhập '-1' không bị chặn | đơn giá nhập '100000000,01' không bị chặn | đơn giá nhập '1500,555' không bị chặn | SL nhập '1000001' không bị chặn | SL nhập…"
+  },
+  {
+    "Id": "ST_M4_008",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_009",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_010",
+    "Outcome": "Failed",
+    "Message": "Expected value to be between 200 and 299 because {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Vui lòng nhập lý do.\"}, but found 400."
+  },
+  {
+    "Id": "ST_M4_011",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_012",
+    "Outcome": "Failed",
+    "Message": "System.InvalidOperationException : SAI: nút bị disable nhưng không thấy hint 'Chưa nhận NVL nào…'"
+  },
+  {
+    "Id": "ST_M4_013",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_014",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_015",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_016",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_017",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_018",
+    "Outcome": "Failed",
+    "Message": "Expected value to be between 200 and 299 because {\"success\":false,\"errorCode\":\"TEAM_ORDER_BUSY\",\"message\":\"Tổ đang làm đơn DH-2511-006 (đã nhập kho TP 0% / đặt). Chỉ giao đơn khác khi đạt từ 90% hoặc…"
+  },
+  {
+    "Id": "ST_M4_019",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_020",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_021",
+    "Outcome": "Passed",
+    "Message": ""
+  },
+  {
+    "Id": "ST_M4_022",
+    "Outcome": "Passed",
+    "Message": ""
+  }
+]

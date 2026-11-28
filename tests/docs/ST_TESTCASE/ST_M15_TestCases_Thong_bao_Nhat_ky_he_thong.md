@@ -1,0 +1,18 @@
+tests/docs/ST_M15_TestCases_Thong_bao_Nhat_ky_he_thong.md
+
+| Test Case ID | Pre-conditions | Input parameters | Expected Results | Type |
+| :--- | :--- | :--- | :--- | :--- |
+| ST_M15_001 | Admin; Worker CN01 đang đăng nhập ở trình duyệt khác | Admin `/notifications` → "Gửi thông báo nhanh" → Nội dung, Mức ưu tiên, Gửi tới "Toàn xưởng" → "Gửi"; CN01 chờ (dùng `Expect` timeout, không `Task.Delay`) | [UI]: Modal đóng; thông báo có ở tab "Đã gửi"; CN01 thấy toast thông báo mới, huy hiệu chuông +1, dòng đậm ở Hộp thư<br>[System/Persist]: `POST /admin/announcements` `targetScope=ALL` | Normal |
+| ST_M15_002 | Manager; CN01 thuộc MAY01, CN02 thuộc MAY02 | Gửi tới "Theo tổ" = MAY01 | [UI]: CN01 nhận thông báo; CN02 không nhận<br>[System/Persist]: `teamIds=[MAY01]` | Normal |
+| ST_M15_003 | Manager; có Accountant và WK | Gửi tới "Theo vai trò" = Accountant | [UI]: Accountant nhận; WK không nhận<br>[System/Persist]: `roleIds` đúng | Normal |
+| ST_M15_004 | Modal gửi thông báo | Nội dung trống; chỉ khoảng trắng; 1000 ký tự; 1001 ký tự | [UI]: Trống/khoảng trắng báo required; 1000 gửi được; 1001 bị chặn<br>[System/Persist]: Nội dung 1000 ký tự hiển thị đầy đủ ở người nhận | Boundary |
+| ST_M15_005 | Modal gửi thông báo | Chọn "Theo tổ" không chọn tổ; "Theo vai trò" không chọn vai trò | [UI]: Báo required ở ô Tổ / Vai trò<br>[System/Persist]: Không gửi API | Boundary |
+| ST_M15_006 | Có tổ MAY03 đã ngừng | Gửi "Theo tổ" chọn MAY03 (nếu còn trong danh sách) | [UI]: BE chặn với lỗi rõ ràng hoặc gửi được (ghi nhận); không treo<br>[System/Persist]: Không sinh thông báo cho người ngoài phạm vi | Abnormal |
+| ST_M15_007 | CN01 có 3 thông báo chưa đọc | Hộp thư → "Đánh dấu đã đọc" 1 dòng → kiểm chuông → F5 | [UI]: Dòng hết đậm; huy hiệu chuông giảm 1 (ghi nhận nếu chuông chưa cập nhật ngay); giữ sau F5<br>[System/Persist]: `POST …/{id}/read`; `unread-count` = 2 | Normal |
+| ST_M15_008 | CN01 có 2 thông báo chưa đọc | "Đánh dấu tất cả đã đọc" → đăng xuất → đăng nhập lại | [UI]: Mọi dòng hết đậm; huy hiệu = 0 sau đăng nhập lại<br>[System/Persist]: `POST …/read-all` | Normal |
+| ST_M15_009 | CN01 có thông báo | Bấm chuông → chọn thông báo; ở bảng bấm "Xem chi tiết" | [UI]: Chuông hiện danh sách mới nhất và điều hướng `/notifications`; chi tiết hiện đúng tiêu đề do BE sinh + nội dung<br>[System/Persist]: Thông báo được đánh dấu đọc theo rule | Normal |
+| ST_M15_010 | Worker đăng nhập | `/notifications` → tìm nút "Gửi thông báo nhanh", tab "Đã gửi"; gọi `POST /manager/announcements` bằng token Worker | [UI]: Trang mở (không redirect) nhưng không có nút gửi và tab Đã gửi<br>[System/Persist]: API → 403 | Abnormal |
+| ST_M15_011 | Admin sửa SĐT NV CN01 và Manager sửa sản lượng sau hạn có lý do (Module 2, 8) | Admin `/admin/audit-logs` → tìm "Tìm theo lý do / người thực hiện" → mở chi tiết | [UI]: Có dòng nhật ký đúng người thực hiện, đối tượng, hành động; modal "Chi tiết thay đổi" hiện bảng Trường / Trước / Sau đúng giá trị<br>[System/Persist]: Nhật ký không sửa/xóa được từ UI | Normal |
+| ST_M15_012 | Có nhật ký nhiều bảng | Lọc "Đối tượng", "Hành động", khoảng ngày → phân trang → F5 | [UI]: Kết quả đúng bộ lọc; nhãn Đối tượng là tiếng Việt (ghi nhận bảng hiện tên kỹ thuật)<br>[System/Persist]: Gọi `GET /admin/audit-logs` đúng tham số | Normal |
+| ST_M15_013 | Admin `/admin/audit-logs` | Khoảng ngày 5 năm; từ khóa `%' <script>`; ngày Từ > Đến | [UI]: Trả kết quả hoặc thông báo giới hạn rõ ràng; không treo, không vỡ giao diện<br>[System/Persist]: Không lỗi 500 | Boundary |
+| ST_M15_014 | Manager; Accountant; Worker | Gõ `/admin/audit-logs`; đăng xuất ở `/notifications` rồi Back | [UI]: Redirect `/`; Back không hiện hộp thư<br>[System/Persist]: `GET /admin/audit-logs` bằng token Manager → 403 | Abnormal |

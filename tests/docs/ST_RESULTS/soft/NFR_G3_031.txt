@@ -1,0 +1,1 @@
+Sau ≤ 10 lần sai phải 429 hoặc tạm khóa; mật khẩu đúng vẫn đăng nhập được → 200

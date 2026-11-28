@@ -1,0 +1,12 @@
+{
+  "case_id": "NFR_G3_024",
+  "vu": 1,
+  "duration_sec": 0.26,
+  "rps": 11.69,
+  "p50_ms": 0,
+  "p95_ms": 94,
+  "max_ms": 94,
+  "ok_count": 2,
+  "fail_count": 1,
+  "extra_note": "Phép kiểm đạt/vi phạm tính ở ok/fail; p50/p95 là latency của request được kiểm. API không có GET theo productId, chỉ kiểm PUT"
+}

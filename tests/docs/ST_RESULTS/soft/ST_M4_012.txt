@@ -1,0 +1,1 @@
+nút bị disable nhưng không thấy hint 'Chưa nhận NVL nào…'
