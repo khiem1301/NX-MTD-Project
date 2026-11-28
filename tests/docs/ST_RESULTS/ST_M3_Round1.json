@@ -1,0 +1,142 @@
+[
+    {
+        "Id": "ST_M3_001",
+        "Outcome": "Failed",
+        "Message": "Expected value to be 201, but found 200 (difference of -1)."
+    },
+    {
+        "Id": "ST_M3_002",
+        "Outcome": "Failed",
+        "Message": "Microsoft.Playwright.PlaywrightException : Locator expected to be visible Call log: - - LocatorAssertions.ToBeVisibleAsync with timeout 5000ms - - waiting for Locator(\".ant-message-notice\").Filter(ne…"
+    },
+    {
+        "Id": "ST_M3_003",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_004",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_005",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_006",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_007",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_008",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_009",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_010",
+        "Outcome": "Failed",
+        "Message": "Expected value to be between 200 and 299 because {\"success\":false,\"errorCode\":\"COMMON_VALIDATION\",\"message\":\"Dữ liệu không hợp lệ.\",\"errors\":{\"sampleImageUrl\":[\"Ảnh mẫu không hợp lệ, vui lòng chọn lạ…"
+    },
+    {
+        "Id": "ST_M3_011",
+        "Outcome": "Failed",
+        "Message": "System.TimeoutException : Timeout 15000ms exceeded while waiting for event \"Response\" ---- System.TimeoutException : Timeout 15000ms exceeded while waiting for event \"Response\""
+    },
+    {
+        "Id": "ST_M3_012",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_013",
+        "Outcome": "Failed",
+        "Message": "Expected string \"{\"productId\":17,\"operationCode\":\"ST_AUTO_CD44412\",\"operationName\":\"ST_AUTO_ cong doan ST_AUTO_CD44412\",\"stationSequence\":1,\"skillLevel\":3,\"standardTimeSec\":125,\"teamType\":\"Sewing\",\"i…"
+    },
+    {
+        "Id": "ST_M3_014",
+        "Outcome": "Failed",
+        "Message": "System.InvalidOperationException : SAI: CD#1 không báo lỗi pattern (ô tự bỏ ký tự #) | Thứ tự='0' không báo lỗi | Thứ tự='32768' không báo lỗi | Bậc (1-9)='0' không báo lỗi | Bậc (1-9)='10' không báo…"
+    },
+    {
+        "Id": "ST_M3_015",
+        "Outcome": "Failed",
+        "Message": "System.InvalidOperationException : SAI: đơn giá 0 không hiện đúng câu 'Đơn giá phải lớn hơn 0.' | đơn giá 100000001 không hiện đúng câu 'Đơn giá không được vượt quá 100.000.000 đồng.' | đơn giá nhập …"
+    },
+    {
+        "Id": "ST_M3_016",
+        "Outcome": "Failed",
+        "Message": "System.InvalidOperationException : SAI: không có thông báo công đoạn cuối hiện tại sẽ chuyển"
+    },
+    {
+        "Id": "ST_M3_017",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_018",
+        "Outcome": "Failed",
+        "Message": "System.InvalidOperationException : SAI: không hiện gợi ý ngày hiệu lực đã qua (pastDateHint)"
+    },
+    {
+        "Id": "ST_M3_019",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_020",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_021",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_022",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_023",
+        "Outcome": "Failed",
+        "Message": "System.InvalidOperationException : SAI: danh sách công đoạn của Kế toán không hiện 'Bị từ chối' sau khi Admin từ chối (hiện 'Chưa có')"
+    },
+    {
+        "Id": "ST_M3_024",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_025",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_026",
+        "Outcome": "Failed",
+        "Message": "System.InvalidOperationException : SAI: nút 'Thêm công đoạn' bị ẩn hẳn thay vì disabled | nút 'Nhập từ Excel' bị ẩn hẳn thay vì disabled | nút 'Nhóm công đoạn' bị ẩn hẳn thay vì disabled"
+    },
+    {
+        "Id": "ST_M3_027",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M3_028",
+        "Outcome": "Passed",
+        "Message": ""
+    }
+]

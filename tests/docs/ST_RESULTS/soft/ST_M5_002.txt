@@ -1,0 +1,1 @@
+email 'ncc@' không báo 'Email không hợp lệ.'

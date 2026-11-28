@@ -1,0 +1,12 @@
+{
+  "case_id": "NFR_G3_030",
+  "vu": 1,
+  "duration_sec": 2.36,
+  "rps": 1.7,
+  "p50_ms": 6.6,
+  "p95_ms": 7.5,
+  "max_ms": 7.5,
+  "ok_count": 3,
+  "fail_count": 1,
+  "extra_note": "Phép kiểm đạt/vi phạm tính ở ok/fail; p50/p95 là latency của request được kiểm. RỦI RO (e): server không xoay vòng refresh token, dùng lại lần 2 → HTTP 200"
+}

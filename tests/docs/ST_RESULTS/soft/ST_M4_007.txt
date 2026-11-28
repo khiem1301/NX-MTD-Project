@@ -1,0 +1,5 @@
+đơn giá nhập '-1' không bị chặn
+đơn giá nhập '100000000,01' không bị chặn
+đơn giá nhập '1500,555' không bị chặn
+SL nhập '1000001' không bị chặn
+SL nhập '1,5' không bị chặn

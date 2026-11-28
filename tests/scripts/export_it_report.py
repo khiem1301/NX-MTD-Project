@@ -3,6 +3,15 @@
 
   python tests/scripts/export_it_report.py --round 1 [--batch N]   # tạo sheet Batch1_Auth_HR từ sheet mẫu, điền Round 1
   python tests/scripts/export_it_report.py --round 2   # chỉ điền cột Round 2 (+ Defect IDs nếu có file map)
+  python tests/scripts/export_it_report.py --suite st --batch N --round 1|2   # System Test → Report-5.3_System Test.xlsx
+    (mã ca ST_M<N>_NNN, spec docs/ST_TESTCASE/ST_M<N>_*.md, kết quả docs/ST_RESULTS/ST_M<N>_Round<R>.json,
+     ảnh lỗi docs/ST_RESULTS/screenshots/<CaseID>.png được chèn vào cột Note; sheet mẫu "Workflow Name1" của
+     Report-5.3_System Test_FRs.xlsx được nhân bản thành sheet Module<N>_<Tên>)
+
+  python tests/scripts/export_it_report.py --type nfr --round 1|2 [--batch N]   # NFR → Report-5.4_Non-Functional Test.xlsx
+    (mã ca NFR_G<N>_NNN, spec docs/ST_NFR_TESTCASE/ST_NFR_TestCases_Group<N>_*.md, kết quả docs/ST_RESULTS/NFR_G<N>_Round<R>.json,
+     chỉ số docs/ST_RESULTS/nfr_metrics/<CaseID>.json ghép vào cột Note; bỏ --batch = mọi nhóm đã có kết quả của Round đó.
+     File 5.4 chưa có thì tạo từ Report-5.3_System Test_FRs.xlsx, sheet Group<N>_<Tên> nhân bản từ "Workflow Name1")
 
 Nguyên tắc: mở trực tiếp workbook hiện có (không tạo file mới), nhân bản sheet mẫu bằng copy_worksheet để giữ style,
 không đụng tới sheet mẫu gốc. Round 2 / Round 3 / Defect IDs của Round 1 để trống.
@@ -18,12 +27,19 @@ from copy import copy
 from pathlib import Path
 
 from openpyxl import load_workbook
+from openpyxl.formatting.rule import CellIsRule
+from openpyxl.styles import Font, PatternFill
 from openpyxl.worksheet.datavalidation import DataValidation
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCS = ROOT / "tests" / "docs"
 WORKBOOK = DOCS / "Report-5.2_Integration Test.xlsx"
 RESULTS_DIR = DOCS / "IT_RESULTS"
+ST_WORKBOOK = DOCS / "Report-5.3_System Test_FRs.xlsx"
+ST_RESULTS_DIR = DOCS / "ST_RESULTS"
+NFR_WORKBOOK = DOCS / "Report-5.4_Non-Functional Test.xlsx"
+NFR_SPEC_DIR = DOCS / "ST_NFR_TESTCASE"
+NFR_METRICS_DIR = ST_RESULTS_DIR / "nfr_metrics"
 
 BATCHES = {
     1: dict(
@@ -111,6 +127,49 @@ BATCHES = {
     ),
 }
 CFG: dict = {}
+SUITE = "it"
+
+
+def st_config(n: int) -> dict:
+    """Cấu hình module System Test: tên lấy từ tests/docs/ST_MODULES.md, spec ở docs/ST_TESTCASE/ST_M<N>_*.md."""
+    name = f"Module {n}"
+    modules = DOCS / "ST_MODULES.md"
+    if modules.exists():
+        for line in modules.read_text(encoding="utf-8").splitlines():
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if len(cells) >= 5 and cells[0] == str(n):
+                name = cells[1]
+                break
+    found = sorted((DOCS / "ST_TESTCASE").glob(f"ST_M{n}_*.md")) if (DOCS / "ST_TESTCASE").exists() else []
+    return dict(
+        pfx="ST", key=f"M{n}", spec_name=found[0].name if found else f"ST_M{n}_TestCases.md",
+        sheet=(f"Module{n}_" + (found[0].stem.split("TestCases_", 1)[-1] if found else "x"))[:31],
+        expected=None, title=f"Module {n} — {name}", short=name,
+        requirement=f"System Test E2E (Playwright, Chromium) trên giao diện Frontend: {name}. Phạm vi Frontend theo tests/docs/ST_MODULES.md.",
+        precondition="Dữ liệu tiền tố ST_AUTO_; phiên đăng nhập theo Role; mỗi ca tự dọn dữ liệu",
+        race_forced=set(), stats_row=None, tc_first_row=None,
+    )
+
+
+def nfr_config(n: int) -> dict:
+    """Cấu hình nhóm NFR: tên lấy từ file spec docs/ST_NFR_TESTCASE/ST_NFR_TestCases_Group<N>_*.md."""
+    found = sorted(NFR_SPEC_DIR.glob(f"ST_NFR_TestCases_Group{n}_*.md"))
+    if not found:
+        sys.exit(f"Không thấy spec ST_NFR_TestCases_Group{n}_*.md trong {NFR_SPEC_DIR}")
+    name = found[0].stem.split("TestCases_", 1)[1]  # Group1_Performance
+    short = name.split("_", 1)[-1]
+    return dict(
+        pfx="NFR", key=f"G{n}", spec_name=found[0].name, sheet=name[:31],
+        expected=None, title=f"NFR Group {n} — {short}", short=short,
+        requirement=f"Non-Functional System Test (nhóm {short}) theo tests/docs/ST_NFR_TARGETS.md: NBomber / HttpClient / Playwright trên môi trường test.",
+        precondition="Môi trường test riêng, DB reset + seed theo nhóm; dữ liệu tiền tố NFR_AUTO_, dọn sau khi chạy",
+        race_forced=set(), stats_row=None, tc_first_row=None,
+    )
+
+
+def st_stats_row() -> int:
+    """Dòng Test Statistics của module ST: dòng đã trỏ tới sheet này, hoặc dòng trống đầu tiên từ 11."""
+    return 11  # được tính lại trong update_summary_sheets
 SHEET_NAME = ""
 TEMPLATE_SHEET = "Feature Name1"
 RACE_FORCED_FAILED: set = set()
@@ -121,10 +180,19 @@ FEATURE_TITLE = FEATURE_REQUIREMENT = ""
 
 def select_batch(n: int) -> None:
     global CFG, SHEET_NAME, RACE_FORCED_FAILED, FAILED_MD, SPEC_CANDIDATES, FEATURE_TITLE, FEATURE_REQUIREMENT
-    CFG = BATCHES[n]
+    global RESULTS_DIR
+    if SUITE in ("st", "nfr"):
+        RESULTS_DIR = ST_RESULTS_DIR
+        CFG = st_config(n) if SUITE == "st" else nfr_config(n)
+    else:
+        CFG = BATCHES[n]
+        CFG.setdefault("pfx", "IT")
     SHEET_NAME, RACE_FORCED_FAILED = CFG["sheet"], CFG["race_forced"]
-    FAILED_MD = RESULTS_DIR / f"IT_{CFG['key']}_Round1_Failed.md"
-    SPEC_CANDIDATES = [DOCS / CFG["spec_name"], DOCS / "IT_TESTCASE" / CFG["spec_name"]]
+    global TEMPLATE_SHEET
+    TEMPLATE_SHEET = "Feature Name1" if SUITE == "it" else "Workflow Name1"
+    FAILED_MD = RESULTS_DIR / f"{CFG['pfx']}_{CFG['key']}_Round1_Failed.md"
+    spec_dir = {"it": "IT_TESTCASE", "st": "ST_TESTCASE", "nfr": "ST_NFR_TESTCASE"}[SUITE]
+    SPEC_CANDIDATES = [DOCS / CFG["spec_name"], DOCS / spec_dir / CFG["spec_name"]]
     FEATURE_TITLE, FEATURE_REQUIREMENT = CFG["title"], CFG["requirement"]
 
 FIRST_DATA_ROW = 12
@@ -164,7 +232,7 @@ def parse_spec(path: Path) -> list[dict]:
             h3 = line[4:].strip()
         elif line.startswith("## "):
             h2, h3 = line[3:].strip(), ""
-        m = re.match(rf"^\|\s*(IT_{CFG['key']}_\d{{3}})\b[^|]*\|", line)  # ô ID có thể kèm nhãn **[Đ1]**
+        m = re.match(rf"^\|\s*({CFG['pfx']}_{CFG['key']}_\d{{3}})\b[^|]*\|", line)  # ô ID có thể kèm nhãn **[Đ1]**
         if not m:
             continue
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
@@ -175,13 +243,63 @@ def parse_spec(path: Path) -> list[dict]:
         expected = "|".join(cells[3:-1])
         cases.append({
             "id": cid, "pre": clean(pre), "input": clean(inp), "expected": clean(expected), "type": typ,
-            "group": re.sub(r"`", "", h3 or h2),
+            "group": re.sub(r"`", "", h3 or h2 or (CFG.get("short") or "")),
         })
     return cases
 
 
+def nfr_target_names() -> dict[str, str]:
+    """G1-01 → tên mục tiêu, đọc từ bảng trong ST_NFR_TARGETS.md (dùng làm tiêu đề nhóm ca)."""
+    path, names = DOCS / "ST_NFR_TARGETS.md", {}
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            m = re.match(r"^\|\s*(G\d+-\d+)\s*\|\s*([^|]+?)\s*\|", line)
+            if m:
+                names[m.group(1)] = clean(m.group(2))
+    return names
+
+
+def parse_nfr_spec(path: Path) -> list[dict]:
+    """Bảng NFR: TC ID | Mục tiêu | Loại | Endpoint / Màn hình | Kịch bản | Kết quả mong đợi."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    env = next((clean(l.split(":**", 1)[1]) for l in lines if l.startswith("> **Môi trường")), CFG["precondition"])
+    names, cases = nfr_target_names(), []
+    for line in lines:
+        m = re.match(rf"^\|\s*({CFG['pfx']}_{CFG['key']}_\d{{3}})\b", line)
+        if not m:
+            continue
+        cells = [c.strip().replace("\\|", "|") for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+        if len(cells) != 6:
+            sys.exit(f"{m.group(1)}: cần 6 cột, đọc được {len(cells)}: {line[:80]}")
+        _, target, typ, endpoint, scenario, expected = cells
+        cases.append({
+            "id": m.group(1), "pre": env, "input": clean(scenario), "expected": clean(expected), "type": typ,
+            "group": f"{target} — {names[target]}" if target in names else clean(target),
+            "endpoint": clean(endpoint),
+        })
+    return cases
+
+
+def metric_note(cid: str) -> str:
+    """Chỉ số thực đo của ca (nếu có file nfr_metrics/<CaseID>.json) để ghép vào cột Note."""
+    path = NFR_METRICS_DIR / f"{cid}.json"
+    if not path.exists():
+        return ""
+    try:
+        m = json.loads(path.read_text(encoding="utf-8-sig"))
+        if m["case_id"] != cid:
+            sys.exit(f"{path.name}: case_id là {m['case_id']}, không khớp tên file")
+        ok, fail = m["ok_count"], m["fail_count"]
+        rate = f"{fail * 100 / (ok + fail):.2f}%" if ok + fail else "không có request"
+        note = (f"[Số đo] p95={m['p95_ms']:g} ms; RPS={m['rps']:g}; Error Rate={rate} ({fail}/{ok + fail}); "
+                f"p50={m['p50_ms']:g} ms; max={m['max_ms']:g} ms; VU={m['vu']}; thời lượng={m['duration_sec']:g} s")
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError) as ex:
+        sys.exit(f"File chỉ số hỏng {path}: {ex!r}")
+    return f"{note}. {m['extra_note']}" if m.get("extra_note") else note
+
+
 def load_results(round_no: int) -> dict[str, str]:
-    path = RESULTS_DIR / f"IT_{CFG['key']}_Round{round_no}.json"
+    path = RESULTS_DIR / f"{CFG['pfx']}_{CFG['key']}_Round{round_no}.json"
     if not path.exists():
         sys.exit(f"Thiếu file kết quả: {path}")
     data = json.loads(path.read_text(encoding="utf-8-sig"))
@@ -199,16 +317,20 @@ def parse_failed_notes(path: Path, cases: list[dict] | None = None) -> dict[str,
             continue
         parts = [p.strip() for p in line.strip().strip("|").split(" | ")]
         if len(parts) == 2:
-            cid = f"IT_{CFG['key']}_{parts[0]}"
+            cid = f"{CFG['pfx']}_{CFG['key']}_{parts[0]}"
             case = by_id[cid]
             spec = " ".join(case["expected"].split())
-            notes[cid] = f"[Lệch Spec] Spec: {spec}. Thực tế (app): {clean(parts[1].replace(chr(92) + '|', '|'))}"
+            label = "Vi phạm SLA/Threshold" if SUITE == "nfr" else "Lệch Spec"
+            notes[cid] = f"[{label}] Spec: {spec}. Thực tế (app): {clean(parts[1].replace(chr(92) + '|', '|'))}"
+            shot = ST_RESULTS_DIR / "screenshots" / f"{cid}.png"
+            if SUITE != "it" and shot.exists():
+                notes[cid] += f" Ảnh lỗi: tests/docs/ST_RESULTS/screenshots/{cid}.png"
             continue
         if len(parts) < 4:
             sys.exit(f"Dòng Failed không đủ 4 cột: {line[:80]}")
         num, group, spec, actual = parts[0], parts[1], parts[2], " | ".join(parts[3:])
         label = CATEGORY.get(group, group)
-        notes[f"IT_{CFG['key']}_{num}"] = f"[{label}] Spec: {clean(spec)}. Thực tế: {clean(actual)}."
+        notes[f"{CFG['pfx']}_{CFG['key']}_{num}"] = f"[{label}] Spec: {clean(spec)}. Thực tế: {clean(actual)}."
     return notes
 
 
@@ -259,6 +381,14 @@ def rebuild_validations(src_ws, dst_ws, last_row: int) -> None:
         dst_ws.add_data_validation(new)
 
 
+def color_results(ws) -> None:
+    """Passed nền xanh, Failed nền đỏ ở cột kết quả Round 1/2/3. copy_worksheet không sao chép conditional formatting."""
+    for text, font, fill in (("Passed", "FF006100", "FFC6EFCE"), ("Failed", "FF9C0006", "FFFFC7CE")):
+        ws.conditional_formatting.add("F10:F998 I10:I998 L10:L998", CellIsRule(
+            operator="equal", formula=[f'"{text}"'], font=Font(color=font),
+            fill=PatternFill(fill_type="solid", start_color=fill, end_color=fill)))
+
+
 def build_sheet(wb, cases: list[dict], results: dict[str, str], notes: dict[str, str]):
     if SHEET_NAME in wb.sheetnames:
         existing = wb[SHEET_NAME]
@@ -271,7 +401,8 @@ def build_sheet(wb, cases: list[dict], results: dict[str, str], notes: dict[str,
     template = wb[TEMPLATE_SHEET]
     ws = wb.copy_worksheet(template)
     ws.title = SHEET_NAME
-    others = [n for n in wb.sheetnames if n.startswith("Batch") and n != SHEET_NAME]
+    sheet_prefix = {"it": "Batch", "st": "Module", "nfr": "Group"}[SUITE]
+    others = [n for n in wb.sheetnames if n.startswith(sheet_prefix) and n != SHEET_NAME]
     anchor = wb.sheetnames.index(others[-1]) if others else wb.sheetnames.index("Test Statistics")
     wb.move_sheet(ws, offset=(anchor + 1) - wb.sheetnames.index(SHEET_NAME))
 
@@ -288,7 +419,7 @@ def build_sheet(wb, cases: list[dict], results: dict[str, str], notes: dict[str,
 
     ws["B2"], ws["B3"] = FEATURE_TITLE, FEATURE_REQUIREMENT
     last_row = GROUP_ROW_TEMPLATE + len(cases) + len({c["group"] for c in cases}) - 1
-    ws["B4"] = f'=COUNTIF(A{GROUP_ROW_TEMPLATE}:A998,"IT_{CFG['key']}_*")'
+    ws["B4"] = f'=COUNTIF(A{GROUP_ROW_TEMPLATE}:A998,"{CFG['pfx']}_{CFG['key']}_*")'
     # Round 2/3 trong sheet mẫu đều đếm cột F (Round 1); sheet này đếm đúng cột I / L.
     for row, col in ((6, "F"), (7, "I"), (8, "L")):
         for k in "BCDE":
@@ -312,14 +443,17 @@ def build_sheet(wb, cases: list[dict], results: dict[str, str], notes: dict[str,
         outcome = "Failed" if case["id"] in RACE_FORCED_FAILED else results[case["id"]]
         values = {
             COLS["id"]: case["id"],
-            COLS["desc"]: f'{case["group"]}\nLoại: {case["type"]}',
+            COLS["desc"]: "\n".join(filter(None, [case["group"], case.get("endpoint"), f'Loại: {case["type"]}'])),
             COLS["proc"]: case["input"],
             COLS["expected"]: case["expected"],
             COLS["pre"]: case["pre"],
             COLS["r1"]: outcome,
         }
-        if outcome == "Failed":
-            values[COLS["note"]] = notes[case["id"]]
+        note = notes[case["id"]] if outcome == "Failed" else ""
+        if SUITE == "nfr":
+            note = "\n".join(filter(None, [note, metric_note(case["id"])]))
+        if note:
+            values[COLS["note"]] = note
         for c, v in values.items():
             ws.cell(row, c).value = v
         for c in range(1, 17):
@@ -329,14 +463,24 @@ def build_sheet(wb, cases: list[dict], results: dict[str, str], notes: dict[str,
 
     assert row - 1 == last_row, (row - 1, last_row)
     rebuild_validations(template, ws, last_row)
+    color_results(ws)
     return ws
 
 
 def update_summary_sheets(wb, ws, cases: list[dict]) -> None:
     """Test Statistics: dòng 11 trỏ sang sheet mới. Test Cases: liệt kê các nhóm chức năng của Batch 1."""
+    if SUITE in ("st", "nfr"):
+        update_summary_st(wb, cases)
+        return
     stats = wb["Test Statistics"]
     q = f"'{SHEET_NAME}'"
     sr = CFG["stats_row"]
+    if sr is None:  # ST: dùng lại dòng đã trỏ tới sheet này, nếu không thì dòng trống đầu tiên
+        sr = next((r for r in range(11, 200) if stats[f"C{r}"].value in (f"={q}!B2", None, "Test coverage")), 11)
+        for r in range(11, sr):
+            pass
+        if stats[f"C{sr}"].value in (None,):
+            stats[f"B{sr}"] = sr - 10
     if stats[f"C{sr}"].value == "Test coverage":  # hết chỗ cho batch mới: dời 2 dòng tổng kết xuống 1 dòng, giữ style
         for r in (sr + 1, sr):
             for col in range(1, 10):
@@ -360,7 +504,8 @@ def update_summary_sheets(wb, ws, cases: list[dict]) -> None:
     style_row = 13
     first = CFG["tc_first_row"]
     if first is None:  # nối tiếp danh sách các batch trước, đánh số tiếp
-        first = max(r for r in range(9, tc.max_row + 1) if tc.cell(r, 2).value not in (None, "")) + 1
+        first = max((r for r in range(9, tc.max_row + 1) if tc.cell(r, 2).value not in (None, "")), default=8) + 1
+        first = max(first, 9)
     base_no = int(tc.cell(first - 1, 2).value) if first > 9 else 0
     for i, (name, ids) in enumerate(groups):
         r = first + i
@@ -376,26 +521,178 @@ def update_summary_sheets(wb, ws, cases: list[dict]) -> None:
             wrap_style(tc.cell(r, col))
 
 
+ST_CAPACITY = 15
+
+
+def update_summary_st(wb, cases: list[dict]) -> None:
+    """Report-5.3 (FRs): Test Statistics 11.. (tối đa 15 module, khối Sub total dời xuống dưới) và Test Cases."""
+    stats = wb["Test Statistics"]
+    q = f"'{SHEET_NAME}'"
+    sub_row = 11 + ST_CAPACITY + 1
+    if stats["C14"].value == "Sub total":
+        snap = {r: [(c.value, copy(c.font), copy(c.fill), copy(c.border), copy(c.alignment), c.number_format) for c in stats[r][:8]]
+                for r in (11, 14, 16, 17)}
+        for r in range(11, 18):
+            for col in range(2, 9):
+                stats.cell(r, col).value = None
+        for k in range(ST_CAPACITY):
+            for col, (_, f, fl, b, a, nf) in enumerate(snap[11], start=1):
+                c = stats.cell(11 + k, col)
+                c.font, c.fill, c.border, c.alignment, c.number_format = copy(f), copy(fl), copy(b), copy(a), nf
+        for src, dst in ((14, sub_row), (16, sub_row + 2), (17, sub_row + 3)):
+            for col, (v, f, fl, b, a, nf) in enumerate(snap[src], start=1):
+                c = stats.cell(dst, col)
+                c.value = v
+                c.font, c.fill, c.border, c.alignment, c.number_format = copy(f), copy(fl), copy(b), copy(a), nf
+        for col in "DEFGH":
+            stats[f"{col}{sub_row}"] = f"=SUM({col}11:{col}{sub_row - 1})"
+        stats[f"E{sub_row + 2}"] = f"=(D{sub_row}+E{sub_row})*100/(H{sub_row}-G{sub_row})"
+        stats[f"E{sub_row + 3}"] = f"=D{sub_row}*100/(H{sub_row}-G{sub_row})"
+    row = next((r for r in range(11, sub_row) if stats[f"C{r}"].value in (None, f"={q}!B2")), None)
+    if row is None:
+        sys.exit("Test Statistics hết chỗ cho module mới")
+    stats[f"B{row}"] = row - 10
+    stats[f"C{row}"], stats[f"D{row}"], stats[f"E{row}"] = f"={q}!B2", f"={q}!B6", f"={q}!C6"
+    stats[f"F{row}"], stats[f"G{row}"], stats[f"H{row}"] = f"={q}!D6", f"={q}!E6", f"={q}!B4"
+
+    tc = wb["Test Cases"]
+    if str(tc["C9"].value or "").startswith("Workflow "):
+        for r in range(9, 14):
+            for col in range(2, 7):
+                tc.cell(r, col).value = None
+    existing = [r for r in range(9, tc.max_row + 1) if tc.cell(r, 4).value == SHEET_NAME]
+    first = existing[0] if existing else max((r for r in range(9, tc.max_row + 1) if tc.cell(r, 2).value not in (None, "")), default=8) + 1
+    base_no = first - 9
+    groups: list[tuple[str, list[str]]] = []
+    for c in cases:
+        if not groups or groups[-1][0] != c["group"]:
+            groups.append((c["group"], []))
+        groups[-1][1].append(c["id"])
+    for i, (name, ids) in enumerate(groups):
+        r = first + i
+        for col in range(2, 7):
+            if r > 13:
+                copy_style(tc.cell(13, col), tc.cell(r, col))
+        tc.cell(r, 2).value = str(base_no + i + 1)
+        tc.cell(r, 3).value = name
+        tc.cell(r, 4).value = SHEET_NAME
+        tc.cell(r, 5).value = f"{len(ids)} ca: {ids[0]} → {ids[-1]}"
+        tc.cell(r, 6).value = CFG["precondition"]
+        for col in range(2, 7):
+            wrap_style(tc.cell(r, col))
+
+
 # ----------------------------------------------------------------------------- Round 2
+
+def append_st_round2_note(ws, row: int, cid: str, result: str) -> None:
+    """Giữ nguyên Note Round 1, nối thêm đoạn [Round 2]; chạy lại thì thay đoạn cũ."""
+    cell = ws.cell(row, COLS["note"])
+    old = str(cell.value or "").split("[Round 2]")[0].rstrip()
+    measured = metric_note(cid) if SUITE == "nfr" else ""
+    if result == "Failed":
+        md = RESULTS_DIR / f"{CFG['pfx']}_{CFG['key']}_Round2_Failed.md"
+        short = cid.rsplit("_", 1)[1]
+        m = re.search(rf"^\| {short} \| (.*) \|\s*$", md.read_text(encoding="utf-8"), re.M)
+        if not m:
+            sys.exit(f"Ca {cid} Failed ở Round 2 chưa có Note trong {md.name}")
+        new = f"[Round 2] {m.group(1)}. Ảnh lỗi: tests/docs/ST_RESULTS/screenshots/round2/{cid}.png"
+    elif old or measured:
+        new = "[Round 2] Passed"
+    else:
+        return
+    if measured:
+        new += "\n" + measured
+    cell.value = "\n".join(["[Round 1] " + old.removeprefix("[Round 1] "), new]) if old else new
+
 
 def fill_round2(wb) -> None:
     if SHEET_NAME not in wb.sheetnames:
         sys.exit(f"Chưa có sheet {SHEET_NAME}: chạy --round 1 trước.")
     ws = wb[SHEET_NAME]
     results = load_results(2)
-    defects_path = RESULTS_DIR / f"IT_{CFG['key']}_Defects.json"  # tùy chọn: {"IT_B1_017": "BUG-001", ...}
+    defects_path = RESULTS_DIR / f"{CFG['pfx']}_{CFG['key']}_Defects.json"  # tùy chọn: {"IT_B1_017": "BUG-001", ...}
     defects = json.loads(defects_path.read_text(encoding="utf-8")) if defects_path.exists() else {}
     filled = 0
     for r in range(FIRST_DATA_ROW, ws.max_row + 1):
         cid = ws.cell(r, COLS["id"]).value
-        if not (isinstance(cid, str) and cid.startswith(f"IT_{CFG['key']}_")):
+        if not (isinstance(cid, str) and cid.startswith(f"{CFG['pfx']}_{CFG['key']}_")):
             continue
         if cid in results:
             ws.cell(r, COLS["r2"]).value = results[cid]
             filled += 1
+            if SUITE != "it":
+                append_st_round2_note(ws, r, cid, results[cid])
         if cid in defects:
             ws.cell(r, COLS["defect"]).value = defects[cid]
     print(f"Round 2: đã điền {filled} ca, {len(defects)} Defect ID.")
+
+
+# ----------------------------------------------------------------------------- Report-5.3
+
+def create_st_workbook(path: Path) -> None:
+    """Tạo Report-5.3 từ template Report-5.2: bỏ sheet Batch*, xóa dữ liệu IT trong Test Statistics / Test Cases."""
+    wb = load_workbook(WORKBOOK)
+    for name in [n for n in wb.sheetnames if n.startswith("Batch")]:
+        del wb[name]
+    stats = wb["Test Statistics"]
+    for r in range(11, 20):
+        for col in range(2, 9):
+            stats.cell(r, col).value = None
+    tc = wb["Test Cases"]
+    for r in range(9, tc.max_row + 1):
+        for col in range(2, 7):
+            tc.cell(r, col).value = None
+    wb.save(path)
+    print("Đã tạo từ template:", path)
+
+
+# ----------------------------------------------------------------------------- Report-5.4
+
+def new_nfr_workbook():
+    """Report-5.4 chưa có: lấy định dạng từ Report-5.3 (giữ sheet mẫu Workflow Name*), bỏ dữ liệu System Test. Chỉ lưu khi xuất xong."""
+    if not ST_WORKBOOK.exists():
+        sys.exit(f"Không thấy template {ST_WORKBOOK}")
+    wb = load_workbook(ST_WORKBOOK)
+    for name in [n for n in wb.sheetnames if n.startswith("Module")]:
+        del wb[name]
+    wb["Cover"]["B2"] = "NON-FUNCTIONAL TEST REPORT DOCUMENT"
+    stats = wb["Test Statistics"]
+    stats["B1"] = "NON-FUNCTIONAL TEST STATISTICS"
+    for r in range(11, 11 + ST_CAPACITY + 1):
+        for col in range(2, 9):
+            stats.cell(r, col).value = None
+    tc = wb["Test Cases"]
+    for r in range(9, tc.max_row + 1):
+        for col in range(2, 7):
+            tc.cell(r, col).value = None
+    return wb
+
+
+def nfr_groups_with_results(round_no: int) -> list[int]:
+    found = (re.fullmatch(rf"NFR_G(\d+)_Round{round_no}\.json", p.name) for p in ST_RESULTS_DIR.glob("NFR_G*.json"))
+    return sorted(int(m.group(1)) for m in found if m)
+
+
+def export_one(wb, round_no: int) -> None:
+    if round_no != 1:
+        fill_round2(wb)
+        return
+    cases = (parse_nfr_spec if SUITE == "nfr" else parse_spec)(find_spec())
+    ids = [c["id"] for c in cases]
+    n = CFG["expected"] or len(set(ids))
+    if not ids or len(ids) != n or len(set(ids)) != n:
+        sys.exit(f"Cần đủ {n} ca duy nhất, đọc được {len(ids)} ({len(set(ids))} duy nhất).")
+    results = load_results(1)
+    missing = [i for i in ids if i not in results]
+    if missing:
+        sys.exit("Thiếu kết quả cho: " + ", ".join(missing))
+    failed = {i for i in ids if results[i] == "Failed"} | RACE_FORCED_FAILED
+    notes = parse_failed_notes(FAILED_MD, cases) if failed else {}
+    if failed - set(notes):
+        sys.exit("Ca Failed chưa có Note: " + ", ".join(sorted(failed - set(notes))))
+    ws = build_sheet(wb, cases, results, notes)
+    update_summary_sheets(wb, ws, cases)
+    print(f"{SHEET_NAME} Round 1: {len(ids)} ca, Failed={len(failed)}, Passed={len(ids) - len(failed)}.")
 
 
 # ----------------------------------------------------------------------------- main
@@ -404,31 +701,35 @@ def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")  # console Windows mặc định cp1252
     ap =argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--round", type=int, choices=(1, 2), required=True)
-    ap.add_argument("--batch", type=int, choices=tuple(BATCHES), default=1)
-    ap.add_argument("--workbook", type=Path, default=WORKBOOK)
+    ap.add_argument("--suite", "--type", dest="suite", choices=("it", "st", "nfr"), default="it",
+                    help="it = Integration (Report-5.2), st = System (Report-5.3), nfr = Non-Functional (Report-5.4)")
+    ap.add_argument("--batch", type=int, default=None, help="số Batch (it), Module (st) hoặc Group (nfr)")
+    ap.add_argument("--workbook", type=Path, default=None)
     args = ap.parse_args()
 
-    select_batch(args.batch)
-    wb = load_workbook(args.workbook)  # mở trực tiếp file hiện có (không tạo mới)
-    if args.round == 1:
-        cases = parse_spec(find_spec())
-        ids = [c["id"] for c in cases]
-        n = CFG["expected"]
-        if len(ids) != n or len(set(ids)) != n:
-            sys.exit(f"Cần đủ {n} ca duy nhất, đọc được {len(ids)} ({len(set(ids))} duy nhất).")
-        results = load_results(1)
-        missing = [i for i in ids if i not in results]
-        if missing:
-            sys.exit("Thiếu kết quả cho: " + ", ".join(missing))
-        notes = parse_failed_notes(FAILED_MD, cases)
-        failed = {i for i in ids if results[i] == "Failed"} | RACE_FORCED_FAILED
-        if failed - set(notes):
-            sys.exit("Ca Failed chưa có Note: " + ", ".join(sorted(failed - set(notes))))
-        ws = build_sheet(wb, cases, results, notes)
-        update_summary_sheets(wb, ws, cases)
-        print(f"Round 1: {len(ids)} ca, Failed={len(failed)}, Passed={len(ids) - len(failed)}.")
+    global SUITE
+    SUITE = args.suite
+    if SUITE == "nfr":
+        batches = [args.batch] if args.batch is not None else nfr_groups_with_results(args.round)
+        if not batches:
+            sys.exit(f"Chưa có file NFR_G*_Round{args.round}.json trong {ST_RESULTS_DIR}")
     else:
-        fill_round2(wb)
+        batches = [1 if args.batch is None else args.batch]
+    if SUITE == "it" and batches[0] not in BATCHES:
+        sys.exit(f"--batch phải thuộc {sorted(BATCHES)}")
+    if args.workbook is None:
+        args.workbook = {"it": WORKBOOK, "st": ST_WORKBOOK, "nfr": NFR_WORKBOOK}[SUITE]
+    if SUITE == "st" and not args.workbook.exists():
+        sys.exit(f"Không thấy template {args.workbook}")
+    if SUITE == "nfr" and not args.workbook.exists():
+        if args.round != 1:
+            sys.exit(f"Chưa có {args.workbook.name}: chạy --round 1 trước.")
+        wb = new_nfr_workbook()
+    else:
+        wb = load_workbook(args.workbook)  # mở trực tiếp file hiện có (không tạo mới)
+    for n in batches:  # chỉ lưu khi mọi nhóm đều xuất được
+        select_batch(n)
+        export_one(wb, args.round)
     wb.save(args.workbook)
     print("Đã lưu:", args.workbook)
 

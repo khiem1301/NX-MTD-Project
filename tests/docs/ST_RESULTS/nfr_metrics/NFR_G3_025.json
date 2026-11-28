@@ -1,0 +1,12 @@
+{
+  "case_id": "NFR_G3_025",
+  "vu": 1,
+  "duration_sec": 0.42,
+  "rps": 4.76,
+  "p50_ms": 21.4,
+  "p95_ms": 21.4,
+  "max_ms": 21.4,
+  "ok_count": 2,
+  "fail_count": 0,
+  "extra_note": "Phép kiểm đạt/vi phạm tính ở ok/fail; p50/p95 là latency của request được kiểm. QaQc khác người tạo hủy được: HTTP 404. Nhóm chưa chốt quy tắc chỉ người tạo được sửa"
+}

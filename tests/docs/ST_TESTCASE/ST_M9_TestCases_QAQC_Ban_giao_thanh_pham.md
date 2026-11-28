@@ -1,0 +1,20 @@
+tests/docs/ST_M9_TestCases_QAQC_Ban_giao_thanh_pham.md
+
+| Test Case ID | Pre-conditions | Input parameters | Expected Results | Type |
+| :--- | :--- | :--- | :--- | :--- |
+| ST_M9_001 | QaQc đăng nhập; dòng đơn có hàng trên chuyền (công đoạn cuối đã có sản lượng) | `/qc-batches` → "Thêm đợt kiểm": Ngày, Ca, Giờ kiểm, Tổ may, Đơn, Dòng đơn → đọc "Hàng trên chuyền" → Số hàng đạt 20 → lưu → F5 | [UI]: Toast "Đã thêm đợt kiểm."; đợt có trong bảng sau F5; "Hàng trên chuyền" giảm 20 khi mở lại<br>[System/Persist]: `POST /qa-qc/qc-batches` đúng payload | Normal |
+| ST_M9_002 | Modal đợt kiểm | Số hàng đạt 0; 1; 1.000.000; 1.000.001; bỏ trống Giờ kiểm | [UI]: 0 → "Số hàng đạt phải lớn hơn 0."; 1.000.001 → "Số hàng đạt tối đa 1.000.000."; thiếu giờ báo required<br>[System/Persist]: Không lưu khi lỗi | Boundary |
+| ST_M9_003 | Hàng trên chuyền còn 30 | Số hàng đạt 31 | [UI]: Lỗi BE rõ ràng, modal giữ dữ liệu<br>[System/Persist]: Không tạo đợt | Abnormal |
+| ST_M9_004 | Modal đợt kiểm | Ngày = ngày mai, Giờ kiểm trong tương lai | [UI]: BE chấp nhận hoặc lỗi rõ ràng; không treo<br>[System/Persist]: Ghi nhận rule thực tế | Abnormal |
+| ST_M9_005 | Đợt kiểm trong ca hiện tại | "Sửa" → Số hàng đạt 15 → lưu → F5 | [UI]: Toast "Đã cập nhật đợt kiểm."; giá trị mới sau F5<br>[System/Persist]: `PUT /qa-qc/qc-batches/{id}` | Normal |
+| ST_M9_006 | Đợt kiểm của ca đã kết thúc | QaQc "Sửa" → bỏ trống Lý do; lý do khoảng trắng; `REASON_MAX_LENGTH`+1 | [UI]: Báo "Vui lòng nhập lý do." hoặc lỗi BE hết hạn rõ ràng; max+1 bị chặn<br>[System/Persist]: Số hàng đạt không đổi | Boundary |
+| ST_M9_007 | Đợt kiểm | "Xóa" → nhập lý do → xác nhận → F5 | [UI]: Đợt biến mất khỏi bảng<br>[System/Persist]: `POST …/{id}/delete`; hàng trên chuyền tăng lại | Normal |
+| ST_M9_008 | Đợt kiểm ca đã kết thúc | Manager `/manager/qc-batches` → Sửa số đạt + lý do → lưu; QaQc F5 `/qc-batches` | [UI]: Manager lưu thành công; QaQc thấy số mới<br>[System/Persist]: Lý do sửa có trong nhật ký (Module 15) | Normal |
+| ST_M9_009 | Dòng đơn có QC đạt 100, đã giao 0 | `/warehouse/fg-handovers` → "Lập phiếu bàn giao" → đơn → mã hàng → Giao lần này 100 → "Xác nhận" → WK đăng nhập | [UI]: Phiếu "Chờ xác nhận"; WK thấy phiếu với nút "Nhận vào kho"/"Từ chối"<br>[System/Persist]: `POST /qa-qc/fg-handovers`; "Còn giao được" về 0 | Normal |
+| ST_M9_010 | Còn giao được = 40; 1 dòng còn 0 | Giao lần này 0 (mọi dòng); 40; 41; kiểm dòng còn 0 | [UI]: 41 bị chặn; dòng còn 0 bị disable; toàn 0 → lỗi form hiện (kể cả khi lỗi nằm sau Modal.confirm)<br>[System/Persist]: Không tạo phiếu rỗng | Boundary |
+| ST_M9_011 | Phiếu FG 100 "Chờ xác nhận" | WK "Nhận vào kho" → Số kho đếm 100 → xác nhận → F5; Manager xem `/warehouse/inventories` | [UI]: Trạng thái đã nhận ở WK và QaQc<br>[System/Persist]: Tồn thành phẩm tăng 100; Manager lập phiếu xuất được (Module 10) | Normal |
+| ST_M9_012 | Phiếu FG 100 | Số kho đếm 98 không "Lý do lệch"; 98 + lý do; 101; bỏ trống | [UI]: 98 không lý do báo bắt buộc; 101 và trống bị chặn; 98 + lý do lưu được<br>[System/Persist]: Tồn tăng 98; QaQc thấy chênh lệch + lý do | Boundary |
+| ST_M9_013 | Phiếu FG "Chờ xác nhận" | WK "Từ chối" → "Lý do từ chối" → QaQc F5 | [UI]: REJECTED + lý do hiển thị cho QaQc<br>[System/Persist]: "Còn giao được" của dòng được trả lại; tồn không đổi | Normal |
+| ST_M9_014 | Phiếu FG "Chờ xác nhận"; WK mở phiếu ở tab | QaQc "Rút phiếu" → OK; WK bấm "Nhận vào kho" ở tab cũ | [UI]: QaQc thấy CANCELLED; WK nhận lỗi trạng thái rõ ràng<br>[System/Persist]: Tồn không đổi | Abnormal |
+| ST_M9_015 | Còn giao được 40; QaQc mở form ở 2 tab | Cả 2 tab giao 40 → lần lượt xác nhận | [UI]: Tab 2 nhận lỗi BE rõ ràng<br>[System/Persist]: Tổng giao không vượt QC đạt | Abnormal |
+| ST_M9_016 | Worker; QaQc; WK | Worker gõ `/qc-batches`, `/warehouse/fg-handovers`; QaQc gõ `/manager/qc-batches`; WK tìm nút "Lập phiếu bàn giao"; QaQc tìm "Nhận vào kho"; đăng xuất rồi Back | [UI]: URL trái quyền redirect `/`; mỗi role không thấy nút của role kia; Back không hiện dữ liệu<br>[System/Persist]: `POST /warehouse-keeper/fg-handovers/{id}/confirm` bằng token QaQc → 403 | Abnormal |

@@ -1,0 +1,137 @@
+[
+    {
+        "Id": "ST_M1_001",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_002",
+        "Outcome": "Failed",
+        "Message": "System.TimeoutException : Timeout 30000ms exceeded while waiting for event \"Response\" ---- System.TimeoutException : Timeout 30000ms exceeded while waiting for event \"Response\""
+    },
+    {
+        "Id": "ST_M1_003",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_004",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_005",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_006",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_007",
+        "Outcome": "Failed",
+        "Message": "Microsoft.Playwright.PlaywrightException : Locator expected to be visible Call log: - - LocatorAssertions.ToBeVisibleAsync with timeout 5000ms - - waiting for Locator(\".ant-alert-error\")"
+    },
+    {
+        "Id": "ST_M1_008",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_009",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_010",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_011",
+        "Outcome": "Failed",
+        "Message": "System.InvalidOperationException : Không thực hiện được: danh sách tài khoản không có TeamLeader thuộc tổ cắt để mở /operation-assignments"
+    },
+    {
+        "Id": "ST_M1_012",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_013",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_014",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_015",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_016",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_017",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_018",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_019",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_020",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_021",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_022",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_023",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_024",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_025",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_026",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M1_027",
+        "Outcome": "Failed",
+        "Message": "Expected string to be the same string, but they differ at index 7: ↓ (actual) \"Mã NV: DongKTT23\" \"Mã NV: ST_AUTO_31405…\" ↑ (expected)."
+    }
+]

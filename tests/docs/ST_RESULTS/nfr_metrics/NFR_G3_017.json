@@ -1,0 +1,12 @@
+{
+  "case_id": "NFR_G3_017",
+  "vu": 1,
+  "duration_sec": 0.16,
+  "rps": 25.13,
+  "p50_ms": 11.2,
+  "p95_ms": 39.1,
+  "max_ms": 39.1,
+  "ok_count": 4,
+  "fail_count": 0,
+  "extra_note": "Phép kiểm đạt/vi phạm tính ở ok/fail; p50/p95 là latency của request được kiểm. Spec ghi GET grade-suggestions/items/{workerId}; API chỉ có PUT/DELETE"
+}

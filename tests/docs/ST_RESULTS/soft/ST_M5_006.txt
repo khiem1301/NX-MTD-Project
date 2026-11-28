@@ -1,0 +1,3 @@
+số lần giao '0' không báo lỗi mà ô tự đổi thành '1'
+số lần giao '100' không báo lỗi mà ô tự đổi thành '10'
+đơn giá gõ '0,5' thành '5': không làm tròn đúng và không báo lỗi

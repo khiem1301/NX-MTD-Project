@@ -1,0 +1,177 @@
+[
+    {
+        "Id": "ST_M2_001",
+        "Outcome": "Failed",
+        "Message": "Expected value to be 201, but found 200 (difference of -1)."
+    },
+    {
+        "Id": "ST_M2_002",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_003",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_004",
+        "Outcome": "Failed",
+        "Message": "Expected value to be less than or equal to 20, but found 21 (difference of 1)."
+    },
+    {
+        "Id": "ST_M2_005",
+        "Outcome": "Failed",
+        "Message": "Microsoft.Playwright.PlaywrightException : Locator expected to be visible Call log: - - LocatorAssertions.ToBeVisibleAsync with timeout 5000ms - - waiting for GetByRole(AriaRole.Dialog, new() { NameR…"
+    },
+    {
+        "Id": "ST_M2_006",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_007",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_008",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_009",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_010",
+        "Outcome": "Failed",
+        "Message": "Microsoft.Playwright.PlaywrightException : Locator expected to have count '1' But was: '0' Call log: - - LocatorAssertions.ToHaveCountAsync with timeout 5000ms - - waiting for Locator(\".ant-select-dr…"
+    },
+    {
+        "Id": "ST_M2_011",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_012",
+        "Outcome": "Failed",
+        "Message": "Expected value to be between 400 and 499 because ngày nghỉ 28/11/2026 không hợp lệ, payload {\"resignDate\":\"2026-11-28\",\"reason\":\"ST_AUTO_ ngay khong hop le\",\"rowVer\":\"AAAAAAAAQso=\"}, but found 200."
+    },
+    {
+        "Id": "ST_M2_013",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_014",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_015",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_016",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_017",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_018",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_019",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_020",
+        "Outcome": "Failed",
+        "Message": "Expected value to be 20, but found 21 (difference of 1)."
+    },
+    {
+        "Id": "ST_M2_021",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_022",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_023",
+        "Outcome": "Failed",
+        "Message": "Expected value to be between 400 and 499 because payload gửi {\"employeeIds\":[110],\"effectiveDate\":\"2026-01-01\",\"reason\":null}, but found 200."
+    },
+    {
+        "Id": "ST_M2_024",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_025",
+        "Outcome": "Failed",
+        "Message": "Microsoft.Playwright.PlaywrightException : Locator expected to be visible Call log: - - LocatorAssertions.ToBeVisibleAsync with timeout 5000ms - - waiting for Locator(\".ant-message-notice\").Filter(ne…"
+    },
+    {
+        "Id": "ST_M2_026",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_027",
+        "Outcome": "Failed",
+        "Message": "Microsoft.Playwright.PlaywrightException : Locator expected to be visible Call log: - - LocatorAssertions.ToBeVisibleAsync with timeout 5000ms - - waiting for GetByRole(AriaRole.Dialog, new() { NameR…"
+    },
+    {
+        "Id": "ST_M2_028",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_029",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_030",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_031",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_032",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_033",
+        "Outcome": "Failed",
+        "Message": "System.InvalidOperationException : Phần Worker và Manager đạt; phần TeamLeader tổ cắt gõ /hr/grades không chạy được: thiếu tài khoản tổ trưởng tổ cắt"
+    },
+    {
+        "Id": "ST_M2_034",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "ST_M2_035",
+        "Outcome": "Failed",
+        "Message": "Expected value to be 200 because tạo gợi ý AI: {\"success\":false,\"errorCode\":\"GRADE_AI_UNAVAILABLE\",\"message\":\"Chức năng AI gợi ý bậc chưa được cấu hình (thiếu khóa Gemini). Vui lòng liên hệ Admin.\"},…"
+    }
+]

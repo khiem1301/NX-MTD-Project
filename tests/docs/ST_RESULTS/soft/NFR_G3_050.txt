@@ -1,0 +1,4 @@
+Admin /admin/break-even: 404 /api/v1/admin/break-even; 1 lỗi Console: Failed to load resource: the server responded with a status of 404 (Not Found)
+Admin /admin/cost-summary: 404 /api/v1/admin/cost-summary; 1 lỗi Console: Failed to load resource: the server responded with a status of 404 (Not Found)
+Accountant /monthly-costs: 404 /api/v1/accountant/monthly-costs; 1 lỗi Console: Failed to load resource: the server responded with a status of 404 (Not Found)
+WarehouseKeeper /warehouse/material-returns: 403 /api/v1/team-leader/material-returns/returnable; 1 lỗi Console: Failed to load resource: the server responded with a status of 403 (Forbidden)

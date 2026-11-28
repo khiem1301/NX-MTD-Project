@@ -1,0 +1,267 @@
+[
+    {
+        "Id": "NFR_G3_001",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_002",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_003",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_004",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_005",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_006",
+        "Outcome": "Failed",
+        "Message": "2/12 vi phạm: KETOAN POST rj-employees/sync (cần 403) → 200 | QUANDOC POST rj-employees/sync (cần 403) → 200"
+    },
+    {
+        "Id": "NFR_G3_007",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_008",
+        "Outcome": "Failed",
+        "Message": "1/14 vi phạm: CODIEN GET common/request-inbox (cần 403) → 200"
+    },
+    {
+        "Id": "NFR_G3_009",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_010",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_011",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_012",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_013",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_014",
+        "Outcome": "Failed",
+        "Message": "2/9 vi phạm: common/my-attendance/timesheets?FromDate=2026-11-13&ToDate=2026-11-27 + id của B phải trả dữ liệu A hoặc 400 → 200 | common/my-attendance/timesheets/summary?FromDate=2026-11-13&ToDate=20…"
+    },
+    {
+        "Id": "NFR_G3_015",
+        "Outcome": "Failed",
+        "Message": "1/4 vi phạm: confirm-batch lẫn ID của B → 400/403 hoặc chỉ xử lý ID của A → 404"
+    },
+    {
+        "Id": "NFR_G3_016",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_017",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_018",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_019",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_020",
+        "Outcome": "Failed",
+        "Message": "4/12 vi phạm: Worker đính kèm vào PurchaseOrder/2 (cần 403/400) → 404 | Worker đính kèm vào DispatchNote/1 (cần 403/400) → 404 | Worker đính kèm vào Request/2 (cần 403/400) → 404 | Worker đính kèm và…"
+    },
+    {
+        "Id": "NFR_G3_021",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_022",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_023",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_024",
+        "Outcome": "Failed",
+        "Message": "1/3 vi phạm: PUT order 7 + productId của đơn 8 (cần 404) → 409"
+    },
+    {
+        "Id": "NFR_G3_025",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_026",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_027",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_028",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_029",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_030",
+        "Outcome": "Failed",
+        "Message": "1/4 vi phạm: (a) sau logout (cần 401) → 200"
+    },
+    {
+        "Id": "NFR_G3_031",
+        "Outcome": "Failed",
+        "Message": "1/2 vi phạm: Sau ≤ 10 lần sai phải 429 hoặc tạm khóa; mật khẩu đúng vẫn đăng nhập được → 200"
+    },
+    {
+        "Id": "NFR_G3_032",
+        "Outcome": "Failed",
+        "Message": "3/4 vi phạm: Manager reset-password Admin (cần 403) → 404 | Manager lock Admin (cần 403) → 404 | Manager unlock Admin (cần 403) → 404"
+    },
+    {
+        "Id": "NFR_G3_033",
+        "Outcome": "Failed",
+        "Message": "1/5 vi phạm: đổi mật khẩu với mật khẩu cũ sai (cần 400) → 409"
+    },
+    {
+        "Id": "NFR_G3_034",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_035",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_036",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_037",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_038",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_039",
+        "Outcome": "Failed",
+        "Message": "2/4 vi phạm: attachments 5 MB + 1 byte (cần 413) → 400 | sample-image 5 MB + 1 byte (cần 413) → 400"
+    },
+    {
+        "Id": "NFR_G3_040",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_041",
+        "Outcome": "Failed",
+        "Message": "11/18 vi phạm: admin/employee-import/preview: 400 < 10 s (đo 4677 ms) → 500 | admin/employee-import/preview: RAM +2114 MB (cần ≤ 200) | admin/customer-orders/import/preview: 400 < 10 s (đo 2680 ms) →…"
+    },
+    {
+        "Id": "NFR_G3_042",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_043",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_044",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_045",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_046",
+        "Outcome": "Failed",
+        "Message": "10/26 vi phạm: admin/audit-logs pageSize=-1 (cần 400) → 200 | admin/audit-logs pageSize=0 (cần 400) → 200 | admin/audit-logs pageSize=2147483647 (cần 400) → 200 | admin/materials pageSize=-1 (cần 400…"
+    },
+    {
+        "Id": "NFR_G3_047",
+        "Outcome": "Failed",
+        "Message": "3/21 vi phạm: admin/piece-rates/approve-many 100.000 phần tử: 400/413 < 5 s (đo 810 ms) → 409 | manager/order-materials/batch 100.000 phần tử: 400/413 < 5 s (đo 1157 ms) → 404 | admin/order-materials…"
+    },
+    {
+        "Id": "NFR_G3_048",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_049",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_050",
+        "Outcome": "Failed",
+        "Message": "4/160 vi phạm: Admin /admin/break-even: 404 /api/v1/admin/break-even; 1 lỗi Console: Failed to load resource: the server responded with a status of 404 (Not Found) | Admin /admin/cost-summary: 404 /a…"
+    },
+    {
+        "Id": "NFR_G3_051",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_052",
+        "Outcome": "Passed",
+        "Message": ""
+    },
+    {
+        "Id": "NFR_G3_053",
+        "Outcome": "Passed",
+        "Message": ""
+    }
+]

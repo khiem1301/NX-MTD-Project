@@ -1,0 +1,1 @@
+payload POST /admin/customer-orders không theo cấu trúc blocks[].lines[] (thực tế gửi lines[] ở cấp gốc)

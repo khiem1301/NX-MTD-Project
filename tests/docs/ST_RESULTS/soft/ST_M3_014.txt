@@ -1,0 +1,6 @@
+CD#1 không báo lỗi pattern (ô tự bỏ ký tự #)
+Thứ tự='0' không báo lỗi
+Thứ tự='32768' không báo lỗi
+Bậc (1-9)='0' không báo lỗi
+Bậc (1-9)='10' không báo lỗi
+TG chuẩn (giây)='0' không báo lỗi
