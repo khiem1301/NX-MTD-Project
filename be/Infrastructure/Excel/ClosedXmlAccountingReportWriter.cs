@@ -9,7 +9,19 @@ namespace NX_MTD.Infrastructure.Excel;
 public sealed class ClosedXmlAccountingReportWriter : IAccountingReportExcelWriter
 {
     private static readonly string[] WorkdayHeaders =
-        { "Mã NV", "Họ tên", "Tổ", "Công ngày thường", "Công Chủ nhật", "Tổng công", "Giờ tăng ca" };
+    {
+        "Mã NV", "Họ tên", "Bậc thợ", "Công ngày thường", "Công Chủ nhật", "Tổng công", "Số lượng lỗi",
+        "Công đoạn", "Sản lượng", "Đơn giá", "Thành tiền", "Tổng tiền",
+    };
+
+    private const string WholeMoneyFormat = "#,##0";
+    private const string CentMoneyFormat = "#,##0.00";
+    private const int EmployeeColumns = 7;
+    private const int TotalAmountColumn = 12;
+    private const string SheetPrefix = "Cong ";
+    private const string NoTeamName = "KhongTo";
+    private const int MaxSheetNameLength = 31;
+    private const string InvalidSheetChars = ":\\/?*[]";
 
     private static readonly string[] VehicleHeaders =
     {
@@ -22,7 +34,7 @@ public sealed class ClosedXmlAccountingReportWriter : IAccountingReportExcelWrit
     {
         using var workbook = new XLWorkbook();
 
-        WriteWorkdaySheet(workbook, workdays);
+        WriteWorkdaySheets(workbook, workdays);
         WriteMealSheet(workbook, meals);
         WriteVehicleSheet(workbook, vehicles);
 
@@ -31,34 +43,103 @@ public sealed class ClosedXmlAccountingReportWriter : IAccountingReportExcelWrit
         return stream.ToArray();
     }
 
-    private static void WriteWorkdaySheet(XLWorkbook workbook, WorkdayOvertimeReportDto dto)
+    /// <summary>Mỗi tổ một sheet (tên "Cong {mã tổ}"); nhân viên chưa có tổ vào sheet "Cong KhongTo"; không có dòng nào thì một sheet trống.</summary>
+    private static void WriteWorkdaySheets(XLWorkbook workbook, WorkdayOvertimeReportDto dto)
     {
-        var sheet = workbook.Worksheets.Add("CongTangCa");
-        sheet.Cell(1, 1).Value = $"Công + tăng ca tháng {dto.PeriodMonth}";
+        var teams = dto.Rows.GroupBy(r => r.TeamCode ?? string.Empty)
+            .OrderBy(g => g.Key.Length == 0).ThenBy(g => g.Key).ToList();
+        if (teams.Count == 0)
+        {
+            WriteTeamSheet(workbook.Worksheets.Add(SheetPrefix + NoTeamName), dto.PeriodMonth, string.Empty, []);
+            return;
+        }
+
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var team in teams)
+            WriteTeamSheet(workbook.Worksheets.Add(UniqueSheetName(team.Key, used)), dto.PeriodMonth, team.Key, team.ToList());
+    }
+
+    private static string UniqueSheetName(string teamCode, HashSet<string> used)
+    {
+        var clean = new string((teamCode.Length == 0 ? NoTeamName : teamCode).Where(c => !InvalidSheetChars.Contains(c)).ToArray());
+        var name = (SheetPrefix + clean)[..Math.Min(MaxSheetNameLength, SheetPrefix.Length + clean.Length)];
+        for (var n = 2; !used.Add(name); n++)
+        {
+            var suffix = $" ({n})";
+            name = name[..Math.Min(name.Length, MaxSheetNameLength - suffix.Length)] + suffix;
+        }
+        return name;
+    }
+
+    private static void WriteTeamSheet(IXLWorksheet sheet, string periodMonth, string teamCode, IReadOnlyList<WorkdayOvertimeRowDto> rows)
+    {
+        sheet.Cell(1, 1).Value = $"Công, sản lượng theo công đoạn, lỗi tháng {periodMonth} - Tổ {(teamCode.Length == 0 ? "chưa có tổ" : teamCode)}";
         sheet.Row(1).Style.Font.Bold = true;
         WriteHeader(sheet, 2, WorkdayHeaders);
 
         var r = 3;
-        foreach (var row in dto.Rows)
-        {
-            var c = 1;
-            sheet.Cell(r, c++).Value = row.EmployeeCode;
-            sheet.Cell(r, c++).Value = row.FullName;
-            sheet.Cell(r, c++).Value = row.TeamCode ?? "";
-            sheet.Cell(r, c++).Value = row.RegularWorkdays;
-            sheet.Cell(r, c++).Value = row.SundayWorkdays;
-            sheet.Cell(r, c++).Value = row.TotalWorkdays;
-            sheet.Cell(r, c).Value = row.TotalOvertimeHours;
-            r++;
-        }
-        sheet.Cell(r, 1).Value = "Tổng cộng";
-        sheet.Cell(r, 4).Value = dto.TotalRegularWorkdays;
-        sheet.Cell(r, 5).Value = dto.TotalSundayWorkdays;
-        sheet.Cell(r, 6).Value = dto.TotalWorkdays;
-        sheet.Cell(r, 7).Value = dto.TotalOvertimeHours;
-        sheet.Row(r).Style.Font.Bold = true;
+        foreach (var row in rows) r = WriteEmployeeBlock(sheet, r, row);
+        WriteTotalRow(sheet, r, rows);
+        DrawGrid(sheet.Range(2, 1, r, WorkdayHeaders.Length));
 
         sheet.Columns().AdjustToContents();
+    }
+
+    /// <summary>
+    /// Một nhân viên: mỗi công đoạn (và mức giá) một dòng; thông tin của nhân viên (mã, tên, bậc, công, lỗi, tổng tiền) gộp ô theo chiều dọc
+    /// qua các dòng đó để cộng cột không bị tính lặp. Trả về dòng kế tiếp.
+    /// </summary>
+    private static int WriteEmployeeBlock(IXLWorksheet sheet, int first, WorkdayOvertimeRowDto row)
+    {
+        var count = Math.Max(1, row.Operations.Count);
+        var last = first + count - 1;
+        for (var i = 0; i < row.Operations.Count; i++)
+        {
+            var op = row.Operations[i];
+            var r = first + i;
+            sheet.Cell(r, 8).Value = $"{op.OperationCode} - {op.OperationName}";
+            sheet.Cell(r, 9).Value = op.OutputQty;
+            SetMoney(sheet.Cell(r, 10), op.UnitRate);
+            SetMoney(sheet.Cell(r, 11), op.Amount);
+        }
+
+        sheet.Cell(first, 1).Value = row.EmployeeCode;
+        sheet.Cell(first, 2).Value = row.FullName;
+        sheet.Cell(first, 3).Value = row.GradeCode ?? "";
+        sheet.Cell(first, 4).Value = row.RegularWorkdays;
+        sheet.Cell(first, 5).Value = row.SundayWorkdays;
+        sheet.Cell(first, 6).Value = row.TotalWorkdays;
+        sheet.Cell(first, 7).Value = row.DefectQty;
+        SetMoney(sheet.Cell(first, TotalAmountColumn), row.OutputAmount);
+        foreach (var column in Enumerable.Range(1, EmployeeColumns).Append(TotalAmountColumn))
+        {
+            var cells = sheet.Range(first, column, last, column);
+            if (count > 1) cells.Merge();
+            cells.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+        }
+
+        return last + 1;
+    }
+
+    private static void WriteTotalRow(IXLWorksheet sheet, int r, IReadOnlyList<WorkdayOvertimeRowDto> rows)
+    {
+        sheet.Cell(r, 1).Value = "Tổng cộng";
+        sheet.Cell(r, 4).Value = rows.Sum(x => x.RegularWorkdays);
+        sheet.Cell(r, 5).Value = rows.Sum(x => x.SundayWorkdays);
+        sheet.Cell(r, 6).Value = rows.Sum(x => x.TotalWorkdays);
+        sheet.Cell(r, 7).Value = rows.Sum(x => x.DefectQty);
+        sheet.Cell(r, 9).Value = rows.Sum(x => x.OutputQty);
+        var total = rows.Sum(x => x.OutputAmount);
+        SetMoney(sheet.Cell(r, 11), total);
+        SetMoney(sheet.Cell(r, TotalAmountColumn), total);
+        sheet.Row(r).Style.Font.Bold = true;
+    }
+
+    /// <summary>Ghi số tiền: số nguyên hiển thị không có phần lẻ, có lẻ thì hai chữ số lẻ (tránh dấu phẩy thừa sau số).</summary>
+    private static void SetMoney(IXLCell cell, decimal amount)
+    {
+        cell.Value = amount;
+        cell.Style.NumberFormat.Format = amount == decimal.Truncate(amount) ? WholeMoneyFormat : CentMoneyFormat;
     }
 
     private static void WriteMealSheet(XLWorkbook workbook, MealReportDto dto)
@@ -83,6 +164,7 @@ public sealed class ClosedXmlAccountingReportWriter : IAccountingReportExcelWrit
         r++;
         sheet.Cell(r, 1).Value = "Có chênh lệch";
         sheet.Cell(r, 2).Value = dto.HasDiscrepancy ? "Có" : "Không";
+        DrawGrid(sheet.Range(3, 1, r, 2));
 
         sheet.Columns().AdjustToContents();
     }
@@ -115,8 +197,18 @@ public sealed class ClosedXmlAccountingReportWriter : IAccountingReportExcelWrit
         sheet.Cell(r, 7).Value = dto.TotalKmGapWarnings;
         sheet.Cell(r, 8).Value = dto.TotalFuelOverNormWarnings;
         sheet.Row(r).Style.Font.Bold = true;
+        DrawGrid(sheet.Range(2, 1, r, VehicleHeaders.Length));
 
         sheet.Columns().AdjustToContents();
+    }
+
+    /// <summary>Viền đen mảnh quanh bảng và giữa các ô.</summary>
+    private static void DrawGrid(IXLRange table)
+    {
+        table.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        table.Style.Border.OutsideBorderColor = XLColor.Black;
+        table.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+        table.Style.Border.InsideBorderColor = XLColor.Black;
     }
 
     private static void WriteHeader(IXLWorksheet sheet, int rowIndex, IReadOnlyList<string> headers)

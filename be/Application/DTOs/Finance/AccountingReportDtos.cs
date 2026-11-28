@@ -5,16 +5,28 @@ namespace NX_MTD.Application.DTOs;
 
 // ----- 1. Công + tăng ca (DailyTimesheet) -----
 
-/// <summary>Tổng công + tăng ca của một nhân viên trong tháng, tách công Chủ nhật (IsSunday, SUNDAY_PAY_MULTIPLIER)
-/// khỏi công ngày thường.</summary>
-public sealed record WorkdayOvertimeRowDto(
-    int EmployeeId, string EmployeeCode, string FullName, string? TeamCode,
-    decimal RegularWorkdays, decimal SundayWorkdays, decimal TotalWorkdays, decimal TotalOvertimeHours);
+/// <summary>Sản lượng một công đoạn của một nhân viên trong tháng ở một mức đơn giá: mỗi lần báo sản lượng đã gắn mức giá có hiệu lực lúc
+/// báo (OutputRecord.PieceRateId) nên giá đổi giữa tháng thì công đoạn đó có nhiều dòng, mỗi dòng một mức giá.</summary>
+public sealed record WorkerOperationOutputDto(
+    string OperationCode, string OperationName, decimal UnitRate, int OutputQty, decimal Amount);
 
-/// <summary>Báo cáo công + tăng ca toàn xưởng trong một tháng — UC36.</summary>
+/// <summary>Công, bậc thợ, số lượng lỗi và sản lượng theo công đoạn (số lượng × đơn giá) của một nhân viên trong tháng, tách công Chủ nhật
+/// (IsSunday, SUNDAY_PAY_MULTIPLIER) khỏi công ngày thường (DEV-ALL-199, 200). Số lượng lỗi = Σ số lượng các phiếu hàng hỏng chưa hủy mà
+/// nhân viên chịu trách nhiệm.</summary>
+public sealed record WorkdayOvertimeRowDto(
+    int EmployeeId, string EmployeeCode, string FullName, string? TeamCode, string? GradeCode,
+    decimal RegularWorkdays, decimal SundayWorkdays, decimal TotalWorkdays, int DefectQty,
+    IReadOnlyList<WorkerOperationOutputDto> Operations)
+{
+    public int OutputQty => Operations.Sum(o => o.OutputQty);
+    public decimal OutputAmount => Operations.Sum(o => o.Amount);
+}
+
+/// <summary>Báo cáo công, bậc thợ, sản lượng, lỗi toàn xưởng trong một tháng — UC36. File Excel chia mỗi tổ một sheet.</summary>
 public sealed record WorkdayOvertimeReportDto(
     string PeriodMonth, IReadOnlyList<WorkdayOvertimeRowDto> Rows,
-    decimal TotalRegularWorkdays, decimal TotalSundayWorkdays, decimal TotalWorkdays, decimal TotalOvertimeHours);
+    decimal TotalRegularWorkdays, decimal TotalSundayWorkdays, decimal TotalWorkdays,
+    int TotalOutputQty, decimal TotalOutputAmount, int TotalDefectQty);
 
 // ----- 2. Suất ăn + đối soát bếp (DailyMeal) -----
 

@@ -20,8 +20,8 @@ public sealed class AccountingReportRepository : IAccountingReportRepository
 
     // ---------- 1. Công + tăng ca ----------
 
-    public async Task<IReadOnlyList<(int EmployeeId, string EmployeeCode, string FullName, string? TeamCode,
-            decimal WorkdayValue, decimal OvertimeHours, bool IsSunday)>>
+    public async Task<IReadOnlyList<(int EmployeeId, string EmployeeCode, string FullName, string? TeamCode, string? GradeCode,
+            decimal WorkdayValue, bool IsSunday)>>
         GetTimesheetRowsAsync(DateOnly fromDate, DateOnly toDate, CancellationToken ct)
     {
         var rows = await _context.DailyTimesheets.AsNoTracking()
@@ -30,13 +30,38 @@ public sealed class AccountingReportRepository : IAccountingReportRepository
             {
                 t.EmployeeId, t.Employee.EmployeeCode, t.Employee.FullName,
                 TeamCode = t.Employee.Team == null ? null : t.Employee.Team.TeamCode,
-                t.WorkdayValue, t.OvertimeHours, IsSunday = t.IsSunday ?? false,
+                GradeCode = t.Employee.CurrentGradeCode,
+                t.WorkdayValue, IsSunday = t.IsSunday ?? false,
             })
             .ToListAsync(ct);
 
         return rows
-            .Select(r => (r.EmployeeId, r.EmployeeCode, r.FullName, r.TeamCode, r.WorkdayValue, r.OvertimeHours, r.IsSunday))
+            .Select(r => (r.EmployeeId, r.EmployeeCode, r.FullName, r.TeamCode, r.GradeCode, r.WorkdayValue, r.IsSunday))
             .ToList();
+    }
+
+    public async Task<IReadOnlyDictionary<int, EmployeeProduction>> GetProductionTotalsAsync(
+        DateOnly fromDate, DateOnly toDate, CancellationToken ct)
+    {
+        // Mỗi lần báo sản lượng đã gắn mức giá có hiệu lực lúc báo (PieceRateId): giá đổi giữa tháng thì tách dòng theo mức giá.
+        var output = await _context.OutputRecords.AsNoTracking()
+            .Where(o => o.WorkDate >= fromDate && o.WorkDate <= toDate)
+            .GroupBy(o => new { o.WorkerId, o.Operation.OperationCode, o.Operation.OperationName, o.PieceRate.Rate })
+            .Select(g => new { g.Key.WorkerId, g.Key.OperationCode, g.Key.OperationName, g.Key.Rate, Qty = g.Sum(o => o.Quantity) })
+            .ToListAsync(ct);
+        var defects = await _context.DefectRecords.AsNoTracking()
+            .Where(d => d.WorkDate >= fromDate && d.WorkDate <= toDate && d.Status != DefectStatuses.Cancelled)
+            .GroupBy(d => d.ResponsibleWorkerId)
+            .Select(g => new { WorkerId = g.Key, Qty = g.Sum(d => d.Quantity) })
+            .ToDictionaryAsync(x => x.WorkerId, x => x.Qty, ct);
+
+        var lines = output.ToLookup(x => x.WorkerId);
+        return lines.Select(g => g.Key).Union(defects.Keys).ToDictionary(
+            id => id,
+            id => new EmployeeProduction(
+                lines[id].OrderBy(x => x.OperationCode).ThenBy(x => x.Rate)
+                    .Select(x => new OperationOutputLine(x.OperationCode, x.OperationName, x.Rate, x.Qty)).ToList(),
+                defects.GetValueOrDefault(id)));
     }
 
     // ---------- 2. Suất ăn + đối soát bếp ----------

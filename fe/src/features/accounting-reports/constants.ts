@@ -1,13 +1,14 @@
 /** Chuỗi hiển thị màn "Báo cáo kế toán" (UC36, MI-19, CHỈ Kế toán). */
 export const ACCOUNTING_REPORT_TEXT = {
   pageTitle: 'Báo cáo kế toán',
-  pageSubtitle: 'Công + tăng ca, suất ăn + đối soát bếp, km + xăng theo xe — theo tháng.',
+  pageSubtitle:
+    'Công + bậc thợ + sản lượng + lỗi, suất ăn + đối soát bếp, km + xăng theo xe — theo tháng.',
   periodMonth: 'Tháng',
   export: 'Xuất Excel',
   noDataYet: 'Chưa có dữ liệu cho tháng này.',
 
   tabs: {
-    workdays: 'Công + tăng ca',
+    workdays: 'Công, sản lượng, lỗi',
     meals: 'Suất ăn',
     vehicles: 'Sổ xe',
   },
@@ -16,10 +17,15 @@ export const ACCOUNTING_REPORT_TEXT = {
     employeeCode: 'Mã NV',
     fullName: 'Họ tên',
     teamCode: 'Tổ',
+    gradeCode: 'Bậc thợ',
     regularWorkdays: 'Công ngày thường',
     sundayWorkdays: 'Công Chủ nhật',
     totalWorkdays: 'Tổng công',
-    totalOvertimeHours: 'Giờ tăng ca',
+    outputQty: 'Sản lượng',
+    outputAmount: 'Thành tiền',
+    defectQty: 'Số lượng lỗi',
+    operation: 'Công đoạn',
+    unitRate: 'Đơn giá',
   },
 
   mealSummary: {

@@ -49,14 +49,23 @@ public class AccountingReportServiceTests
     public async Task GetWorkdayOvertimeReportAsync_Valid_AggregatesPerEmployeeSplitBySunday()
     {
         _repo.GetTimesheetRowsAsync(MonthStart, MonthEnd, Arg.Any<CancellationToken>()).Returns(new List<
-            (int EmployeeId, string EmployeeCode, string FullName, string? TeamCode, decimal WorkdayValue,
-                decimal OvertimeHours, bool IsSunday)>
+            (int EmployeeId, string EmployeeCode, string FullName, string? TeamCode, string? GradeCode, decimal WorkdayValue,
+                bool IsSunday)>
         {
-            (1, "NV001", "Nguyễn Văn A", "Tổ may 1", 1m, 1m, false),
-            (1, "NV001", "Nguyễn Văn A", "Tổ may 1", 1m, 0.5m, false),
-            (1, "NV001", "Nguyễn Văn A", "Tổ may 1", 1m, 2m, true),
-            (2, "NV002", "Trần Thị B", "Tổ may 1", 1m, 0m, false),
+            (1, "NV001", "Nguyễn Văn A", "Tổ may 1", "A", 1m, false),
+            (1, "NV001", "Nguyễn Văn A", "Tổ may 1", "A", 1m, false),
+            (1, "NV001", "Nguyễn Văn A", "Tổ may 1", "A", 1m, true),
+            (2, "NV002", "Trần Thị B", "Tổ may 1", null, 1m, false),
         });
+        _repo.GetProductionTotalsAsync(MonthStart, MonthEnd, Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<int, EmployeeProduction>
+            {
+                [1] = new([
+                    new OperationOutputLine("CD01", "May vai", 1000m, 80),
+                    new OperationOutputLine("CD01", "May vai", 1200m, 40),
+                    new OperationOutputLine("CD02", "Ui", 500m, 20),
+                ], 3),
+            });
 
         var result = await _sut.GetWorkdayOvertimeReportAsync(Month, CancellationToken.None);
 
@@ -68,19 +77,25 @@ public class AccountingReportServiceTests
         nv001.RegularWorkdays.Should().Be(2m);
         nv001.SundayWorkdays.Should().Be(1m);
         nv001.TotalWorkdays.Should().Be(3m);
-        nv001.TotalOvertimeHours.Should().Be(3.5m);
+        (nv001.GradeCode, nv001.OutputQty, nv001.DefectQty).Should().Be(("A", 140, 3));
+        // Giá đổi giữa tháng: CD01 có hai dòng, mỗi dòng nhân đúng mức giá của nó.
+        nv001.Operations.Select(o => o.Amount).Should().Equal(80_000m, 48_000m, 10_000m);
+        nv001.OutputAmount.Should().Be(138_000m);
+
+        var nv002 = data.Rows.Single(r => r.EmployeeCode == "NV002");
+        (nv002.GradeCode, nv002.OutputQty, nv002.DefectQty, nv002.OutputAmount).Should().Be((null, 0, 0, 0m));
 
         data.TotalWorkdays.Should().Be(4m);
         data.TotalSundayWorkdays.Should().Be(1m);
-        data.TotalOvertimeHours.Should().Be(3.5m);
+        (data.TotalOutputQty, data.TotalOutputAmount, data.TotalDefectQty).Should().Be((140, 138_000m, 3));
     }
 
     [Fact]
     public async Task GetWorkdayOvertimeReportAsync_NoRows_ReturnsNoDataMessage()
     {
         _repo.GetTimesheetRowsAsync(MonthStart, MonthEnd, Arg.Any<CancellationToken>()).Returns(new List<
-            (int EmployeeId, string EmployeeCode, string FullName, string? TeamCode, decimal WorkdayValue,
-                decimal OvertimeHours, bool IsSunday)>());
+            (int EmployeeId, string EmployeeCode, string FullName, string? TeamCode, string? GradeCode, decimal WorkdayValue,
+                bool IsSunday)>());
 
         var result = await _sut.GetWorkdayOvertimeReportAsync(Month, CancellationToken.None);
 
@@ -188,8 +203,8 @@ public class AccountingReportServiceTests
     public async Task ExportAsync_Valid_BuildsWorkbookFromThreeSections()
     {
         _repo.GetTimesheetRowsAsync(MonthStart, MonthEnd, Arg.Any<CancellationToken>()).Returns(new List<
-            (int EmployeeId, string EmployeeCode, string FullName, string? TeamCode, decimal WorkdayValue,
-                decimal OvertimeHours, bool IsSunday)>());
+            (int EmployeeId, string EmployeeCode, string FullName, string? TeamCode, string? GradeCode, decimal WorkdayValue,
+                bool IsSunday)>());
         _repo.GetMealTotalsAsync(MonthStart, MonthEnd, Arg.Any<CancellationToken>())
             .Returns((DaysWithData: 0, TotalMeals: 0, TotalAmount: 0m));
         _repo.FindPeriodByMonthAsync(Month, Arg.Any<CancellationToken>()).Returns((AccountingPeriod?)null);
