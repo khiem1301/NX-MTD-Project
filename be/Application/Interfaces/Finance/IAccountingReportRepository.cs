@@ -13,11 +13,16 @@ public interface IAccountingReportRepository
 
     // ---------- 1. Công + tăng ca ----------
 
-    /// <summary>Từng dòng DailyTimesheet trong khoảng ngày của kỳ, kèm tên nhân viên/tổ — Service tự gộp
+    /// <summary>Từng dòng DailyTimesheet trong khoảng ngày của kỳ, kèm tên nhân viên / tổ / bậc thợ hiện tại — Service tự gộp
     /// theo nhân viên (regular vs Sunday theo IsSunday).</summary>
-    Task<IReadOnlyList<(int EmployeeId, string EmployeeCode, string FullName, string? TeamCode,
-            decimal WorkdayValue, decimal OvertimeHours, bool IsSunday)>>
+    Task<IReadOnlyList<(int EmployeeId, string EmployeeCode, string FullName, string? TeamCode, string? GradeCode,
+            decimal WorkdayValue, bool IsSunday)>>
         GetTimesheetRowsAsync(DateOnly fromDate, DateOnly toDate, CancellationToken ct);
+
+    /// <summary>Sản lượng công đoạn đã báo (theo công đoạn và mức đơn giá đã gắn lúc báo) và số lượng hàng hỏng chưa hủy trong khoảng ngày,
+    /// theo nhân viên; nhân viên không có gì thì không có trong kết quả.</summary>
+    Task<IReadOnlyDictionary<int, EmployeeProduction>> GetProductionTotalsAsync(
+        DateOnly fromDate, DateOnly toDate, CancellationToken ct);
 
     // ---------- 2. Suất ăn + đối soát bếp ----------
 
@@ -39,3 +44,9 @@ public interface IAccountingReportRepository
     Task<IReadOnlyDictionary<int, (string PlateNumber, string VehicleType)>> GetVehiclesAsync(
         IReadOnlyCollection<int> vehicleIds, CancellationToken ct);
 }
+
+/// <summary>Sản lượng của một công đoạn ở một mức đơn giá (số lượng cộng theo công nhân × công đoạn × mức giá).</summary>
+public sealed record OperationOutputLine(string OperationCode, string OperationName, decimal UnitRate, int Quantity);
+
+/// <summary>Sản lượng theo công đoạn và số lượng hàng hỏng của một nhân viên trong kỳ.</summary>
+public sealed record EmployeeProduction(IReadOnlyList<OperationOutputLine> Operations, int DefectQty);

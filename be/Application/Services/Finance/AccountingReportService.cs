@@ -38,22 +38,31 @@ public sealed class AccountingReportService : IAccountingReportService
 
         var (start, end) = ComputePeriodDateRange(periodMonth);
         var rows = await _repo.GetTimesheetRowsAsync(start, end, ct);
+        var production = await _repo.GetProductionTotalsAsync(start, end, ct);
 
         var byEmployee = rows
-            .GroupBy(r => (r.EmployeeId, r.EmployeeCode, r.FullName, r.TeamCode))
-            .Select(g => new WorkdayOvertimeRowDto(
-                g.Key.EmployeeId, g.Key.EmployeeCode, g.Key.FullName, g.Key.TeamCode,
-                RegularWorkdays: g.Where(x => !x.IsSunday).Sum(x => x.WorkdayValue),
-                SundayWorkdays: g.Where(x => x.IsSunday).Sum(x => x.WorkdayValue),
-                TotalWorkdays: g.Sum(x => x.WorkdayValue),
-                TotalOvertimeHours: g.Sum(x => x.OvertimeHours)))
+            .GroupBy(r => (r.EmployeeId, r.EmployeeCode, r.FullName, r.TeamCode, r.GradeCode))
+            .Select(g =>
+            {
+                production.TryGetValue(g.Key.EmployeeId, out var own);
+                var operations = (own?.Operations ?? [])
+                    .Select(o => new WorkerOperationOutputDto(o.OperationCode, o.OperationName, o.UnitRate, o.Quantity, o.Quantity * o.UnitRate))
+                    .ToList();
+                return new WorkdayOvertimeRowDto(
+                    g.Key.EmployeeId, g.Key.EmployeeCode, g.Key.FullName, g.Key.TeamCode, g.Key.GradeCode,
+                    RegularWorkdays: g.Where(x => !x.IsSunday).Sum(x => x.WorkdayValue),
+                    SundayWorkdays: g.Where(x => x.IsSunday).Sum(x => x.WorkdayValue),
+                    TotalWorkdays: g.Sum(x => x.WorkdayValue),
+                    DefectQty: own?.DefectQty ?? 0, Operations: operations);
+            })
             .OrderBy(r => r.EmployeeCode)
             .ToList();
 
         var dto = new WorkdayOvertimeReportDto(
             periodMonth, byEmployee,
             byEmployee.Sum(r => r.RegularWorkdays), byEmployee.Sum(r => r.SundayWorkdays),
-            byEmployee.Sum(r => r.TotalWorkdays), byEmployee.Sum(r => r.TotalOvertimeHours));
+            byEmployee.Sum(r => r.TotalWorkdays), byEmployee.Sum(r => r.OutputQty), byEmployee.Sum(r => r.OutputAmount),
+            byEmployee.Sum(r => r.DefectQty));
 
         return Result<WorkdayOvertimeReportDto>.Success(dto, byEmployee.Count == 0 ? Messages.NoData : null);
     }
